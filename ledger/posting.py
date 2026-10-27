@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from core.roles import require_admin
 
+from .locks import lock_message, run_void_hooks
 from .errors import (
     EntryStateError, InactiveAccountError, InvalidLineError, UnbalancedEntryError,
 )
@@ -153,6 +154,9 @@ def void_entry(
     reason = (reason or "").strip()
     with transaction.atomic():
         current = JournalEntry.objects.get(pk=entry.pk)
+        locked = lock_message(current)
+        if locked:
+            raise EntryStateError(locked)
         if current.status != EntryStatus.POSTED:
             raise EntryStateError("Only posted entries can be voided.")
         if not reason:
@@ -173,5 +177,6 @@ def void_entry(
         )
         current.status = EntryStatus.VOID
         current.save()
+        run_void_hooks(current)
     entry.refresh_from_db()
     return reversal

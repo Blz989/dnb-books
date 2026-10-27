@@ -70,14 +70,14 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
     - Before anything else it calls `lock_message(entry)` and raises `EntryStateError(message)` if set.
     - After the reversal is posted it calls each void hook with the original entry.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A registered check blocks `void_entry` with its message, and nothing is posted.
   - A hook is called once with the voided entry.
   - With no registrations, behavior is unchanged (the full Phase 1 to 4 suite passes).
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: ledger lock checks and void hooks`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: ledger lock checks and void hooks`
 
 ---
 
