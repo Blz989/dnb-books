@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Balance sheet{% endblock %}
+{% block content %}
+<h1>Balance sheet</h1>
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<p>As of {{ report.as_of|date:"Y-m-d" }}</p>
+<table class="report">
+  <tbody>
+    <tr class="section"><th colspan="3">Assets</th></tr>{% include "ledger/_rows.html" with rows=report.assets %}
+    <tr class="total"><td colspan="2">Total assets</td><td class="num">{{ report.total_assets|floatformat:"2g" }}</td></tr>
+    <tr class="section"><th colspan="3">Liabilities</th></tr>{% include "ledger/_rows.html" with rows=report.liabilities %}
+    <tr class="section"><th colspan="3">Equity</th></tr>{% include "ledger/_rows.html" with rows=report.equity %}
+    <tr><td colspan="2">Retained earnings</td><td class="num">{{ report.retained_earnings|floatformat:"2g" }}</td></tr>
+    <tr><td colspan="2">Current year earnings</td><td class="num">{{ report.current_year_earnings|floatformat:"2g" }}</td></tr>
+    <tr class="total"><td colspan="2">Total liabilities and equity</td><td class="num">{{ report.total_liabilities_and_equity|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

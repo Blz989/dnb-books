@@ -79,7 +79,7 @@ tests/
 **Interfaces:**
 - Produces: URL name `home` at `/`; template `core/base.html` with blocks `title`, `content`, `messages`; settings keys `DNB_BACKUP_DIR: Path`, `DNB_BACKUP_KEY: str`, `DNB_DB_PATH: Path`; management command `serve [--host 0.0.0.0] [--port 8000]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_anonymous_home_redirects_to_login(client):
@@ -99,18 +99,18 @@ def test_sqlite_options_for_concurrency(settings):
 
 `conftest.py` defines `standard_user` and `admin_user` fixtures (plain users for now; Task 2 adds groups).
 
-- [ ] **Step 2: Run tests, expect FAIL** (`uv run pytest tests/test_skeleton.py -v`, no project yet)
+- [x] **Step 2: Run tests, expect FAIL** (`uv run pytest tests/test_skeleton.py -v`, no project yet)
 
-- [ ] **Step 3: Implement the skeleton**
+- [x] **Step 3: Implement the skeleton**
   - `pyproject.toml`: `requires-python = ">=3.12"`, deps `Django>=5.2,<6.0`, `waitress`, `whitenoise`, `django-auditlog`, `cryptography`, `python-dotenv`; dev deps under `[dependency-groups] dev = ["pytest", "pytest-django", "hypothesis"]` (installed by `uv sync` and by the SessionStart hook in `.claude/hooks/session-start.sh`); `.gitignore` covers `.env`, `.venv/`, `data/`, `staticfiles/`, `__pycache__/`; `[tool.pytest.ini_options] DJANGO_SETTINGS_MODULE = "dnb.settings"`.
   - `settings.py` loads `.env` via `python-dotenv`; DB `NAME = DNB_DB_PATH` (default `BASE_DIR / "data" / "dnb.sqlite3"`), `OPTIONS = {"init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", "transaction_mode": "IMMEDIATE", "timeout": 20}`; `TEST = {"NAME": BASE_DIR / "data" / "test.sqlite3"}` so tests run on a real file (needed for the threaded posting test and backup snapshots); `LOGIN_URL = "/accounts/login/"`; include `django.contrib.auth.urls`; whitenoise middleware; `TIME_ZONE` from env, default `America/Los_Angeles` (override in `.env`); `USE_TZ = True`.
   - `serve` command runs `waitress.serve(get_wsgi_application(), host=..., port=...)`.
   - `start.*` runs `uv run python manage.py serve`. `update.*` runs in order and stops on first failure: `uv run python manage.py backup_now` (skip with a printed notice if the command does not exist yet), `git pull`, `uv sync`, `uv run python manage.py migrate`, `uv run python manage.py collectstatic --noinput`.
   - `README.md` "Getting started": first-time install (install uv, copy `.env.example` to `.env`, `uv sync`, `migrate`, `createsuperuser`, `setup_roles`), start, update.
 
-- [ ] **Step 4: Run tests, expect PASS**
+- [x] **Step 4: Run tests, expect PASS**
 
-- [ ] **Step 5: Commit** `feat: project skeleton with SQLite WAL, login, serve command`
+- [x] **Step 5: Commit** `feat: project skeleton with SQLite WAL, login, serve command`
 
 ---
 
@@ -125,7 +125,7 @@ def test_sqlite_options_for_concurrency(settings):
 - Produces: `ADMIN_GROUP = "Admin"`, `STANDARD_GROUP = "Standard"`, `is_admin(user) -> bool` (true if superuser or in Admin group), `require_admin(user) -> None` (raises `django.core.exceptions.PermissionDenied` with message "Only an admin can do this."). Command `setup_roles` is idempotent and gives Standard `add/change/view` on `ledger.Account`, `ledger.JournalEntry`, `ledger.JournalLine` and `view` on `ledger.AccountingPeriod`; Admin gets all ledger and backup permissions. Both groups are `is_staff`-eligible (admin site access).
 - Fixtures: `admin_user` (staff, Admin group), `standard_user` (staff, Standard group).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_is_admin(admin_user, standard_user):
@@ -142,10 +142,10 @@ def test_setup_roles_idempotent(db):
 
 Note: `setup_roles` runs after Task 3 models exist; write the permission assignment so missing models are skipped with a warning, and re-verify in Task 3 Step 4.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `core/roles.py` and `setup_roles`; enable auditlog middleware**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: admin/standard roles and audit log middleware`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `core/roles.py` and `setup_roles`; enable auditlog middleware**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: admin/standard roles and audit log middleware`
 
 ---
 
@@ -177,7 +177,7 @@ Note: `setup_roles` runs after Task 3 models exist; write the permission assignm
   - `BEFORE UPDATE ON ledger_journalentry WHEN OLD.status = 'VOID' OR (OLD.status = 'POSTED' AND (NEW.status NOT IN ('POSTED','VOID') OR NEW.date IS NOT OLD.date OR NEW.reference IS NOT OLD.reference OR NEW.memo IS NOT OLD.memo OR NEW.source_type IS NOT OLD.source_type OR NEW.source_id IS NOT OLD.source_id OR NEW.reverses_id IS NOT OLD.reverses_id))` → abort.
   - `BEFORE INSERT`, `BEFORE UPDATE`, `BEFORE DELETE ON ledger_journalline` when the parent entry's status is not `'DRAFT'` → abort.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_subtype_must_match_type(db):
@@ -211,10 +211,10 @@ def test_in_ledger_excludes_drafts(draft_entry, posted_entry):
 
 Fixtures in `conftest.py`: `cash` (1000, ASSET/BANK), `revenue` (4000, INCOME/INCOME), `expense` (6000, EXPENSE/EXPENSE), `ar`, `ap`, `equity` as needed; `draft_entry`; `posted_entry` built as a DRAFT with two lines, then promoted with `JournalEntry.objects.filter(pk=...).update(status=EntryStatus.POSTED)` (the trigger allows DRAFT→POSTED); switch it to `post_entry` in Task 5.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement models, errors, generate 0001, hand-write 0002 triggers, register with auditlog**
-- [ ] **Step 4: Run, expect PASS**; also re-run `tests/test_roles.py` (setup_roles now finds ledger models)
-- [ ] **Step 5: Commit** `feat: ledger models with model and trigger immutability`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement models, errors, generate 0001, hand-write 0002 triggers, register with auditlog**
+- [x] **Step 4: Run, expect PASS**; also re-run `tests/test_roles.py` (setup_roles now finds ledger models)
+- [x] **Step 5: Commit** `feat: ledger models with model and trigger immutability`
 
 ---
 
@@ -233,7 +233,7 @@ Fixtures in `conftest.py`: `cash` (1000, ASSET/BANK), `revenue` (4000, INCOME/IN
   - `close_period(year: int, month: int, user) -> AccountingPeriod` (admin only; sets `closed_by`, `closed_at`).
   - `reopen_period(year: int, month: int, user, reason: str) -> AccountingPeriod` (admin only; `reason` required and stripped non-empty, else `ValueError("A reason is required to reopen a period.")`; stores `reopen_reason`).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_new_period_is_open(db):
@@ -257,10 +257,10 @@ def test_reopen_requires_reason(admin_user):
     assert not p.is_closed and p.reopen_reason == "Late vendor bill"
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `ledger/periods.py`**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: monthly period close and admin-only reopen`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `ledger/periods.py`**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: monthly period close and admin-only reopen`
 
 ---
 
@@ -287,7 +287,7 @@ def test_reopen_requires_reason(admin_user):
   6. Sum debits ≠ sum credits → `UnbalancedEntryError("Debits ({d}) and credits ({c}) must be equal. Difference: {diff}.")` formatted with 2 decimals and thousands separators.
   7. Date in closed period → `PeriodClosedError` from `assert_open`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_post_balanced_entry(admin_user, cash, revenue):
@@ -321,10 +321,10 @@ def test_concurrent_posts_both_succeed(admin_user, cash, revenue): ...
 # Review Focus 1: two threads (each closes its connection at the end) each post 20 entries on the file-backed test DB; assert 40 posted entries and no OperationalError.
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `ledger/posting.py`** (use `Decimal.as_tuple().exponent < -2` for the precision check)
-- [ ] **Step 4: Run, expect PASS** (full suite)
-- [ ] **Step 5: Commit** `feat: posting service with balance, precision, and period validation`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `ledger/posting.py`** (use `Decimal.as_tuple().exponent < -2` for the precision check)
+- [x] **Step 4: Run, expect PASS** (full suite)
+- [x] **Step 5: Commit** `feat: posting service with balance, precision, and period validation`
 
 ---
 
@@ -338,7 +338,7 @@ def test_concurrent_posts_both_succeed(admin_user, cash, revenue): ...
 - Produces: `void_entry(entry: JournalEntry, *, user, reason: str, date: date | None = None) -> JournalEntry`. Admin only (`require_admin`). `reason` required. Date defaults to `entry.date`. In one transaction: posts a reversal via `post_entry` with each line's debit and credit swapped, `memo = f"Void of {entry.display_number}: {reason}"`, `reverses=entry`, same `source_type/source_id`; then sets `entry.status = VOID`. Returns the reversal.
 - Errors: entry not POSTED → `EntryStateError("Only posted entries can be voided.")`. Reversal date in a closed month → `PeriodClosedError` with the message from `assert_open`, and the original stays POSTED.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_void_nets_to_zero(admin_user, posted_entry, cash):
@@ -359,10 +359,10 @@ def test_cannot_void_twice(...): ...
 def test_standard_user_cannot_void(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `void_entry`**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: void posted entries via reversing entry`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `void_entry`**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: void posted entries via reversing entry`
 
 ---
 
@@ -382,7 +382,7 @@ def test_standard_user_cannot_void(...): ...
   - `balance_sheet(as_of: date) -> BalanceSheet(as_of, assets, liabilities, equity: list[ReportRow], retained_earnings, current_year_earnings, total_assets, total_liabilities_and_equity)`. `current_year_earnings` = net income Jan 1 of `as_of.year` through `as_of`; `retained_earnings` = net income of all dates before that Jan 1. No closing entries are posted (matches Zoho).
   - All dataclasses frozen; amounts quantized to `0.01`.
 
-- [ ] **Step 1: Write failing tests** (one scenario fixture `sample_ledger`: owner invests 10,000 cash on 2025-06-01; sale 1,000 cash 2025-12-31; expense 300 on 2026-01-01; sale 500 on AR 2026-01-31; plus one draft entry and one voided entry that must not change results)
+- [x] **Step 1: Write failing tests** (one scenario fixture `sample_ledger`: owner invests 10,000 cash on 2025-06-01; sale 1,000 cash 2025-12-31; expense 300 on 2026-01-01; sale 500 on AR 2026-01-31; plus one draft entry and one voided entry that must not change results)
 
 ```python
 def test_trial_balance_balances(sample_ledger):
@@ -409,10 +409,10 @@ def test_general_ledger_running_balance(sample_ledger, cash):
 def test_draft_and_void_have_no_effect(sample_ledger): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `balances.py` and `reports.py`** (aggregate in the database with `Sum`, convert with `Decimal(str(v))`)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: trial balance, general ledger, P&L, balance sheet`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `balances.py` and `reports.py`** (aggregate in the database with `Sum`, convert with `Decimal(str(v))`)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: trial balance, general ledger, P&L, balance sheet`
 
 Before committing, review the posting and report rules against the `finance:journal-entry` and `finance:financial-statements` skills and note any finding in the commit body.
 
@@ -438,7 +438,7 @@ Before committing, review the posting and report rules against the `finance:jour
   - `JournalEntryAdmin` with `JournalLineInline`: editable only while DRAFT (`has_change_permission`/`has_delete_permission` return False otherwise; inline add/delete off). Shows totals and difference. Action **"Post selected drafts"** calls `post_draft` per entry and reports each `PostingError` message via `messages.error`. Object page for POSTED entries shows a **Void** button (admin only) linking to `/admin/ledger/journalentry/<id>/void/`, a form with `date` and `reason`.
   - `AccountingPeriodAdmin`: actions **Close selected periods** (admin only) and a per-row **Reopen** link to a form requiring `reason`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_report_csv(client, admin_user, sample_ledger):
@@ -459,10 +459,10 @@ def test_reopen_without_reason_rejected(client, admin_user): ...
 
 CSV amounts are plain numbers with 2 decimals, no thousands separators. HTML shows separators.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement admin, forms, views, templates**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: admin screens for ledger and report pages with CSV export`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement admin, forms, views, templates**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: admin screens for ledger and report pages with CSV export`
 
 ---
 
@@ -483,7 +483,7 @@ CSV amounts are plain numbers with 2 decimals, no thousands separators. HTML sho
   - `run_backup(now: datetime | None = None) -> BackupRun`: records RUNNING, snapshots to a temp dir, computes fingerprint, encrypts into `DNB_BACKUP_DIR`, applies retention, records SUCCESS. Any exception → FAILED with a plain message (for example "Backup folder D:\Drive\dnb-backups does not exist.") and is not re-raised. Missing `DNB_BACKUP_KEY` → FAILED "No backup key set. Run generate_backup_key."
   - Commands: `backup_now` (exit code 1 if FAILED, prints message), `generate_backup_key` (prints a new Fernet key and the instruction: "Add this to .env as DNB_BACKUP_KEY and store a copy in your password manager. Backups cannot be restored without it.").
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_encrypt_roundtrip(tmp_path): ...
@@ -506,10 +506,10 @@ def test_retention(tmp_path):
 
 `file_db_with_entries` fixture: `transactional_db` plus a few posted entries; `settings.DNB_DB_PATH` points at the file-backed test DB name from Task 1.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `backup/service.py`, model, commands; wire `update.*` to call `backup_now` first (already scripted in Task 1)**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: encrypted nightly backup with retention`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `backup/service.py`, model, commands; wire `update.*` to call `backup_now` first (already scripted in Task 1)**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: encrypted nightly backup with retention`
 
 ---
 
@@ -529,7 +529,7 @@ def test_retention(tmp_path):
   - Home page renders the status as a colored banner, visible to every logged-in user.
   - README section "Nightly backup" (under "Getting started"): Windows Task Scheduler and Linux cron instructions running `backup_now` at 1:15 AM, and `restore_drill` on the 1st of each month.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_drill_passes_on_fresh_backup(file_db_with_entries, tmp_path, settings): ...
@@ -542,10 +542,10 @@ def test_home_shows_banner(client, standard_user, failed_run):
     assert b"Last backup failed" in client.get("/").content
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: restore drill, restore command, backup status on home screen`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: restore drill, restore command, backup status on home screen`
 
 ---
 
@@ -554,7 +554,7 @@ def test_home_shows_banner(client, standard_user, failed_run):
 **Files:**
 - Create: `tests/test_acceptance.py`
 
-- [ ] **Step 1: Write the acceptance test** (Spec 12, "Phase 1 done when"): as an admin through the Django test client only, create two accounts in admin, create a draft entry with two lines, post it with the admin action, then load all four report pages and assert the amount appears on each; run `backup_now` and `restore_drill` via `call_command` against the file-backed test DB and assert both exit cleanly.
-- [ ] **Step 2: Run full suite** `uv run pytest -q` → all pass, no warnings about naive datetimes.
+- [x] **Step 1: Write the acceptance test** (Spec 12, "Phase 1 done when"): as an admin through the Django test client only, create two accounts in admin, create a draft entry with two lines, post it with the admin action, then load all four report pages and assert the amount appears on each; run `backup_now` and `restore_drill` via `call_command` against the file-backed test DB and assert both exit cleanly.
+- [x] **Step 2: Run full suite** `uv run pytest -q` → all pass, no warnings about naive datetimes.
 - [ ] **Step 3: Manual check on a real machine:** `start` script, log in from a second browser on the network, post one entry, view reports, run `backup_now`, confirm the encrypted file appears in the synced folder, run `restore_drill`.
-- [ ] **Step 4: Commit** `test: phase 1 acceptance`
+- [x] **Step 4: Commit** `test: phase 1 acceptance`

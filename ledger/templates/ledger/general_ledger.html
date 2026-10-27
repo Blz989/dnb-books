@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+{% block title %}General ledger{% endblock %}
+{% block content %}
+<h1>General ledger</h1>
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<p>{{ report.account }}, {{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}</p>
+<table class="report">
+  <thead><tr><th>Date</th><th>Entry</th><th>Reference</th><th>Description</th>
+    <th class="num">Debit</th><th class="num">Credit</th><th class="num">Balance</th></tr></thead>
+  <tbody>
+    <tr><td colspan="6">Opening balance</td><td class="num">{{ report.opening_balance|floatformat:"2g" }}</td></tr>
+  {% for l in report.lines %}
+    <tr><td>{{ l.date|date:"Y-m-d" }}</td><td>{{ l.entry_number }}</td><td>{{ l.reference }}</td><td>{{ l.description }}</td>
+        <td class="num">{% if l.debit %}{{ l.debit|floatformat:"2g" }}{% endif %}</td>
+        <td class="num">{% if l.credit %}{{ l.credit|floatformat:"2g" }}{% endif %}</td>
+        <td class="num">{{ l.balance|floatformat:"2g" }}</td></tr>
+  {% endfor %}
+    <tr class="total"><td colspan="6">Closing balance</td><td class="num">{{ report.closing_balance|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

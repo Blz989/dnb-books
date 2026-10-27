@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs on one computer in the office, and everyone else uses it from a web browser on the office network.
 
-> **Status:** Design approved. Phase 1 (ledger core) is ready to build. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Phase 1 (ledger core) is built and tested. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -42,14 +42,61 @@ Rules the system enforces:
 
 ## Getting started
 
-Install, start, update, and backup instructions are added here as Phase 1 is built. Planned workflow:
+### First-time install (on the office PC)
+
+1. Install [uv](https://docs.astral.sh/uv/) (it installs Python and the dependencies for you).
+2. Copy `.env.example` to `.env` and fill in `DNB_SECRET_KEY` (any long random text), `DNB_ALLOWED_HOSTS` (the office PC's name or IP address, plus `localhost`), and `DNB_BACKUP_DIR` (a folder inside your synced cloud folder, such as Google Drive, OneDrive, or Dropbox).
+3. Run these once:
+
+```bash
+uv sync
+uv run python manage.py migrate
+uv run python manage.py createsuperuser
+uv run python manage.py setup_roles
+uv run python manage.py generate_backup_key
+```
+
+The last command prints a backup key. Put it in `.env` as `DNB_BACKUP_KEY` and keep a copy in your password manager.
+
+### Everyday use
 
 | Task | How |
 |---|---|
 | Start the app | Run `start` (`start.bat` on Windows, `start.sh` on Linux), then open `http://<office-pc>:8000` |
-| Update the app | Run `update`. It takes a backup first, then pulls the new version and applies database changes |
+| Update the app | Run `update` (`update.bat` or `update.sh`). It takes a backup first, then pulls the new version and applies database changes |
 | Back up now | `uv run python manage.py backup_now` |
 | Check backups work | `uv run python manage.py restore_drill` |
+
+### Nightly backup
+
+Backups are encrypted copies of the database written to `DNB_BACKUP_DIR`. Your sync app (Google Drive, OneDrive, Dropbox) uploads them off-site. The app keeps the last 30 days plus the newest backup of every month. If the backup folder is missing or unwritable, the home screen shows a red warning.
+
+Schedule `backup_now` for 1:15 AM every day and `restore_drill` for the 1st of each month.
+
+**Windows (Task Scheduler)**
+
+1. Open Task Scheduler and choose Create Task.
+2. Trigger: Daily at 1:15 AM. Action: Start a program.
+   - Program: `uv`
+   - Arguments: `run python manage.py backup_now`
+   - Start in: the folder where DNB Books is installed (for example `C:\dnb-books`)
+3. Make a second task the same way with a Monthly trigger on day 1 at 2:00 AM and the arguments `run python manage.py restore_drill`.
+4. The next morning, check that the home screen shows "Last backup" with a recent time.
+
+**Linux (cron)**: run `crontab -e` and add (use the real paths):
+
+```
+15 1 * * * cd /home/office/dnb-books && uv run python manage.py backup_now >> data/backup.log 2>&1
+0 2 1 * * cd /home/office/dnb-books && uv run python manage.py restore_drill >> data/backup.log 2>&1
+```
+
+**Restore**
+
+```bash
+uv run python manage.py restore_backup <backup file> --to <new database file>
+```
+
+The command never overwrites a file. It prints the steps to swap the restored database in: stop the app, rename the current database, move the restored file to `DNB_DB_PATH`, start the app.
 
 **Important:** backups are encrypted. Keep a copy of the backup key (`DNB_BACKUP_KEY` in `.env`) in a password manager. Without it, backups cannot be restored.
 

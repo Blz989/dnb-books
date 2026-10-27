@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Profit and loss{% endblock %}
+{% block content %}
+<h1>Profit and loss</h1>
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<p>{{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}, accrual basis</p>
+<table class="report">
+  <tbody>
+    <tr class="section"><th colspan="3">Income</th></tr>{% include "ledger/_rows.html" with rows=report.income %}
+    <tr class="section"><th colspan="3">Cost of goods sold</th></tr>{% include "ledger/_rows.html" with rows=report.cost_of_goods_sold %}
+    <tr class="total"><td colspan="2">Gross profit</td><td class="num">{{ report.gross_profit|floatformat:"2g" }}</td></tr>
+    <tr class="section"><th colspan="3">Operating expenses</th></tr>{% include "ledger/_rows.html" with rows=report.operating_expenses %}
+    <tr class="section"><th colspan="3">Other income</th></tr>{% include "ledger/_rows.html" with rows=report.other_income %}
+    <tr class="section"><th colspan="3">Other expenses</th></tr>{% include "ledger/_rows.html" with rows=report.other_expenses %}
+    <tr class="total"><td colspan="2">Net income</td><td class="num">{{ report.net_income|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
