@@ -9,7 +9,16 @@
 {% if inventory_unconfigured %}
 <div class="banner info">Inventory isn't set up yet. Choose the inventory accounts in Settings. <a href="/items/settings/">Open settings</a></div>
 {% endif %}
+{% if sales_unconfigured %}
+<div class="banner info">Sales isn't set up yet. Choose the sales accounts in Sales settings. <a href="/sales/settings/">Open settings</a></div>
+{% endif %}
 {% if backup.level != "ok" %}<div class="banner {{ backup.level }}">{{ backup.message }}</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Open A/R</div><div class="v">{{ open_ar|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:ar-aging' %}">A/R aging</a></div></div>
+  <div class="kpi{% if overdue_count %} warn{% endif %}"><div class="l">Overdue</div><div class="v">{{ overdue_total|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:open-invoices' %}?overdue=1">{{ overdue_count }} overdue invoice{{ overdue_count|pluralize }}</a></div></div>
+  <div class="kpi"><div class="l">Undeposited</div><div class="v">{{ undeposited|floatformat:"2g" }}</div><div class="note"><a href="{% url 'sales:deposit-new' %}">Make a deposit</a></div></div>
+  <div class="kpi{% if awaiting_bill %} warn{% endif %}"><div class="l">Drop shipments awaiting bill</div><div class="v">{{ awaiting_bill }}</div><div class="note"><a href="{% url 'reports:drop-ship-awaiting-bill' %}">Awaiting bill report</a></div></div>
+</div>
 <div class="kpis">
   <div class="kpi{% if backup.level != "ok" %} warn{% endif %}"><div class="l">Backups</div><div class="v">{% if backup.level == "ok" %}OK{% else %}Needs attention{% endif %}</div><div class="note">{{ backup.message }}</div></div>
   <div class="kpi"><div class="l">Stock value</div><div class="v">{{ stock_value|floatformat:"2g" }}</div><div class="note"><a href="/reports/inventory-valuation/">Inventory valuation</a></div></div>
@@ -24,6 +33,15 @@
     <li><a href="/items/counts/">Counts</a></li>
     <li><a href="/reports/inventory-valuation/">Inventory valuation</a></li>
     <li><a href="/reports/stock-movements/">Stock movements</a></li>
+  </ul>
+  <h2>Sales</h2>
+  <ul class="links">
+    <li><a href="{% url 'contacts:list' %}">Customers</a></li>
+    <li><a href="{% url 'sales:order-new' %}">New sales order</a></li>
+    <li><a href="{% url 'sales:invoice-new' %}">New invoice</a></li>
+    <li><a href="{% url 'sales:payment-new' %}">Receive payment</a></li>
+    <li><a href="{% url 'sales:deposit-new' %}">New deposit</a></li>
+    <li><a href="{% url 'sales:credit-new' %}">New credit note</a></li>
   </ul>
   <h2>Reports</h2>
   <ul class="links">

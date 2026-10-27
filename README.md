@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Phase 2 (items and inventory) is built and tested, on top of Phase 1 (ledger core). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Phase 3 (sales) is built and tested, on top of Phase 2 (items and inventory) and Phase 1 (ledger core). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -11,7 +11,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Ledger | Chart of accounts, journal entries, month close, trial balance, P&L, balance sheet, general ledger | 1 |
 | Backups | Nightly encrypted off-site backup, monthly restore drill | 1 |
 | Items and inventory | Item catalog, stock movements, FIFO or weighted average cost per item | 2 |
-| Sales | Customers, quotes, sales orders, invoices (PDF), payments, credit notes | 3 |
+| Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging | 3 |
 | Purchasing | Vendors, purchase orders, receiving, bills, vendor payments and credits | 4 |
 | Banking | Plaid bank feeds, file import, check printing on existing check stock, reconciliation | 5 |
 | Migration | Full Zoho history import with month-by-month verification | 5 |
@@ -28,6 +28,24 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Fix a quantity | Adjustments, New adjustment. Stock can go below zero after you confirm; the cost is estimated until stock is received or counted |
 | Count the shelves | Counts. Enter counts without seeing expected quantities, review the differences, then post |
 | Check stock value against the books | Reports, Inventory valuation. The difference must be 0.00 |
+
+### Sales (Phase 3)
+
+| Task | Where |
+|---|---|
+| Set up sales accounts, company details, logo, default invoice notes, and the next document numbers (once, admin) | Sales settings. Set the next numbers to carry on from Zoho's |
+| Add a customer | Customers, New customer. Terms default to Net 30 |
+| Take an order, then invoice it a shipment at a time | Sales orders, New sales order, then Invoice a shipment. Lower a quantity or set it to 0 to leave it for later |
+| Sell something the manufacturer ships straight to the customer | Mark the line "Drop ship" and name the vendor. No stock moves. It shows on the Drop shipments awaiting bill report until the vendor bill is entered (Phase 4) |
+| Fix a saved invoice | Invoices, open it, Edit. The number stays, the books are reposted, and the old version stays under Revisions |
+| Print or save an invoice | Invoices, open it, Download PDF |
+| Record a payment | Customers or Payments, Receive payment. Checks and cash wait in Undeposited Funds; ACH and wire go straight to the bank |
+| Take checks to the bank | Deposits, New deposit. Tick the payments going in this deposit |
+| Give a credit or money back | Credit notes, New credit note, then Apply to an invoice. A refund is admin only, from a payment or credit with an unapplied amount |
+| Void a sales document | Admin only, with a reason. Voided documents keep their numbers |
+| Check A/R against the books | Reports, A/R aging and Undeposited funds. Both show a Difference that must be 0.00 |
+
+A month won't close while customer balances or undeposited payments disagree with the ledger. An admin can close it anyway from Admin, Accounting periods, with a reason that is saved on the period.
 
 ## How it works
 
@@ -159,7 +177,7 @@ Screens are checked visually against `docs/design/items-mockup.html`. Use a thro
 ```bash
 export DNB_DB_PATH=/tmp/demo.sqlite3 DNB_DEBUG=1
 uv run python manage.py migrate
-uv run python manage.py seed_demo          # user demo / demo-pass-123; refuses a non-empty database
+uv run python manage.py seed_demo          # user demo / demo-pass-123, with items, customers, invoices, and payments; refuses a non-empty database
 uv run python manage.py runserver 8765 --noreload &
 node scripts/screenshots.mjs http://127.0.0.1:8765 /tmp/shots / /reports/trial-balance/
 ```

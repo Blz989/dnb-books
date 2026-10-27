@@ -286,10 +286,13 @@ def test_close_and_reopen_order(adm, customer, bolt):
 
 
 def test_lists_and_filters(adm, customer, invoice, bolt, admin_user):
+    from django.utils import timezone
+
     old = create_invoice(customer=customer, date=date(2026, 1, 5), user=admin_user, lines=[InvoiceLineSpec(bolt, 1, D("5.00"))])
+    recent = create_invoice(customer=customer, date=timezone.localdate(), user=admin_user, lines=[InvoiceLineSpec(bolt, 1, D("5.00"))])
     page = adm.get("/sales/invoices/").content.decode()
     assert "INV-000001" in page and "tag overdue" in page
     assert "INV-000001" not in adm.get("/sales/invoices/?status=VOID").content.decode()
     overdue = adm.get(f"/sales/invoices/?customer={customer.pk}&overdue=1").content.decode()
-    assert old.number in overdue and "INV-000001" not in overdue
+    assert old.number in overdue and recent.number not in overdue
     assert adm.get("/sales/orders/").status_code == 200

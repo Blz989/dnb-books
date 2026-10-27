@@ -564,13 +564,13 @@ def test_void_reopens_closed_order(...): ...
 - Modify: `core/views.py`, `core/templates/core/home.html`, `README.md` (Status, What it does: Sales row)
 - Create: `tests/test_phase3_acceptance.py`
 
-- [ ] **Step 1: Home cards.**
+- [x] **Step 1: Home cards.**
   - **Open AR** (total, linking to AR aging).
   - **Overdue** (total, linking to open invoices filtered to overdue).
   - **Undeposited** (total, linking to the deposit form).
   - **Drop shipments awaiting bill** (count, linking to the report).
   - Test: the values for a seeded scenario.
-- [ ] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with checks after each step):
+- [x] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with checks after each step):
   1. Create an SO with a stock line and a drop-ship line.
   2. Invoice twice.
   3. Edit the first invoice's quantity.
@@ -580,9 +580,9 @@ def test_void_reopens_closed_order(...): ...
   7. Refund an overpayment.
 
   After every step, `ar_check() == [] and undeposited_check() == []`. Finally the PDF view returns a PDF.
-- [ ] **Step 3: Full suite** `uv run pytest -q` passes with no warnings.
-- [ ] **Step 4: Final screenshots:** a tour (home with sales cards, an order, an invoice, the invoice PDF, receive payment, a deposit, AR aging), light and dark, sent.
-- [ ] **Step 5: Commit** `test: phase 3 acceptance`
+- [x] **Step 3: Full suite** `uv run pytest -q` passes with no warnings.
+- [x] **Step 4: Final screenshots:** a tour (home with sales cards, an order, an invoice, the invoice PDF, receive payment, a deposit, AR aging), light and dark, sent.
+- [x] **Step 5: Commit** `test: phase 3 acceptance`
 - [ ] **Step 6: Open the PR** `Phase 3: Sales` per `CLAUDE.md`. List the manual checks for the owner:
   - Run `docker compose up -d --build` (new apt library and Python dependency).
   - Fill in Sales settings and upload the logo.

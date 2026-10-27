@@ -5,12 +5,13 @@ from pathlib import Path
 
 from django.conf import settings
 from django.template.loader import render_to_string
-from weasyprint import HTML
+from weasyprint import CSS, HTML
 
 from .balances import invoice_applied, invoice_total
 from .models import DocStatus, Fulfillment, Invoice, SalesSettings
 
 FONT_DIR = Path(settings.BASE_DIR) / "core" / "static" / "core" / "fonts"
+INVOICE_CSS = Path(settings.BASE_DIR) / "sales" / "static" / "sales" / "invoice_pdf.css"
 
 
 def _address(text: str) -> list[str]:
@@ -51,7 +52,8 @@ def render_invoice_html(invoice: Invoice) -> str:
 
 
 def invoice_document(invoice: Invoice):
-    return HTML(string=render_invoice_html(invoice), base_url=Path(settings.BASE_DIR).as_uri() + "/").render()
+    html = HTML(string=render_invoice_html(invoice), base_url=Path(settings.BASE_DIR).as_uri() + "/")
+    return html.render(stylesheets=[CSS(filename=str(INVOICE_CSS))])
 
 
 def invoice_pdf(invoice: Invoice) -> bytes:
