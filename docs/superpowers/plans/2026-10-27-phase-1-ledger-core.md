@@ -72,7 +72,8 @@ tests/
 ### Task 1: Project skeleton, settings, home page, server commands
 
 **Files:**
-- Create: `pyproject.toml`, `manage.py`, `.env.example`, `.gitignore`, `dnb/settings.py`, `dnb/urls.py`, `dnb/wsgi.py`, `core/apps.py`, `core/views.py`, `core/templates/core/base.html`, `core/templates/core/home.html`, `core/management/commands/serve.py`, `start.sh`, `start.bat`, `update.sh`, `update.bat`, `README.md`
+- Create: `pyproject.toml`, `manage.py`, `.env.example`, `.gitignore`, `dnb/settings.py`, `dnb/urls.py`, `dnb/wsgi.py`, `core/apps.py`, `core/views.py`, `core/templates/core/base.html`, `core/templates/core/home.html`, `core/management/commands/serve.py`, `start.sh`, `start.bat`, `update.sh`, `update.bat`
+- Modify: `README.md` (already exists with project overview; replace the "Getting started" planned-workflow section with real instructions)
 - Test: `tests/test_skeleton.py`, `tests/conftest.py`
 
 **Interfaces:**
@@ -105,7 +106,7 @@ def test_sqlite_options_for_concurrency(settings):
   - `settings.py` loads `.env` via `python-dotenv`; DB `NAME = DNB_DB_PATH` (default `BASE_DIR / "data" / "dnb.sqlite3"`), `OPTIONS = {"init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", "transaction_mode": "IMMEDIATE", "timeout": 20}`; `TEST = {"NAME": BASE_DIR / "data" / "test.sqlite3"}` so tests run on a real file (needed for the threaded posting test and backup snapshots); `LOGIN_URL = "/accounts/login/"`; include `django.contrib.auth.urls`; whitenoise middleware; `TIME_ZONE` from env, default `America/Los_Angeles` (override in `.env`); `USE_TZ = True`.
   - `serve` command runs `waitress.serve(get_wsgi_application(), host=..., port=...)`.
   - `start.*` runs `uv run python manage.py serve`. `update.*` runs in order and stops on first failure: `uv run python manage.py backup_now` (skip with a printed notice if the command does not exist yet), `git pull`, `uv sync`, `uv run python manage.py migrate`, `uv run python manage.py collectstatic --noinput`.
-  - `README.md`: first-time install (install uv, copy `.env.example` to `.env`, `uv sync`, `migrate`, `createsuperuser`, `setup_roles`), start, update.
+  - `README.md` "Getting started": first-time install (install uv, copy `.env.example` to `.env`, `uv sync`, `migrate`, `createsuperuser`, `setup_roles`), start, update.
 
 - [ ] **Step 4: Run tests, expect PASS**
 
@@ -526,7 +527,7 @@ def test_retention(tmp_path):
   - `restore_backup <file> --to <path>`: decrypts to `--to`; refuses to overwrite an existing file; prints the steps to swap it in (stop app, rename current DB, move restored file to `DNB_DB_PATH`, start app).
   - `@dataclass BackupStatus(level: "ok" | "warning" | "error", message: str)`; `backup_status(now: datetime) -> BackupStatus`: `error` if the latest run FAILED ("Last backup failed: {error}"); `warning` if no SUCCESS in the last 26 hours or none ever ("No successful backup in the last 26 hours."); else `ok` ("Last backup {time}.").
   - Home page renders the status as a colored banner, visible to every logged-in user.
-  - README section "Nightly backup": Windows Task Scheduler and Linux cron instructions running `backup_now` at 1:15 AM, and `restore_drill` on the 1st of each month.
+  - README section "Nightly backup" (under "Getting started"): Windows Task Scheduler and Linux cron instructions running `backup_now` at 1:15 AM, and `restore_drill` on the 1st of each month.
 
 - [ ] **Step 1: Write failing tests**
 
