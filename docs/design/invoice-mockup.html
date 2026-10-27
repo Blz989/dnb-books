@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- Approved invoice reference for DNB Books (Phase 3). Company details are placeholders. Not app code. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invoice mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@600&display=swap" rel="stylesheet">
+<style>
+@page { size: letter; margin: 0.6in; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, sans-serif; font-size: 10pt; color: #2b2620; background: #fff; }
+.page { width: 7.3in; margin: 0 auto; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2f6b4f; padding-bottom: 14pt; }
+.brand { display: flex; gap: 12pt; }
+.logo { width: 44pt; height: 44pt; border-radius: 6pt; background: #1f3a2f; color: #f2ede2; display: flex; align-items: center; justify-content: center; font-family: "Source Serif 4"; font-weight: 600; font-size: 15pt; }
+.co { line-height: 1.45; color: #6f655a; }
+.co b { color: #2b2620; font-size: 12pt; font-family: "Source Serif 4"; font-weight: 600; }
+h1 { font-family: "Source Serif 4"; font-weight: 600; font-size: 26pt; margin: 0; color: #1f3a2f; text-align: right; letter-spacing: .02em; }
+.meta { margin-top: 6pt; border-collapse: collapse; margin-left: auto; }
+.meta td { padding: 1.5pt 0 1.5pt 14pt; text-align: right; }
+.meta td:first-child { color: #6f655a; }
+.addr { display: flex; gap: 24pt; margin: 18pt 0 16pt; }
+.addr div { flex: 1; line-height: 1.5; }
+.label { font-size: 8pt; text-transform: uppercase; letter-spacing: .08em; color: #6f655a; margin-bottom: 3pt; }
+table.lines { width: 100%; border-collapse: collapse; }
+.lines th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #6f655a; font-weight: 600; padding: 6pt 6pt; border-bottom: 1px solid #e3dccd; background: #faf6ee; }
+.lines td { padding: 7pt 6pt; border-bottom: 1px solid #eee8db; vertical-align: top; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.sku { color: #2f6b4f; font-weight: 500; }
+.note { color: #6f655a; font-size: 8.5pt; }
+.totals { width: 2.9in; margin: 10pt 0 0 auto; border-collapse: collapse; }
+.totals td { padding: 3pt 6pt; }
+.totals td:first-child { color: #6f655a; }
+.totals .due td { border-top: 2px solid #2f6b4f; padding-top: 7pt; font-weight: 700; font-size: 12pt; color: #1f3a2f; }
+.pay { margin-top: 22pt; display: flex; gap: 24pt; border-top: 1px solid #e3dccd; padding-top: 12pt; line-height: 1.5; }
+.pay div { flex: 1; }
+.notes { margin-top: 22pt; border-top: 1px solid #e3dccd; padding-top: 12pt; line-height: 1.5; }
+.foot { margin-top: 22pt; text-align: center; color: #6f655a; font-size: 8.5pt; }
+.stub { margin-top: 18pt; border-top: 1px dashed #b8ad9b; padding-top: 10pt; display: flex; justify-content: space-between; font-size: 9pt; }
+.stub b { font-family: "Source Serif 4"; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">DNB</div>
+      <div class="co"><b>DNB Supply Co.</b><br>1234 Industrial Way, Suite 100<br>Anytown, CA 90000<br>(555) 010-0100 · billing@example.com</div>
+    </div>
+    <div>
+      <h1>INVOICE</h1>
+      <table class="meta">
+        <tr><td>Invoice</td><td><b>INV-004567</b></td></tr>
+        <tr><td>Date</td><td>Oct 27, 2026</td></tr>
+        <tr><td>Terms</td><td>Net 30</td></tr>
+        <tr><td>Due</td><td><b>Nov 26, 2026</b></td></tr>
+        <tr><td>Sales order</td><td>SO-00123</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="addr">
+    <div><div class="label">Bill to</div><b>Acme Builders, Inc.</b><br>Accounts Payable<br>500 Market Street<br>Springfield, OR 97477</div>
+    <div><div class="label">Ship to</div><b>Acme Builders, Job #212</b><br>88 Riverside Drive<br>Eugene, OR 97401</div>
+  </div>
+
+  <table class="lines">
+    <thead><tr><th style="width:16%">Item</th><th>Description</th><th class="num" style="width:9%">Qty</th><th class="num" style="width:13%">Price</th><th class="num" style="width:14%">Amount</th></tr></thead>
+    <tbody>
+      <tr><td class="sku">BOLT-14</td><td>Hex bolt 1/4" zinc</td><td class="num">600</td><td class="num">0.85</td><td class="num">510.00</td></tr>
+      <tr><td class="sku">PNT-WHT-GL</td><td>White latex, gallon</td><td class="num">12</td><td class="num">32.50</td><td class="num">390.00</td></tr>
+      <tr><td class="sku">PUMP-X</td><td>Sump pump 1/2 HP<div class="note">Shipped directly from the manufacturer</div></td><td class="num">1</td><td class="num">1,240.00</td><td class="num">1,240.00</td></tr>
+      <tr><td class="sku">DEL</td><td>Delivery, job site</td><td class="num">1</td><td class="num">75.00</td><td class="num">75.00</td></tr>
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td>Subtotal</td><td class="num">2,215.00</td></tr>
+    <tr><td>Payments and credits</td><td class="num">−500.00</td></tr>
+    <tr class="due"><td>Balance due</td><td class="num">$1,715.00</td></tr>
+  </table>
+
+  <div class="notes"><div class="label">Notes</div>Please make checks payable to DNB Supply Co. Thank you for your business.<br>Questions about this invoice: billing@example.com</div>
+
+
+</div>
+</body>
+</html>
