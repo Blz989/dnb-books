@@ -164,12 +164,14 @@ class Match(models.Model):
     bank_transaction = models.OneToOneField(BankTransaction, on_delete=models.CASCADE, related_name="match")
     journal_entry = models.ForeignKey(
         JournalEntry, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_matches")
-    sales_payment = models.ForeignKey(
-        Payment, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_matches")
-    deposit = models.ForeignKey(Deposit, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_matches")
-    refund = models.ForeignKey(Refund, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_matches")
-    vendor_payment = models.ForeignKey(
-        VendorPayment, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_matches")
+    # One-to-one: a document can match only one bank transaction. A journal entry can match two (a transfer
+    # is seen from both accounts), so that one stays a foreign key.
+    sales_payment = models.OneToOneField(
+        Payment, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_match")
+    deposit = models.OneToOneField(Deposit, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_match")
+    refund = models.OneToOneField(Refund, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_match")
+    vendor_payment = models.OneToOneField(
+        VendorPayment, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_match")
     confirmed_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     confirmed_at = models.DateTimeField(auto_now_add=True)
 

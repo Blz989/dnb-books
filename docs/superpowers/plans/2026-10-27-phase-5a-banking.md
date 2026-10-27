@@ -210,7 +210,7 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Void hook `release_matches(entry)`: a `Match` whose target's journal entry is the voided one is deleted, and its transaction goes back to NEW (Review Focus 5).
   - "Already matched" means a `Match` exists for the target. Candidates exclude matched targets and void documents.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A vendor check payment with the check number scores 100 and wins over an amount-only document.
   - A deposit total matches.
   - An ACH customer payment matches within 10 days, but not at 11.
@@ -219,10 +219,10 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Exclude and restore.
   - Voiding a matched payment returns its transaction to NEW.
   - A matched target is not offered again.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review against `finance:reconciliation` and record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: bank feed inbox`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review against `finance:reconciliation` and record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: bank feed inbox`
 
 ---
 
