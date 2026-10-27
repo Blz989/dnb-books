@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -21,9 +21,14 @@ from core.roles import require_admin
 from ledger.errors import PostingError
 from ledger.models import Account, AccountType
 
-from .errors import NegativeStockWarning, SettingsMissingError, StockError
-from .forms import REASONS, AdjustDateForm, ItemForm, MovementsForm, ValueAdjustForm, VoidMovementForm
-from .models import Category, InventorySettings, Item, ItemType, MovementKind, StockMovement, SubmittedToken
+from . import counts as count_service
+from .errors import CountError, CountNeedsConfirmation, NegativeStockWarning, SettingsMissingError, StockError
+from .forms import (
+    REASONS, AdjustDateForm, CountPostForm, CountStartForm, ItemForm, MovementsForm, ValueAdjustForm, VoidMovementForm,
+)
+from .models import (
+    Category, CountStatus, InventorySettings, Item, ItemType, MovementKind, StockCount, StockMovement, SubmittedToken,
+)
 from .stock import (
     StockLine, current_unit_cost, effective_total, on_hand, record_movements, record_value_adjustment, stock_value,
     void_movement,
@@ -369,3 +374,116 @@ def void_movement_view(request, pk):
         return render(request, "items/void_movement.html", {**context, "form": form, **_error_messages(exc)})
     messages.success(request, f"Voided the {movement.get_kind_display().lower()} for {movement.item.sku}.")
     return redirect(reverse("items:detail", args=[movement.item.sku]))
+
+
+# ---- counts ----
+
+@login_required
+def count_list(request):
+    counts = StockCount.objects.select_related("started_by", "category").annotate(
+        line_total=Count("lines"), line_counted=Count("lines", filter=Q(lines__counted_quantity__isnull=False)))
+    return render(request, "items/count_list.html", {"counts": counts, "nav_active": "counts"})
+
+
+@login_required
+def count_start(request):
+    form = CountStartForm(request.POST or None, initial={"name": f"Count {_today().isoformat()}", "scope": "ALL"})
+    if request.method == "POST" and form.is_valid():
+        d = form.cleaned_data
+        category = d["category"] if d["scope"] == "CATEGORY" else None
+        count = count_service.start_count(name=d["name"], category=category, user=request.user)
+        messages.success(request, f"Started {count.name}. Count the shelves, then enter the numbers here.")
+        return redirect(reverse("items:count-enter", args=[count.pk]))
+    return render(request, "items/count_start.html", {"form": form, "nav_active": "counts"})
+
+
+def _open_count_or_redirect(request, pk):
+    count = get_object_or_404(StockCount, pk=pk)
+    if count.status != CountStatus.OPEN:
+        messages.error(request, f"This count is already {count.get_status_display()}.")
+        return count, redirect(reverse("items:counts"))
+    return count, None
+
+
+@login_required
+def count_enter(request, pk):
+    count, redirected = _open_count_or_redirect(request, pk)
+    if redirected:
+        return redirected
+    q = request.GET.get("q", "").strip()
+    lines = count.lines.select_related("item")
+    if q:
+        lines = lines.filter(Q(item__sku__icontains=q) | Q(item__name__icontains=q))
+    page = Paginator(lines, PAGE_SIZE).get_page(request.GET.get("page"))
+    errors = []
+    if request.method == "POST":
+        by_item = {l.item_id: l for l in page.object_list}
+        entered: dict[int, int | None] = {}
+        for key, value in request.POST.items():
+            if not key.startswith("count-") or not key[6:].isdigit() or int(key[6:]) not in by_item:
+                continue
+            item_id, value = int(key[6:]), value.strip()
+            if value == "":
+                entered[item_id] = None
+                continue
+            try:
+                entered[item_id] = int(value)
+            except ValueError:
+                errors.append(f"{by_item[item_id].item.sku}: quantity must be a whole number.")
+        if not errors:
+            try:
+                count_service.enter_counts(count, entered, request.user)
+            except CountError as exc:
+                errors.append(str(exc))
+        if not errors:
+            if "review" in request.POST:
+                return redirect(reverse("items:count-review", args=[count.pk]))
+            messages.success(request, "Counts saved.")
+            return redirect(request.get_full_path())
+    for line in page.object_list:
+        # After a bad entry, show what the user typed instead of what is saved.
+        line.typed = request.POST.get(f"count-{line.item_id}") if errors else None
+    counted = count.lines.filter(counted_quantity__isnull=False).count()
+    return render(request, "items/count_enter.html", {
+        "count": count, "page": page, "q": q, "errors": errors, "counted": counted, "total": count.lines.count(),
+        "nav_active": "counts"})
+
+
+@login_required
+def count_review(request, pk):
+    count = get_object_or_404(StockCount, pk=pk)
+    open_count = count.status == CountStatus.OPEN
+    diffs = count_service.review(count)
+    flagged = [d for d in diffs if d.moved_since_start]
+    form = CountPostForm(request.POST or None, initial={"date": _today().isoformat()})
+    context = {
+        "count": count, "diffs": diffs, "flagged": flagged, "form": form, "open": open_count, "nav_active": "counts",
+        "uncounted": count.lines.filter(counted_quantity__isnull=True).count(),
+        "changes": sum(1 for d in diffs if d.difference != 0),
+    }
+    if request.method == "POST" and open_count and form.is_valid():
+        try:
+            movements = count_service.post_count(
+                count, date=form.cleaned_data["date"], user=request.user, confirm_moved=form.cleaned_data["confirm_moved"])
+        except CountNeedsConfirmation as exc:
+            context["errors"] = [
+                f"These items moved since the count started: {', '.join(exc.skus)}. "
+                "Check them, then tick the box to post."]
+        except (StockError, PostingError) as exc:
+            context.update(_error_messages(exc))
+        else:
+            n = len(movements)
+            messages.success(request, f"Posted {count.name}: {n} adjustment{'s' if n != 1 else ''}.")
+            return redirect(reverse("items:counts"))
+    return render(request, "items/count_review.html", context)
+
+
+@login_required
+@require_POST
+def count_cancel(request, pk):
+    count, redirected = _open_count_or_redirect(request, pk)
+    if redirected:
+        return redirected
+    count_service.cancel_count(count, request.user)
+    messages.success(request, f"Canceled {count.name}.")
+    return redirect(reverse("items:counts"))

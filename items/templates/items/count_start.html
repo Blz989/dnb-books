@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+{% block title %}Start a count{% endblock %}
+{% block page_title %}Start a count{% endblock %}
+{% block page_subtitle %}<div class="sub">Expected quantities are saved now. Enter what you count without seeing them.</div>{% endblock %}
+{% block content %}
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  {% for field in form %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn primary">Start count</button>
+  <a class="btn" href="{% url 'items:counts' %}">Cancel</a>
+</form>
+</div></div>
+{% endblock %}

@@ -168,3 +168,6 @@ def test_seed_demo_builds_consistent_books(db):
     v = inventory_valuation(timezone.localdate())
     assert v.difference == D("0.00") and len(v.rows) >= 30
     assert len(negative_stock()) == 1
+    from items.models import StockCount
+
+    assert StockCount.objects.count() == 2

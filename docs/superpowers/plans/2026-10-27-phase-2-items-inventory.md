@@ -526,12 +526,12 @@ def test_bom_and_mixed_case_values(): ...
 - Produces URLs: `items:counts` `/items/counts/`, `items:count-start` `/items/counts/new/`, `items:count-enter` `/items/counts/<int:pk>/` (paged by 50 lines, filter by SKU/name, saves on each page submit), `items:count-review` `/items/counts/<int:pk>/review/` (differences table, flagged rows marked "Moved since count started", a "I've checked the flagged items" checkbox required when any are flagged, date field, Post button), `items:count-cancel` `/items/counts/<int:pk>/cancel/` (POST).
 - Enter screen does **not** show expected quantities (blind count); review does.
 
-- [ ] **Step 1: Write failing tests** (start creates lines; entering on page 2 keeps page 1 values; review shows differences; posting without the checkbox when flagged shows the `CountNeedsConfirmation` SKUs; posted count is read-only)
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (extend `seed_demo` with one open count)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of count list, start, enter, review with a flagged item, posted count; light and dark; send.
-- [ ] **Step 6: Commit** `feat: physical count screens`
+- [x] **Step 1: Write failing tests** (start creates lines; entering on page 2 keeps page 1 values; review shows differences; posting without the checkbox when flagged shows the `CountNeedsConfirmation` SKUs; posted count is read-only)
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (extend `seed_demo` with one open count)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of count list, start, enter, review with a flagged item, posted count; light and dark; send.
+- [x] **Step 6: Commit** `feat: physical count screens`
 
 ---
 

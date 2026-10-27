@@ -8,7 +8,8 @@ from ledger.models import Account, AccountSubtype
 
 from .stock import on_hand
 from .models import (
-    RESERVED_MESSAGE, RESERVED_SKUS, SKU_MESSAGE, SKU_PATTERN, CostingMethod, InventorySettings, Item, ItemType,
+    RESERVED_MESSAGE, RESERVED_SKUS, SKU_MESSAGE, SKU_PATTERN, Category, CostingMethod, InventorySettings, Item,
+    ItemType,
 )
 
 
@@ -138,3 +139,22 @@ class AdjustDateForm(forms.Form):
     date = forms.DateField(
         label="Date", input_formats=["%Y-%m-%d"], widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         error_messages={"invalid": DATE_ERROR, "required": DATE_ERROR})
+
+
+class CountStartForm(forms.Form):
+    name = forms.CharField(label="Count name", max_length=100, error_messages={"required": "Enter a name for this count."})
+    scope = forms.ChoiceField(label="Count", choices=[("ALL", "All active stock items"), ("CATEGORY", "One category")])
+    category = forms.ModelChoiceField(Category.objects.all(), required=False, label="Category")
+
+    def clean(self):
+        data = super().clean()
+        if data.get("scope") == "CATEGORY" and not data.get("category"):
+            self.add_error("category", "Choose a category.")
+        return data
+
+
+class CountPostForm(forms.Form):
+    date = forms.DateField(
+        label="Post on", input_formats=["%Y-%m-%d"], widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        error_messages={"invalid": DATE_ERROR, "required": DATE_ERROR})
+    confirm_moved = forms.BooleanField(required=False, label="I've checked the flagged items")

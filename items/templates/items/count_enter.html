@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% block title %}{{ count.name }}{% endblock %}
+{% block page_title %}{{ count.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ counted }} of {{ total }} items counted. Leave a box empty to skip an item.</div>{% endblock %}
+{% block page_actions %}
+  <a class="btn" href="{% url 'items:count-review' count.pk %}">Review</a>
+  <form method="post" action="{% url 'items:count-cancel' count.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Cancel count</button></form>
+{% endblock %}
+{% block content %}
+{% include "items/_errors.html" %}
+<div class="card">
+  <form method="get" class="filters">
+    <label class="grow">Find<input type="search" name="q" value="{{ q }}" placeholder="SKU or name"></label>
+    <button type="submit" class="btn">Search</button>
+  </form>
+  <form method="post">{% csrf_token %}
+  <table class="data">
+    <thead><tr><th>SKU</th><th>Name</th><th>Unit</th><th class="num">Counted</th></tr></thead>
+    <tbody>
+    {% for l in page.object_list %}
+      <tr><td><span class="sku">{{ l.item.sku }}</span></td><td>{{ l.item.name }}</td><td>{{ l.item.unit }}</td>
+          <td class="num"><input type="text" inputmode="numeric" name="count-{{ l.item_id }}" style="width:6rem;text-align:right"
+            value="{% if l.typed is not None %}{{ l.typed }}{% elif l.counted_quantity is not None %}{{ l.counted_quantity }}{% endif %}"></td></tr>
+    {% empty %}<tr><td colspan="4" class="empty">No items match.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>
+      {% if page.has_previous %}<a href="?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+      {% if page.has_next %}<a href="?{% if q %}q={{ q|urlencode }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}
+    </span>
+  </div>
+  <div class="body">
+    <button type="submit" class="btn primary">Save counts</button>
+    <button type="submit" name="review" value="1" class="btn">Save and review</button>
+  </div>
+  </form>
+</div>
+{% endblock %}

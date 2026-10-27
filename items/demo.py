@@ -7,6 +7,7 @@ from django.utils import timezone
 from ledger.models import Account
 
 from .models import Category, CostingMethod, InventorySettings, Item, ItemType, MovementKind
+from . import counts
 from .stock import StockLine, record_movements, record_value_adjustment
 
 D = Decimal
@@ -104,3 +105,24 @@ def seed_items(user):
     record_movements(kind=adj, date=opening_day - timedelta(days=5), user=user, lines=[
         StockLine(items["TAPE-BL-2"], 40, reason="Late-entered receipt", unit_cost=D("2.9000"))])
     return items
+
+
+def seed_counts(user, items):
+    """One posted count and one open count with a flagged item."""
+    today = timezone.localdate()
+    first = today.replace(day=1)
+
+    supplies = Category.objects.get(name="Supplies")
+    done = counts.start_count(name="September supplies count", category=supplies, user=user)
+    counts.enter_counts(done, {items["GLOVE-NIT-M"].pk: 50, items["TAPE-DUCT"].pk: 90, items["ZIP-14"].pk: 70}, user)
+    counts.post_count(done, date=first - timedelta(days=2), user=user)
+
+    open_count = counts.start_count(name="October full count", category=None, user=user)
+    # Stock moves after the snapshot, so this item shows as flagged on the review screen.
+    record_movements(kind=MovementKind.ADJUSTMENT, date=today, user=user,
+                     lines=[StockLine(items["TAPE-BL-2"], -2, reason="Sample")])
+    counts.enter_counts(open_count, {
+        items["NAIL-16D"].pk: 28, items["WIRE-12-250"].pk: 18, items["HOSE-50"].pk: 21,
+        items["TAPE-BL-2"].pk: 241, items["BOLT-38"].pk: 412, items["NUT-14"].pk: 1500,
+        items["FAUCET-KIT"].pk: 9, items["VALVE-BALL-12"].pk: 59,
+    }, user)

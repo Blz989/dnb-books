@@ -1,0 +1,39 @@
+{% extends "core/base.html" %}
+{% block title %}Review {{ count.name }}{% endblock %}
+{% block page_title %}{{ count.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><span class="tag{% if not open %} ns{% endif %}">{{ count.get_status_display|capfirst }}</span>
+  {{ changes }} item{{ changes|pluralize }} to change{% if uncounted %} · {{ uncounted }} not counted (ignored){% endif %}</div>{% endblock %}
+{% block page_actions %}{% if open %}<a class="btn" href="{% url 'items:count-enter' count.pk %}">Back to counting</a>{% endif %}{% endblock %}
+{% block content %}
+{% include "items/_errors.html" %}
+{% if flagged and open %}<div class="banner warning">{{ flagged|length }} item{{ flagged|length|pluralize }} moved since the count started. Check the flagged rows before posting.</div>{% endif %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>SKU</th><th>Name</th><th class="num">Expected</th><th class="num">Counted</th><th class="num">On hand now</th><th class="num">Difference</th><th></th></tr></thead>
+  <tbody>
+  {% for d in diffs %}
+    <tr>
+      <td><span class="sku">{{ d.line.item.sku }}</span></td><td>{{ d.line.item.name }}</td>
+      <td class="num">{{ d.line.expected_quantity }}</td><td class="num">{{ d.line.counted_quantity }}</td>
+      <td class="num">{{ d.current_on_hand }}</td>
+      <td class="num{% if d.difference < 0 %} neg{% endif %}">{% if d.difference > 0 %}+{% endif %}{{ d.difference }}</td>
+      <td>{% if d.moved_since_start %}<span class="tag ns">Moved since count started</span>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="empty">No counts entered yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if open %}
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  <div class="form-row" style="max-width:14rem"><label for="{{ form.date.id_for_label }}">{{ form.date.label }}</label>{{ form.date }}
+    {% for e in form.date.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  {% if flagged %}<div class="form-row"><label><input type="checkbox" name="confirm_moved"{% if form.confirm_moved.value %} checked{% endif %}> {{ form.confirm_moved.label }}</label></div>{% endif %}
+  <button type="submit" class="btn primary">Post count</button>
+</form>
+</div></div>
+{% elif count.posted_at %}
+<div class="banner ok">Posted {{ count.posted_at|date:"Y-m-d" }} by {{ count.posted_by.get_username }}. This count can't be changed.</div>
+{% endif %}
+{% endblock %}
