@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Check calibration</title></head>
+<body>
+<div class="sheet">
+  {% for v in vertical %}<div class="vline{% if v.major %} major{% endif %}" style="left:{{ v.at }}in"></div>{% if v.label is not None %}<div class="vlabel" style="left:{{ v.at }}in">{{ v.label }}</div>{% endif %}{% endfor %}
+  {% for h in horizontal %}<div class="hline{% if h.major %} major{% endif %}" style="top:{{ h.at }}in"></div>{% if h.label is not None %}<div class="hlabel" style="top:{{ h.at }}in">{{ h.label }}</div>{% endif %}{% endfor %}
+  {% for b in boxes %}<div class="box" style="left:{{ b.left }}in;top:{{ b.top }}in;width:{{ b.width }}in;height:{{ b.height }}in"><span>{{ b.label }}</span></div>{% endfor %}
+  <div class="note" style="left:0.45in;top:5.7in">
+    <h3>Check calibration · {{ account }}</h3>
+    <p>Offset X {{ offset_x }} in · Offset Y {{ offset_y }} in</p>
+    <p>Print at 100% (actual size), not "fit to page". Hold this sheet against a voucher check in front of a light.
+    Each box should sit on its line on the stock. Grid lines are 0.25 in apart; bold lines every inch from the top left of the page.</p>
+  </div>
+</div>
+</body></html>

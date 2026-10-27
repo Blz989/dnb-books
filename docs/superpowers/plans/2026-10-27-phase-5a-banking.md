@@ -357,17 +357,17 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - `calibration_pdf(bank_account) -> bytes`: field outlines, a 0.25 in grid, labels, and the current offsets printed.
   - `save_layout(bank_account, *, fields: dict, offset_x: Decimal, offset_y: Decimal, user)`: admin; offsets between −0.50 and 0.50 ("Offsets must be between -0.50 and 0.50 inches.").
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The context for a two-bill payment matches the mockup values.
   - Stub overflow at 13 bills.
   - The PDF starts with `%PDF`.
   - An offset of 0.10 shifts every field's `left` in the rendered HTML by 0.10 in.
   - The offset range is enforced.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots:** rasterize the check PDF and the calibration PDF with `pdftoppm`, compare the check against `docs/design/check-mockup.html`, and send both.
-- [ ] **Step 6: Commit** `feat: check and calibration PDFs`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots:** rasterize the check PDF and the calibration PDF with `pdftoppm`, compare the check against `docs/design/check-mockup.html`, and send both.
+- [x] **Step 6: Commit** `feat: check and calibration PDFs`
 
 ---
 

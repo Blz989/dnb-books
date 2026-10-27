@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Check {{ c.number }}</title></head>
+<body>
+<div class="sheet">
+  {% if p.date %}<div class="f" style="left:{{ p.date.left }}in;top:{{ p.date.top }}in;font-size:{{ p.date.size }}pt">{{ c.date }}</div>{% endif %}
+  {% if p.payee %}<div class="f payee" style="left:{{ p.payee.left }}in;top:{{ p.payee.top }}in;font-size:{{ p.payee.size }}pt">{{ c.payee }}</div>{% endif %}
+  {% if p.amount %}<div class="f amt" style="left:{{ p.amount.left }}in;top:{{ p.amount.top }}in;font-size:{{ p.amount.size }}pt">{{ c.amount }}</div>{% endif %}
+  {% if p.amount_words %}<div class="f" style="left:{{ p.amount_words.left }}in;top:{{ p.amount_words.top }}in;font-size:{{ p.amount_words.size }}pt">{{ c.amount_words }}</div>{% endif %}
+  {% if p.memo %}<div class="f" style="left:{{ p.memo.left }}in;top:{{ p.memo.top }}in;font-size:{{ p.memo.size }}pt">{{ c.memo }}</div>{% endif %}
+  {% if p.address %}<div class="f address" style="left:{{ p.address.left }}in;top:{{ p.address.top }}in;font-size:{{ p.address.size }}pt">{% for line in c.address_lines %}{{ line }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>{% endif %}
+  {% if p.stub1 %}{% include "banking/_check_stub.html" with at=p.stub1 show_paid_from=False %}{% endif %}
+  {% if p.stub2 %}{% include "banking/_check_stub.html" with at=p.stub2 show_paid_from=True %}{% endif %}
+</div>
+</body></html>
