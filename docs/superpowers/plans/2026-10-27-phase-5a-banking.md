@@ -390,17 +390,17 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - "Sync now" (admin) runs `sync_item` for that item and shows the counts.
 - Import: upload (OFX/QFX/CSV, max 5 MB), then CSV mapping with a 5-row preview (saved to `csv_mapping`), then the result counts.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The account list shows balances and the inbox count.
   - Link is admin only and hidden without Plaid settings.
   - Exchange stores an encrypted token (with the fake client).
   - Import flows for OFX and for CSV with the mapping saved and reused.
   - A file too large shows "The file is too large (5 MB limit)."
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: checking, savings, card, and loan accounts; imported statement rows)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of bank accounts, the link page (Plaid not set up message), the import mapping preview, and the import result. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: bank account, link, and import screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: checking, savings, card, and loan accounts; imported statement rows)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of bank accounts, the link page (Plaid not set up message), the import mapping preview, and the import result. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: bank account, link, and import screens`
 
 ---
 

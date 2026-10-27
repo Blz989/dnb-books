@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}{% if mode == "update" %}Re-link {{ item.institution_name }}{% else %}Link with Plaid{% endif %}{% endblock %}
+{% block page_title %}{% if mode == "update" %}Re-link {{ item.institution_name }}{% else %}Link with Plaid{% endif %}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if mode == "update" %}Sign in to the bank again so syncing can continue{% else %}Connect a bank, card, or loan so its transactions arrive in the inbox{% endif %}</div>{% endblock %}
+{% block content %}
+{% if not configured %}
+<div class="banner info">{{ not_configured }}</div>
+<p><a href="{% url 'banking:accounts' %}">Back to bank accounts</a>. File import works without Plaid.</p>
+{% else %}
+<div class="card"><div class="body">
+  <p>Plaid opens in a pop-up where you sign in to the bank. DNB Books never sees the bank password.</p>
+  <div id="link-error" class="banner error" hidden></div>
+  <button type="button" class="btn primary" id="link-button" data-mode="{{ mode }}" data-csrf="{{ csrf_token }}"
+    data-token-url="{{ token_url }}"{% if mode == "update" %} data-done-url="{{ done_url }}"{% else %} data-exchange-url="{{ exchange_url }}"{% endif %}>{% if mode == "update" %}Re-link{% else %}Link with Plaid{% endif %}</button>
+  <a class="btn" href="{% url 'banking:accounts' %}">Cancel</a>
+</div></div>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script src="{% static 'banking/link.js' %}" defer></script>
+{% endif %}
+{% endblock %}

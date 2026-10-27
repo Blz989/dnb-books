@@ -70,4 +70,7 @@ class Command(BaseCommand):
         seed_counts(user, items)
         seed_sales(user, items)
         seed_purchasing(user, items)
+        from banking.demo import seed_banking
+
+        seed_banking(user)
         self.stdout.write("Demo data ready. Log in as demo / demo-pass-123.")

@@ -1,0 +1,14 @@
+{% extends "core/base.html" %}
+{% block title %}Import result{% endblock %}
+{% block page_title %}Import finished{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ account.ledger_account }}</div>{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="l">New in the inbox</div><div class="v">{{ added }} added</div></div>
+  <div class="kpi"><div class="l">Already imported</div><div class="v">{{ skipped }} skipped</div></div>
+  <div class="kpi{% if dups %} warn{% endif %}"><div class="l">Also arrived from the other source</div><div class="v">{{ dups }} {{ dup_word }}</div><div class="note">{% if dups %}Saved as excluded. Restore any that are real.{% else %}None found.{% endif %}</div></div>
+</div>
+<a class="btn primary" href="/banking/inbox/?account={{ account.pk }}">Open the inbox</a>
+<a class="btn" href="{% url 'banking:import-file' account.pk %}">Import another file</a>
+<a class="btn" href="{% url 'banking:accounts' %}">Bank accounts</a>
+{% endblock %}

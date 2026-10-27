@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+{% block title %}Import file{% endblock %}
+{% block page_title %}Import a statement file{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ account.ledger_account }}{% if account.mask %} ···· {{ account.mask }}{% endif %}</div>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}{% if hint %}<div>{{ hint }}</div>{% endif %}</div></div>{% endif %}
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  <div class="card"><div class="body">
+    <div class="form-row"><label for="{{ form.file.id_for_label }}">{{ form.file.label }}</label>{{ form.file }}
+      <span class="help">OFX, QFX, or CSV, up to 5 MB. Rows already imported are skipped.</span>
+      {% for e in form.file.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    <div class="form-row"><label><input type="checkbox" name="review_mapping" value="on"{% if form.review_mapping.value %} checked{% endif %}> {{ form.review_mapping.label }}</label>
+      <span class="help">{% if account.csv_mapping %}This account has a saved mapping. Tick this to change it.{% else %}The first CSV for an account asks which column is which.{% endif %}</span></div>
+  </div></div>
+  <button type="submit" class="btn primary">Upload</button>
+  <a class="btn" href="{% url 'banking:accounts' %}">Cancel</a>
+</form>
+{% endblock %}
