@@ -207,7 +207,7 @@ tests/ test_vendors.py, test_purchasing_models.py, test_purchase_orders.py, test
     4. Set each invoice line's `drop_ship_billed = allocated == quantity`.
   - `on_invoice_changed(invoice) -> None` calls `rebuild` for the invoice's drop-ship SO lines, including the lines a just-edited invoice used to have (taken from its latest `InvoiceRevision` snapshot).
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```python
 def test_stock_bill_raises_stock_at_bill_price(...):    # PO 1000 @0.50; bill 500 @0.48 → on_hand +500, layer 0.48; A/P 240.00
@@ -223,10 +223,10 @@ def test_bill_before_invoice_allocates_on_invoice(...): # bill first, then invoi
 def test_invoice_void_releases_allocation(...):
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review against the `finance:journal-entry` skill and record findings in the commit body.
-- [ ] **Step 4: Run full suite, expect PASS** (Phase 3 tests unchanged)
-- [ ] **Step 5: Commit** `feat: bills with stock, drop-ship, and expense lines`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review against the `finance:journal-entry` skill and record findings in the commit body.
+- [x] **Step 4: Run full suite, expect PASS** (Phase 3 tests unchanged)
+- [x] **Step 5: Commit** `feat: bills with stock, drop-ship, and expense lines`
 
 ---
 

@@ -108,15 +108,14 @@ def test_credit_unapplied_and_credit_application(bill, vendor, admin_user, expen
     assert pb.vendor_credit_unapplied(credit, date(2026, 3, 6)) == D("25.00")
 
 
-def test_invoice_changed_hook_calls_registered_functions(db):
+def test_invoice_changed_hook_calls_registered_functions(db, monkeypatch):
     from sales import hooks
 
     seen = []
+    monkeypatch.setattr(hooks, "_invoice_changed", [])
     hooks.register_invoice_changed(seen.append)
-    try:
-        hooks.invoice_changed("INV")
-    finally:
-        hooks._invoice_changed.remove(seen.append)
+    hooks.register_invoice_changed(seen.append)  # registering twice calls once
+    hooks.invoice_changed("INV")
     assert seen == ["INV"]
 
 

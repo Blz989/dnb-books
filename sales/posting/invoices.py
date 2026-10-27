@@ -16,6 +16,7 @@ from core.roles import require_admin
 from ledger.periods import assert_open
 from ledger.posting import LineSpec, post_entry, void_entry
 
+from .. import hooks
 from ..errors import InvoiceError
 from ..models import (
     DocStatus, DocType, Fulfillment, Invoice, InvoiceLine, InvoiceRevision, OrderStatus, SalesOrder, SalesOrderLine, SalesSettings,
@@ -147,6 +148,7 @@ def create_invoice(
         post_lines(invoice, lines, user=user, allow_negative=allow_negative)
         if sales_order is not None:
             refresh_status(sales_order)
+        hooks.invoice_changed(invoice)
         return invoice
 
 
@@ -247,6 +249,7 @@ def edit_invoice(
         post_lines(current, lines, user=user, allow_negative=allow_negative)
         if current.sales_order_id:
             refresh_status(current.sales_order)
+        hooks.invoice_changed(current)
     invoice.refresh_from_db()
     return invoice
 
@@ -280,5 +283,6 @@ def void_invoice(invoice: Invoice, *, user, reason: str, date: date_type | None 
         current.save()
         if current.sales_order_id:
             refresh_status(current.sales_order)
+        hooks.invoice_changed(current)
     invoice.refresh_from_db()
     return invoice
