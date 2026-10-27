@@ -148,7 +148,7 @@ All Phase 1 view tests must still pass unchanged.
 - Admin: register `Category` and `InventorySettings` only (setup). Items are managed on custom screens.
 - `conftest.py`: fixtures `inventory_account` (1300, INVENTORY), `cogs_account` (5000), `shrinkage_account` (6500, EXPENSE "Inventory Shrinkage"), `writedown_account` (6510, EXPENSE "Inventory Write-down"), `opening_equity` (3900, EQUITY "Opening Balance Equity"), `inv_settings` (all six set, income = `revenue`), `make_item(sku, method=FIFO, purchase_cost="1.00")` factory; `items_purge` fixture mirroring `ledger_purge` for items tables (drop items triggers, delete items rows, reinstall), to be listed before `ledger_purge`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_sku_case_insensitive_unique(make_item):
@@ -173,10 +173,10 @@ def test_settings_load_is_singleton(db):
     assert InventorySettings.load().pk == InventorySettings.load().pk
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement models, errors, migrations, admin, roles, fixtures**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: items models with immutable stock movements`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement models, errors, migrations, admin, roles, fixtures**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: items models with immutable stock movements`
 
 ---
 

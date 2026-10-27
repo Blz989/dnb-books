@@ -150,3 +150,78 @@ def file_db_with_entries(transactional_db, ledger_purge, settings, admin_user, c
     for amount in ("100.00", "250.50", "19.99"):
         post_entry(date=date(2026, 1, 5), user=admin_user, lines=[
             LineSpec(cash, debit=Decimal(amount)), LineSpec(revenue, credit=Decimal(amount))])
+
+
+# ---- items fixtures (Phase 2, Task 2) ----
+@pytest.fixture
+def inventory_account(db):
+    return _account("1300", "Inventory Asset", AccountType.ASSET, AccountSubtype.INVENTORY)
+
+
+@pytest.fixture
+def cogs_account(db):
+    return _account("5000", "Cost of Goods Sold", AccountType.EXPENSE, AccountSubtype.COST_OF_GOODS_SOLD)
+
+
+@pytest.fixture
+def shrinkage_account(db):
+    return _account("6500", "Inventory Shrinkage", AccountType.EXPENSE, AccountSubtype.EXPENSE)
+
+
+@pytest.fixture
+def writedown_account(db):
+    return _account("6510", "Inventory Write-down", AccountType.EXPENSE, AccountSubtype.EXPENSE)
+
+
+@pytest.fixture
+def opening_equity(db):
+    return _account("3900", "Opening Balance Equity", AccountType.EQUITY, AccountSubtype.EQUITY)
+
+
+@pytest.fixture
+def inv_settings(db, inventory_account, cogs_account, revenue, shrinkage_account, writedown_account, opening_equity):
+    from items.models import InventorySettings
+
+    s = InventorySettings.load()
+    s.default_inventory_account = inventory_account
+    s.default_cogs_account = cogs_account
+    s.default_income_account = revenue
+    s.shrinkage_account = shrinkage_account
+    s.writedown_account = writedown_account
+    s.opening_equity_account = opening_equity
+    s.save()
+    return s
+
+
+@pytest.fixture
+def make_item(db, inventory_account, cogs_account, revenue):
+    from items.models import CostingMethod, Item, ItemType
+
+    def factory(sku, method=CostingMethod.FIFO, purchase_cost="1.00", **kwargs):
+        fields = dict(
+            sku=sku, name=f"Item {sku}", item_type=ItemType.STOCK, unit="each",
+            purchase_cost=Decimal(purchase_cost), costing_method=method,
+            income_account=revenue, cogs_account=cogs_account, inventory_account=inventory_account,
+        )
+        fields.update(kwargs)
+        return Item.objects.create(**fields)
+
+    return factory
+
+
+@pytest.fixture
+def items_purge():
+    """Like ledger_purge, for the items tables. List it before ledger_purge."""
+    import importlib
+
+    from django.db import connection
+
+    yield
+    mig = importlib.import_module("items.migrations.0002_immutability_triggers")
+    with connection.cursor() as c:
+        for sql in mig.REVERSE:
+            c.execute(sql)
+        for table in ("items_costrevision", "items_fifolayer", "items_stockmovement"):
+            c.execute(f"DELETE FROM {table}")
+        for sql in mig.FORWARD:
+            c.execute(sql)
