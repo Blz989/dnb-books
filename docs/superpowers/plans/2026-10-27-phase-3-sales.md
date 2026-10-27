@@ -228,11 +228,11 @@ def test_refund_needs_exactly_one_source(db): ...                # IntegrityErro
   - Editing a closed order: "{number} is closed. Reopen it to make changes."
   - No posting.
 
-- [ ] **Step 1: Failing tests:** create; update rules and messages; auto-close and manual close or reopen; `remaining` ignores void invoices.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: sales orders`
+- [x] **Step 1: Failing tests:** create; update rules and messages; auto-close and manual close or reopen; `remaining` ignores void invoices.
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: sales orders`
 
 ---
 
