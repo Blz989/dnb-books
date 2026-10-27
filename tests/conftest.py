@@ -237,3 +237,24 @@ def customer(db):
         billing_address="100 Main St\nSpringfield, IL 62701",
         ship_to_address="Dock 4, 200 Industrial Way\nSpringfield, IL 62702",
     )
+
+
+# ---- sales fixtures (Phase 3, Task 3) ----
+@pytest.fixture
+def bank(cash):
+    return cash
+
+
+@pytest.fixture
+def sales_settings(db, ar):
+    from sales.models import SalesSettings
+
+    undeposited = _account("1250", "Undeposited Funds", AccountType.ASSET, AccountSubtype.OTHER_CURRENT_ASSET)
+    returns = _account("4900", "Sales returns and allowances", AccountType.INCOME, AccountSubtype.INCOME)
+    s = SalesSettings.load()
+    s.ar_account = ar
+    s.undeposited_account = undeposited
+    s.returns_account = returns
+    s.company_name = "DNB Supply"
+    s.save()
+    return s

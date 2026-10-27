@@ -181,7 +181,7 @@ def test_system_void_movement_skips_admin(...): ...
   - `customer_balance(customer, as_of=None)`.
   - An invoice counts as of a date when `date <= as_of` and it is not voided on or before `as_of`. Payments and credit notes, the same.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```python
 def test_numbers_are_sequential_and_padded(db):
@@ -199,10 +199,10 @@ def test_refund_needs_exactly_one_source(db): ...                # IntegrityErro
 
 `conftest.py` gains `sales_settings` (A/R 1200, Undeposited Funds 1250 OTHER_CURRENT_ASSET, Sales returns 4900 INCOME) and a `bank` (1000 BANK) fixture.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: sales models, numbering, and balances`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: sales models, numbering, and balances`
 
 ---
 
