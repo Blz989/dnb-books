@@ -178,14 +178,19 @@ def replay(method: CostingMethod, moves: Sequence[Move], fallback_unit_cost: Dec
             totals[m.id] = m.value_change
             estimated[m.id] = False
             if fifo:
+                # Spread by each layer's share of value, so a write-down can never push a cheap layer
+                # below zero. Stock with no value yet has nothing to weigh by, so spread by quantity.
+                by_value = phys_value > 0
+                weight = (lambda l: l[3]) if by_value else (lambda l: l[2])
+                whole = phys_value if by_value else phys_qty
+                absorber = max(range(len(layers)), key=lambda i: weight(layers[i]))
                 remaining_change = m.value_change
                 for i, layer in enumerate(layers):
-                    if i == len(layers) - 1:
-                        share = remaining_change
-                    else:
-                        share = round_cents(m.value_change * layer[2] / phys_qty)
-                    layer[3] += share
-                    remaining_change -= share
+                    if i != absorber:
+                        share = round_cents(m.value_change * weight(layer) / whole)
+                        layer[3] += share
+                        remaining_change -= share
+                layers[absorber][3] += remaining_change
                 phys_value = sum((l[3] for l in layers), ZERO)
             else:
                 phys_value += m.value_change

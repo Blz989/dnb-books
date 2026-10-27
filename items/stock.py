@@ -190,6 +190,49 @@ def record_movements(
         return movements
 
 
+def record_opening_batch(*, date: date_type, lines: Sequence[StockLine], user) -> list[StockMovement]:
+    """Opening stock for many items on one date, posted as one journal entry per inventory account.
+
+    Used by the CSV import so a large file doesn't fill the journal with one entry per item.
+    Each item may appear once.
+    """
+    with transaction.atomic():
+        s = _settings()
+        assert_open(date)
+        _check_lines(lines, MovementKind.OPENING)
+        if len({line.item.pk for line in lines}) != len(lines):
+            raise ItemStateError("Each item can appear only once in an opening batch.")
+
+        planned = []
+        for n, line in enumerate(lines, 1):
+            unit_cost = line.unit_cost if line.unit_cost is not None else current_unit_cost(line.item)
+            total = _replay(line.item, Move(SENTINEL_ID, date, line.quantity, unit_cost)).costed[SENTINEL_ID].total_cost
+            planned.append((line, unit_cost, total, _offset_account(MovementKind.OPENING, line, s, n)))
+
+        entries: dict[tuple[int, int], JournalEntry] = {}
+        groups: dict[tuple[int, int], Decimal] = {}
+        for line, _, total, offset in planned:
+            key = (line.item.inventory_account_id, offset.pk)
+            groups[key] = groups.get(key, ZERO) + total
+        for (inventory_id, offset_id), total in groups.items():
+            if total != 0:
+                entries[(inventory_id, offset_id)] = _post_value_change(
+                    delta=total, inventory=Account.objects.get(pk=inventory_id), offset=Account.objects.get(pk=offset_id),
+                    date=date, user=user, memo=f"Opening stock, {len(lines)} items", source_type="items.import",
+                    source_id=date.isoformat())
+
+        movements = []
+        for line, unit_cost, total, offset in planned:
+            movements.append(StockMovement.objects.create(
+                item=line.item, date=date, kind=MovementKind.OPENING, quantity=line.quantity, unit_cost=unit_cost,
+                total_cost=total, offset_account=offset, reason=line.reason, source_type="items.import",
+                journal_entry=entries.get((line.item.inventory_account_id, offset.pk)) if total != 0 else None,
+                created_by=user))
+        for line in lines:
+            replay_item(line.item, trigger_date=date, user=user)
+        return movements
+
+
 def record_value_adjustment(
     *, item: Item, date: date_type, amount: Decimal, reason: str, user, account: Account | None = None,
 ) -> StockMovement:
@@ -220,7 +263,9 @@ def record_value_adjustment(
         return movement
 
 
-def void_movement(movement: StockMovement, *, user, reason: str, date: date_type | None = None) -> StockMovement:
+def void_movement(
+    movement: StockMovement, *, user, reason: str, date: date_type | None = None, allow_negative: bool = False,
+) -> StockMovement:
     """Reverse a movement's full effective value, mark it voided, and recost the item's later outflows."""
     require_admin(user)
     reason = (reason or "").strip()
@@ -235,6 +280,11 @@ def void_movement(movement: StockMovement, *, user, reason: str, date: date_type
             raise ItemStateError("The void date can't be before the movement date.")
         assert_open(when)
         item = current.item
+        if current.quantity > 0 and not allow_negative:
+            held = on_hand(item)
+            if held - current.quantity < 0:
+                raise NegativeStockWarning([
+                    f"{item.sku} has {held} on hand. Voiding this movement will take it to {held - current.quantity}. Continue?"])
         effective = effective_total(current)
         entry = None
         if effective != 0:

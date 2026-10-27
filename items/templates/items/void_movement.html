@@ -13,7 +13,12 @@
     {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
   </div>
   {% endfor %}
+  {% if warnings %}
+  <div class="banner warning"><div>{% for m in warnings %}<div>{{ m }}</div>{% endfor %}</div></div>
+  <button type="submit" name="allow_negative" value="1" class="btn primary">Void anyway</button>
+  {% else %}
   <button type="submit" class="btn primary">Void movement</button>
+  {% endif %}
   <a class="btn" href="{% url 'items:detail' item.sku %}">Cancel</a>
 </form>
 </div></div>
