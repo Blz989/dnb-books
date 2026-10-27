@@ -384,11 +384,11 @@ def test_void_reopens_closed_order(...): ...
   - "{number} was paid by {method} and went straight to the bank."
   - Deposit date before a payment's date: "The deposit date can't be before {number}'s date."
 
-- [ ] **Step 1: Failing tests** (grouping and total; void, then re-deposit; payment void blocked while deposited; each message)
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: deposits`
+- [x] **Step 1: Failing tests** (grouping and total; void, then re-deposit; payment void blocked while deposited; each message)
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: deposits`
 
 ---
 
