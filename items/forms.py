@@ -57,6 +57,7 @@ class ItemForm(forms.ModelForm):
         if self.locked:
             self.fields["item_type"].disabled = True
             self.fields["costing_method"].disabled = True
+            self.fields["inventory_account"].disabled = True  # stock is tied to this account in the ledger
         if not self.instance.pk:
             s = InventorySettings.load()
             self.initial.setdefault("income_account", s.default_income_account_id)
@@ -86,6 +87,8 @@ class ItemForm(forms.ModelForm):
                 self.add_error(None, "The costing method can't change after an item has stock history.")
             if self.data.get("item_type") not in (None, "", self.instance.item_type):
                 self.add_error(None, "The item type can't change after an item has stock history.")
+            if self.data.get("inventory_account") not in (None, "", str(self.instance.inventory_account_id)):
+                self.add_error(None, "The inventory account can't change after an item has stock history.")
         if self.instance.pk and "is_active" in data and not data["is_active"] and self.instance.is_active:
             held = on_hand(self.instance)
             if held != 0:

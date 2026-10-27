@@ -128,12 +128,16 @@ def _check_lines(lines: Sequence[StockLine], kind: MovementKind) -> None:
 
 def _offset_account(kind: MovementKind, line: StockLine, s: InventorySettings, n: int) -> Account:
     if line.account is not None:
-        return line.account
-    if kind == MovementKind.OPENING:
-        return s.opening_equity_account
-    if kind in (MovementKind.ADJUSTMENT, MovementKind.COUNT):
-        return s.shrinkage_account
-    raise ItemStateError(f"Line {n}: choose an account for this movement.")
+        account = line.account
+    elif kind == MovementKind.OPENING:
+        account = s.opening_equity_account
+    elif kind in (MovementKind.ADJUSTMENT, MovementKind.COUNT):
+        account = s.shrinkage_account
+    else:
+        raise ItemStateError(f"Line {n}: choose an account for this movement.")
+    if account.subtype == AccountSubtype.INVENTORY:
+        raise ItemStateError(f"Line {n}: choose an account other than an inventory account.")
+    return account
 
 
 def record_movements(

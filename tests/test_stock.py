@@ -273,3 +273,10 @@ class RandomOperationsKeepInvariants(HypothesisTestCase):
             except (CostingError, ItemStateError):
                 continue
             assert check_invariants() == []
+
+
+def test_offset_account_cannot_be_an_inventory_account(item_with_stock, admin_user, inventory_account):
+    with pytest.raises(ItemStateError, match="Line 1: choose an account other than an inventory account."):
+        record_movements(kind=ADJUSTMENT, date=d(10, 5), user=admin_user,
+                         lines=[StockLine(item_with_stock, -1, account=inventory_account)])
+    assert StockMovement.objects.filter(kind=ADJUSTMENT).count() == 0

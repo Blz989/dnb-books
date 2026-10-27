@@ -243,3 +243,27 @@ def test_deactivate_without_stock(std, make_item):
 def test_deactivate_requires_post(std, make_item):
     make_item("EMPTY-2")
     assert std.get("/items/EMPTY-2/deactivate/").status_code == 405
+
+
+def test_inventory_account_is_locked_after_first_movement(std, stocked, inv_settings):
+    from ledger.models import Account, AccountSubtype, AccountType
+
+    other = Account.objects.create(number="1310", name="Other Inventory", type=AccountType.ASSET, subtype=AccountSubtype.INVENTORY)
+    html = std.get("/items/BOLT-14/edit/").content.decode()
+    assert 'name="inventory_account"' in html and html.count("disabled") >= 3
+    data = form_data(sku="BOLT-14", **account_fields(inv_settings), is_active="on")
+    data["inventory_account"] = other.pk
+    r = std.post("/items/BOLT-14/edit/", data)
+    assert r.status_code == 200 and b"The inventory account can" in r.content
+    assert Item.objects.get(sku="BOLT-14").inventory_account_id == inv_settings.default_inventory_account_id
+
+
+def test_inventory_account_can_change_before_any_movement(std, make_item, inv_settings):
+    from ledger.models import Account, AccountSubtype, AccountType
+
+    other = Account.objects.create(number="1310", name="Other Inventory", type=AccountType.ASSET, subtype=AccountSubtype.INVENTORY)
+    make_item("FRESH-2")
+    data = form_data(sku="FRESH-2", **account_fields(inv_settings), is_active="on")
+    data["inventory_account"] = other.pk
+    assert std.post("/items/FRESH-2/edit/", data).status_code == 302
+    assert Item.objects.get(sku="FRESH-2").inventory_account == other
