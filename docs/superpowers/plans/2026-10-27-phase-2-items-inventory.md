@@ -192,7 +192,7 @@ def test_settings_load_is_singleton(db):
   - `void_entry(entry, *, user, reason, date=None, allow_items_source: bool = False)`: when the entry's `source_type` starts with `items.` and `allow_items_source` is False, raise `EntryStateError("This entry was created by a stock movement. Void the movement instead.")`.
   - The Django admin "Post selected drafts" action surfaces the new message like other `PostingError`s (no admin code change expected; confirm by test).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_manual_entry_to_inventory_rejected(admin_user, inventory_account, cash):
@@ -208,10 +208,10 @@ def test_void_entry_refuses_items_entries(admin_user, items_entry): ...
 def test_admin_post_action_shows_inventory_message(client, admin_user, inventory_draft): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS** (Phase 1 tests unchanged)
-- [ ] **Step 5: Commit** `feat: inventory accounts change only through stock movements`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS** (Phase 1 tests unchanged)
+- [x] **Step 5: Commit** `feat: inventory accounts change only through stock movements`
 
 ---
 
