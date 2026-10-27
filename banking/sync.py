@@ -76,13 +76,18 @@ def sync_item(item: PlaidItem) -> SyncResult:
         client = plaid_client.get_client()
         accounts = {a.plaid_account_id: a for a in item.accounts.filter(is_active=True) if a.plaid_account_id}
         cursor = item.cursor or None
+        # Ask Plaid for every page first: SQLite holds its write lock for a whole transaction, so the slow part
+        # must not happen inside one.
+        pages = []
+        while True:
+            page = client.transactions_sync(token, cursor)
+            pages.append(page)
+            cursor = page.next_cursor
+            if not page.has_more:
+                break
         with transaction.atomic():
-            while True:
-                page = client.transactions_sync(token, cursor)
+            for page in pages:
                 _apply_page(item, accounts, page, result)
-                cursor = page.next_cursor
-                if not page.has_more:
-                    break
     except FieldKeyError as exc:
         _fail(item, ItemStatus.ERROR, str(exc))
         return SyncResult()

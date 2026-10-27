@@ -195,3 +195,18 @@ def test_sandbox_check_refuses_outside_sandbox(settings):
     settings.PLAID_ENV = "production"
     with pytest.raises(CommandError, match="only runs with PLAID_ENV=sandbox"):
         call_command("plaid_sandbox_check")
+
+
+def test_every_page_is_fetched_before_anything_is_written(item, monkeypatch):
+    """SQLite holds the write lock for a whole transaction, so slow bank calls must not happen inside one."""
+    rows_seen = []
+
+    class Watching(FakePlaidClient):
+        def transactions_sync(self, access_token, cursor):
+            rows_seen.append(BankTransaction.objects.count())
+            return super().transactions_sync(access_token, cursor)
+
+    monkeypatch.setattr(plaid_client, "get_client", lambda: Watching())
+    sync.sync_item(item)
+    assert rows_seen == [0, 0]
+    assert BankTransaction.objects.count() == 4
