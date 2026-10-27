@@ -304,3 +304,23 @@ def test_calibration_pdf_is_served_to_admins_only(adm, std, checking):
     r = adm.get(f"/banking/layout/{checking.pk}/calibrate.pdf")
     assert r.status_code == 200 and r["Content-Type"] == "application/pdf" and r.content.startswith(b"%PDF")
     assert std.get(f"/banking/layout/{checking.pk}/calibrate.pdf").status_code == 403
+
+
+def test_two_tabs_confirming_at_once_print_one_check(adm, to_print, checking, monkeypatch):
+    """Another tab records check 2051 between this request's first look and its write."""
+    from banking.views import common
+
+    real_claim = common._claim_token
+
+    def other_tab_wins(token):
+        VendorPayment.objects.filter(pk=to_print.pk).update(check_number="2051")
+        CheckNumber.objects.create(bank_account=checking, number="2051", status=CheckStatus.PRINTED,
+                                   vendor_payment=to_print)
+        return real_claim(token)
+
+    monkeypatch.setattr(common, "_claim_token", other_tab_wins)
+    r = adm.post(f"/banking/checks/{to_print.number}/confirm/", {"number": "2052", "result": "yes", "token": "t2"},
+                 follow=True)
+    to_print.refresh_from_db()
+    assert "already printed as check 2051" in text(r)
+    assert to_print.check_number == "2051" and CheckNumber.objects.count() == 1

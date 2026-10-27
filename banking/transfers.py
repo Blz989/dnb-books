@@ -86,6 +86,8 @@ def void_transfer(transfer: Transfer, *, user, reason: str, date: date_type | No
         if current.status == TransferStatus.VOID:
             raise TransferError(f"{current} is already void.")
         when = date or current.date
+        if when < current.date:
+            raise TransferError("The void date can't be before the transfer date.")
         void_entry(current.journal_entry, user=user, reason=reason, date=when)
         current.status, current.voided_on, current.void_reason = TransferStatus.VOID, when, reason
         current.save()

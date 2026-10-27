@@ -76,6 +76,7 @@ def _summary_context(rec: Reconciliation) -> dict:
 @login_required
 def reconcile_work(request, account_id, pk):
     rec = _rec(account_id, pk)
+    reconcile.refresh(rec)
     rows = reconcile.rows_for(rec)
     deposits = [r for r in rows if r["is_deposit"]]
     payments = [r for r in rows if not r["is_deposit"]]

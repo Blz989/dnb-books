@@ -39,24 +39,55 @@ def _matched_entry_ids(bank_account: BankAccount, through: date_type) -> set[int
     return ids
 
 
+def _long_date(day: date_type) -> str:
+    return f"{day:%b} {day.day}, {day.year}"
+
+
+def _add_items(rec: Reconciliation) -> None:
+    """Add the account's unreconciled lines dated on or before the statement date that the reconciliation lacks.
+
+    Entries booked while a reconciliation is open (a bank fee spotted on the statement) must join it, or the
+    difference can't reach 0.00.
+    """
+    lines = (
+        JournalLine.objects.in_ledger()
+        .filter(account=rec.bank_account.ledger_account, entry__date__lte=rec.statement_date)
+        .exclude(pk__in=reconciled_lines().values("pk"))
+        .exclude(pk__in=rec.items.values("journal_line_id"))
+    )
+    matched = _matched_entry_ids(rec.bank_account, rec.statement_date)
+    ReconciliationItem.objects.bulk_create([
+        ReconciliationItem(reconciliation=rec, journal_line=line, cleared=line.entry_id in matched)
+        for line in lines
+    ])
+
+
 def start(bank_account: BankAccount, *, statement_date: date_type, statement_balance: Decimal, user) -> Reconciliation:
     with transaction.atomic():
         if Reconciliation.objects.filter(bank_account=bank_account, status=ReconStatus.IN_PROGRESS).exists():
             raise ReconcileError("Finish or cancel the reconciliation already in progress.")
+        last = (
+            Reconciliation.objects.filter(bank_account=bank_account, status=ReconStatus.FINISHED)
+            .order_by("-statement_date").first()
+        )
+        # The opening balance chains from the previous statement, so statements must be reconciled in order.
+        if last is not None and statement_date <= last.statement_date:
+            raise ReconcileError(
+                f"The statement date must be after {_long_date(last.statement_date)}, "
+                "the date of the last finished reconciliation.")
         rec = Reconciliation.objects.create(
             bank_account=bank_account, statement_date=statement_date, statement_balance=statement_balance,
             started_by=user)
-        lines = (
-            JournalLine.objects.in_ledger()
-            .filter(account=bank_account.ledger_account, entry__date__lte=statement_date)
-            .exclude(pk__in=reconciled_lines().values("pk"))
-        )
-        matched = _matched_entry_ids(bank_account, statement_date)
-        ReconciliationItem.objects.bulk_create([
-            ReconciliationItem(reconciliation=rec, journal_line=line, cleared=line.entry_id in matched)
-            for line in lines
-        ])
+        _add_items(rec)
         return rec
+
+
+def refresh(rec: Reconciliation) -> None:
+    """Bring in lines booked since the reconciliation started. Only an open reconciliation changes."""
+    with transaction.atomic():
+        current = Reconciliation.objects.get(pk=rec.pk)
+        if current.status == ReconStatus.IN_PROGRESS:
+            _add_items(current)
 
 
 def toggle(item: ReconciliationItem, cleared: bool) -> None:
@@ -151,6 +182,7 @@ def finish(rec: Reconciliation, *, user) -> Reconciliation:
         current = Reconciliation.objects.get(pk=rec.pk)
         if current.status != ReconStatus.IN_PROGRESS:
             raise ReconcileError("This reconciliation is no longer in progress.")
+        _add_items(current)
         if difference(current) != ZERO:
             raise ReconcileError("The difference must be 0.00 to finish.")
         current.status, current.finished_by, current.finished_at = ReconStatus.FINISHED, user, timezone.now()

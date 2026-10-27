@@ -166,6 +166,10 @@ def check_confirm(request, number):
             if not common._claim_token(token):
                 messages.info(request, common.ALREADY_DONE)
                 return redirect(_detail_url(doc))
+            # Look again inside the transaction: another tab may have printed this check since the first look.
+            doc = _find(number)
+            if not is_to_print(doc):
+                return _already_printed(request, doc)
             checknumbers.assert_free(_ledger(doc), typed, error=PrintError)
             checknumbers.record(
                 _ledger(doc), typed, CheckStatus.PRINTED if printed else CheckStatus.SPOILED,
