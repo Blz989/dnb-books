@@ -132,17 +132,17 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
     - Row errors mean nothing is saved.
     - For CARD and LOAN accounts, files are read as exported: purchases and draws come out negative.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Each fixture parses to the expected rows (amounts and dates spelled out in the tests).
   - `messy.csv` (BOM, `$`, parentheses, Total row) parses (Review Focus 1).
   - A bad amount on row 7 gives "Row 7: amount must be a number." and nothing is saved.
   - A second import of the same file reports added 0, skipped N.
   - Plaid/file overlap is excluded with the reason.
   - Two identical charges on the same day both import.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: OFX, QFX, and CSV statement import`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: OFX, QFX, and CSV statement import`
 
 ---
 
