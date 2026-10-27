@@ -16,7 +16,7 @@ from items.models import (
 )
 from items.stock import (
     StockLine, check_invariants, current_unit_cost, on_hand, record_movements, record_value_adjustment,
-    replay_item, stock_value,
+    replay_item, stock_value, void_movement,
 )
 from ledger.errors import InvalidLineError, PeriodClosedError
 from ledger.models import Account, AccountSubtype, AccountType, EntryStatus
@@ -249,7 +249,7 @@ class RandomOperationsKeepInvariants(HypothesisTestCase):
         ]
 
     @given(ops=st.lists(
-        st.tuples(st.integers(0, 1), st.sampled_from(["in", "out", "adj"]), st.integers(1, 20),
+        st.tuples(st.integers(0, 1), st.sampled_from(["in", "out", "adj", "void"]), st.integers(1, 20),
                   st.integers(1, 28), st.integers(1, 3000)),
         min_size=1, max_size=12))
     @hyp_settings(max_examples=40, deadline=None)
@@ -266,6 +266,10 @@ class RandomOperationsKeepInvariants(HypothesisTestCase):
                 elif kind == "adj":
                     record_value_adjustment(item=item, date=d(10, day), amount=D(cents) / D(100) - D("5.00") or D("0.01"),
                                             reason="r", user=self.user)
+                else:
+                    m = StockMovement.objects.filter(item=item, voided=False).order_by("-id").first()
+                    if m:
+                        void_movement(m, user=self.user, reason="r", date=d(10, 28))
             except (CostingError, ItemStateError):
                 continue
             assert check_invariants() == []

@@ -215,6 +215,36 @@ def record_value_adjustment(
         return movement
 
 
+def void_movement(movement: StockMovement, *, user, reason: str, date: date_type | None = None) -> StockMovement:
+    """Reverse a movement's full effective value, mark it voided, and recost the item's later outflows."""
+    require_admin(user)
+    reason = (reason or "").strip()
+    if not reason:
+        raise ItemStateError("A reason is required to void a movement.")
+    with transaction.atomic():
+        current = StockMovement.objects.select_related("item", "offset_account").get(pk=movement.pk)
+        if current.voided:
+            raise ItemStateError("This movement is already voided.")
+        when = date or current.date
+        assert_open(when)
+        item = current.item
+        effective = effective_total(current)
+        entry = None
+        if effective != 0:
+            entry = _post_value_change(
+                delta=-effective, inventory=item.inventory_account, offset=current.offset_account, date=when,
+                user=user, memo=_memo(f"Void of {MovementKind(current.kind).label}", item.sku, reason),
+                source_type="items.void", source_id=str(current.pk))
+        current.voided = True
+        current.voided_on = when
+        current.void_amount = -effective
+        current.void_entry = entry
+        current.save()
+        replay_item(item, trigger_date=when, user=user)
+    movement.refresh_from_db()
+    return movement
+
+
 def replay_item(item: Item, *, trigger_date: date_type, user) -> list[CostRevision]:
     """Recompute every outflow's cost and post a CostRevision for each difference."""
     with transaction.atomic():

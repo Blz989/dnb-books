@@ -357,7 +357,7 @@ def test_random_operations_keep_invariants(...): ...           # opening, adjust
 - Behavior: in one transaction, compute effective value (total + revisions); post a reversing entry (`source_type="items.void"`, memo `"Void of {kind label} {sku}: {reason}"`) for that amount unless 0.00; set `voided`, `voided_on`, `void_amount` (signed, the negation of effective value), `void_entry`; then `replay_item(item, trigger_date=void date)`.
 - `stock_value`, `on_hand`, and replay exclude voided movements.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_void_inflow_recosts_later_outflow(...):
@@ -369,10 +369,10 @@ def test_void_requires_reason_and_admin(...): ...
 def test_void_in_closed_month_needs_open_date(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: void stock movements with cost replay`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: void stock movements with cost replay`
 
 ---
 
