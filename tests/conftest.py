@@ -106,3 +106,30 @@ def ledger_purge():
         c.execute("DELETE FROM ledger_journalentry")
         for sql in mig.FORWARD:
             c.execute(sql)
+
+
+@pytest.fixture
+def sample_ledger(admin_user, cash, ar, equity, revenue, expense):
+    """Owner invests, two sales across a year end, one expense.
+
+    Also holds one draft and one voided entry; neither may change any report.
+    """
+    from ledger.posting import LineSpec, post_entry, void_entry
+
+    D = Decimal
+
+    def post(d, debit_acct, credit_acct, amount):
+        return post_entry(date=d, user=admin_user, lines=[
+            LineSpec(debit_acct, debit=D(amount)), LineSpec(credit_acct, credit=D(amount))])
+
+    post(date(2025, 6, 1), cash, equity, "10000.00")
+    post(date(2025, 12, 31), cash, revenue, "1000.00")
+    post(date(2026, 1, 1), expense, cash, "300.00")
+    post(date(2026, 1, 31), ar, revenue, "500.00")
+
+    voided = post(date(2026, 1, 15), expense, cash, "50.00")
+    void_entry(voided, user=admin_user, reason="Entered twice")
+
+    draft = JournalEntry.objects.create(date=date(2026, 1, 20), memo="Draft", created_by=admin_user)
+    JournalLine.objects.create(entry=draft, account=cash, debit=D("9999.00"))
+    JournalLine.objects.create(entry=draft, account=revenue, credit=D("9999.00"))

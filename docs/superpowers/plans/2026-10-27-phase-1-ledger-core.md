@@ -382,7 +382,7 @@ def test_standard_user_cannot_void(...): ...
   - `balance_sheet(as_of: date) -> BalanceSheet(as_of, assets, liabilities, equity: list[ReportRow], retained_earnings, current_year_earnings, total_assets, total_liabilities_and_equity)`. `current_year_earnings` = net income Jan 1 of `as_of.year` through `as_of`; `retained_earnings` = net income of all dates before that Jan 1. No closing entries are posted (matches Zoho).
   - All dataclasses frozen; amounts quantized to `0.01`.
 
-- [ ] **Step 1: Write failing tests** (one scenario fixture `sample_ledger`: owner invests 10,000 cash on 2025-06-01; sale 1,000 cash 2025-12-31; expense 300 on 2026-01-01; sale 500 on AR 2026-01-31; plus one draft entry and one voided entry that must not change results)
+- [x] **Step 1: Write failing tests** (one scenario fixture `sample_ledger`: owner invests 10,000 cash on 2025-06-01; sale 1,000 cash 2025-12-31; expense 300 on 2026-01-01; sale 500 on AR 2026-01-31; plus one draft entry and one voided entry that must not change results)
 
 ```python
 def test_trial_balance_balances(sample_ledger):
@@ -409,10 +409,10 @@ def test_general_ledger_running_balance(sample_ledger, cash):
 def test_draft_and_void_have_no_effect(sample_ledger): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `balances.py` and `reports.py`** (aggregate in the database with `Sum`, convert with `Decimal(str(v))`)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: trial balance, general ledger, P&L, balance sheet`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `balances.py` and `reports.py`** (aggregate in the database with `Sum`, convert with `Decimal(str(v))`)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: trial balance, general ledger, P&L, balance sheet`
 
 Before committing, review the posting and report rules against the `finance:journal-entry` and `finance:financial-statements` skills and note any finding in the commit body.
 
