@@ -287,7 +287,7 @@ def test_reopen_requires_reason(admin_user):
   6. Sum debits ≠ sum credits → `UnbalancedEntryError("Debits ({d}) and credits ({c}) must be equal. Difference: {diff}.")` formatted with 2 decimals and thousands separators.
   7. Date in closed period → `PeriodClosedError` from `assert_open`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_post_balanced_entry(admin_user, cash, revenue):
@@ -321,10 +321,10 @@ def test_concurrent_posts_both_succeed(admin_user, cash, revenue): ...
 # Review Focus 1: two threads (each closes its connection at the end) each post 20 entries on the file-backed test DB; assert 40 posted entries and no OperationalError.
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `ledger/posting.py`** (use `Decimal.as_tuple().exponent < -2` for the precision check)
-- [ ] **Step 4: Run, expect PASS** (full suite)
-- [ ] **Step 5: Commit** `feat: posting service with balance, precision, and period validation`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `ledger/posting.py`** (use `Decimal.as_tuple().exponent < -2` for the precision check)
+- [x] **Step 4: Run, expect PASS** (full suite)
+- [x] **Step 5: Commit** `feat: posting service with balance, precision, and period validation`
 
 ---
 

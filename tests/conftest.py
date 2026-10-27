@@ -75,8 +75,34 @@ def draft_entry(db, admin_user, cash, revenue):
 
 
 @pytest.fixture
-def posted_entry(draft_entry):
-    # Task 5 switches this to post_entry.
-    JournalEntry.objects.filter(pk=draft_entry.pk).update(status=EntryStatus.POSTED)
-    draft_entry.refresh_from_db()
-    return draft_entry
+def posted_entry(admin_user, cash, revenue):
+    from ledger.posting import LineSpec, post_entry
+
+    return post_entry(
+        date=date(2026, 1, 15), user=admin_user, memo="Posted",
+        lines=[LineSpec(cash, debit=Decimal("100.00")), LineSpec(revenue, credit=Decimal("100.00"))],
+    )
+
+
+@pytest.fixture
+def ledger_purge():
+    """For transactional tests that leave posted entries behind.
+
+    Django's end-of-test flush DELETEs every row, which the immutability
+    triggers correctly refuse. This empties the ledger tables with the triggers
+    off, then reinstalls the exact triggers from migration 0002. Request it as
+    the last fixture so it tears down before the database flush.
+    """
+    import importlib
+
+    from django.db import connection
+
+    yield
+    mig = importlib.import_module("ledger.migrations.0002_immutability_triggers")
+    with connection.cursor() as c:
+        for sql in mig.REVERSE:
+            c.execute(sql)
+        c.execute("DELETE FROM ledger_journalline")
+        c.execute("DELETE FROM ledger_journalentry")
+        for sql in mig.FORWARD:
+            c.execute(sql)
