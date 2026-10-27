@@ -13,6 +13,12 @@ from sales.views.common import (  # noqa: F401  (shared row helpers and one-time
 from ..errors import PurchasingSettingsMissing
 
 
+def safe_id(value) -> int | None:
+    """A database id from query-string text, or None. Long digit strings would overflow SQLite's integers."""
+    value = str(value or "")
+    return int(value) if value.isdigit() and len(value) <= 12 else None
+
+
 def error_context(exc) -> dict:
     link = None
     if isinstance(exc, PurchasingSettingsMissing):
@@ -110,8 +116,8 @@ def parse_expense_rows(rows: list[dict], start: int = 0):
         if expense_is_blank(row):
             continue
         n += 1
-        account = Account.objects.filter(pk=row["account"], type=AccountType.EXPENSE, is_active=True).first() \
-            if row["account"].isdigit() else None
+        account = Account.objects.filter(pk=safe_id(row["account"]), type=AccountType.EXPENSE, is_active=True).first() \
+            if safe_id(row["account"]) else None
         if account is None:
             errors.append(f"Line {n}: choose an account.")
             continue

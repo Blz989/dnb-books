@@ -14,7 +14,9 @@ from items.models import Item
 from sales.models import DocStatus, DocType, Fulfillment, OrderStatus, SalesOrder, SalesOrderLine
 from sales.numbering import next_number
 
-from ..errors import PurchasingError, UnresolvedVendors
+from decimal import Decimal as _D
+
+from ..errors import MAX_PRICE_TEXT, MAX_QUANTITY, PurchasingError, UnresolvedVendors
 from ..models import BillItemLine, PurchaseOrder, PurchaseOrderLine
 
 
@@ -36,10 +38,16 @@ def validate_po_lines(lines: Sequence[POLineSpec]) -> None:
             raise PurchasingError(f"Line {n}: {line.item.sku} is not an active item.")
         if line.quantity is None or line.quantity <= 0:
             raise PurchasingError(f"Line {n}: enter a quantity above zero.")
+        if line.quantity > MAX_QUANTITY:
+            raise PurchasingError(f"Line {n}: that quantity is too large.")
         if not isinstance(line.price, Decimal):
             raise TypeError("Prices must be Decimal, never float or int.")
+        if not line.price.is_finite():
+            raise PurchasingError(f"Line {n}: enter a price like 12.50.")
         if line.price < 0:
             raise PurchasingError(f"Line {n}: price can't be negative.")
+        if line.price >= _D(MAX_PRICE_TEXT):
+            raise PurchasingError(f"Line {n}: that price is too large.")
         if line.price.as_tuple().exponent < -4:
             raise PurchasingError(f"Line {n}: price can have at most 4 decimal places.")
 

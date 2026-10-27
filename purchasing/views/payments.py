@@ -160,8 +160,8 @@ def payment_list(request):
     if method in VendorPaymentMethod.values:
         payments = payments.filter(method=method)
     vendor = request.GET.get("vendor", "")
-    if vendor.isdigit():
-        payments = payments.filter(vendor_id=vendor)
+    if common.safe_id(vendor):
+        payments = payments.filter(vendor_id=common.safe_id(vendor))
     status = request.GET.get("status", "")
     if status in DocStatus.values:
         payments = payments.filter(status=status)
@@ -186,7 +186,7 @@ def _new_context(form, token, vendor, rows, **extra):
 @login_required
 def payment_new(request):
     if request.method != "POST":
-        vendor = Vendor.objects.filter(pk=request.GET["vendor"]).first() if request.GET.get("vendor", "").isdigit() else None
+        vendor = Vendor.objects.filter(pk=common.safe_id(request.GET.get("vendor"))).first() if common.safe_id(request.GET.get("vendor")) else None
         if vendor is None:
             return render(request, "purchasing/payment_new.html", _new_context(
                 VendorPaymentForm(initial={"date": _today().isoformat()}), "", None, []))
@@ -198,7 +198,7 @@ def payment_new(request):
         messages.info(request, "This payment was already saved.")
         return redirect(reverse("purchasing:payment-list"))
     form = VendorPaymentForm(request.POST)
-    vendor = Vendor.objects.filter(pk=request.POST["vendor"]).first() if request.POST.get("vendor", "").isdigit() else None
+    vendor = Vendor.objects.filter(pk=common.safe_id(request.POST.get("vendor"))).first() if common.safe_id(request.POST.get("vendor")) else None
     if vendor is None:
         return render(request, "purchasing/payment_new.html", _new_context(form, token, None, []))
     rows = open_bill_rows(vendor=vendor, post=request.POST, prefix="apply")

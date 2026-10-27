@@ -10,6 +10,7 @@ from ledger.errors import PostingError
 from sales.errors import SalesError
 from sales.numbering import _sequence, set_sequence
 
+from ..errors import MAX_AMOUNT_TEXT
 from ..forms import PurchasingSettingsForm
 from ..models import PURCHASING_DOC_TYPES, PurchasingSettings, Threshold1099
 
@@ -35,7 +36,7 @@ def _amount(raw: str) -> Decimal | None:
         value = Decimal((raw or "").strip())
     except InvalidOperation:
         return None
-    if not value.is_finite() or value <= 0 or value.as_tuple().exponent < -2:
+    if not value.is_finite() or value <= 0 or value.as_tuple().exponent < -2 or value > Decimal(MAX_AMOUNT_TEXT):
         return None
     return value
 
@@ -72,6 +73,9 @@ def purchasing_settings(request):
             raw = numbering_post.get(f"next_{doc_type.value}", "").strip()
             if not raw.isdigit() or int(raw) < 1:
                 numbering_errors[doc_type.value] = "Enter a next number of 1 or more."
+                continue
+            if len(raw) > 9:
+                numbering_errors[doc_type.value] = "Enter a smaller next number."
                 continue
             if prefix == seq.prefix and int(raw) == seq.next_number:
                 continue

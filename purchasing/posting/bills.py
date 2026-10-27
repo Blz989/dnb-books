@@ -20,7 +20,7 @@ from sales.numbering import next_number
 
 from .. import dropship
 from ..balances import bill_applied
-from ..errors import PurchasingError
+from ..errors import MAX_AMOUNT_TEXT, MAX_PRICE_TEXT, MAX_QUANTITY, PurchasingError
 from ..models import (
     Bill, BillExpenseLine, BillItemLine, BillLineKind, BillRevision, PurchaseOrder, PurchaseOrderLine,
     PurchasingSettings,
@@ -105,17 +105,25 @@ def validate_bill(
             raise PurchasingError(f"Line {n}: {spec.item.sku} is not an active item.")
         if spec.quantity is None or spec.quantity <= 0:
             raise PurchasingError(f"Line {n}: enter a quantity above zero.")
+        if spec.quantity > MAX_QUANTITY:
+            raise PurchasingError(f"Line {n}: that quantity is too large.")
         if not isinstance(spec.price, Decimal):
             raise TypeError("Prices must be Decimal, never float or int.")
+        if not spec.price.is_finite():
+            raise PurchasingError(f"Line {n}: enter a price like 12.50.")
         if spec.price < 0:
             raise PurchasingError(f"Line {n}: price can't be negative.")
+        if spec.price >= Decimal(MAX_PRICE_TEXT) or line_amount(spec) > Decimal(MAX_AMOUNT_TEXT):
+            raise PurchasingError(f"Line {n}: that amount is too large.")
         if spec.price.as_tuple().exponent < -4:
             raise PurchasingError(f"Line {n}: price can have at most 4 decimal places.")
     for n, spec in enumerate(expense_lines, len(item_lines) + 1):
         if not isinstance(spec.amount, Decimal):
             raise TypeError("Amounts must be Decimal, never float or int.")
-        if spec.amount <= 0:
+        if not spec.amount.is_finite() or spec.amount <= 0:
             raise PurchasingError(f"Line {n}: enter an amount above zero.")
+        if spec.amount > Decimal(MAX_AMOUNT_TEXT):
+            raise PurchasingError(f"Line {n}: that amount is too large.")
         if spec.amount.as_tuple().exponent < -2:
             raise PurchasingError(f"Line {n}: amounts can have at most 2 decimal places.")
         if spec.account.subtype in (AccountSubtype.INVENTORY, AccountSubtype.ACCOUNTS_PAYABLE):

@@ -49,8 +49,8 @@ def credit_or_404(number: str) -> VendorCredit:
 def credit_list(request):
     credits = VendorCredit.objects.select_related("vendor")
     vendor = request.GET.get("vendor", "")
-    if vendor.isdigit():
-        credits = credits.filter(vendor_id=vendor)
+    if common.safe_id(vendor):
+        credits = credits.filter(vendor_id=common.safe_id(vendor))
     q = request.GET.get("q", "").strip()
     if q:
         credits = credits.filter(Q(number__icontains=q) | Q(vendor__name__icontains=q))
@@ -134,7 +134,8 @@ def _parse_allowance(rows):
         account = None
         if r["account"]:
             account = Account.objects.filter(
-                pk=r["account"], type=AccountType.EXPENSE, is_active=True).first() if r["account"].isdigit() else None
+                pk=common.safe_id(r["account"]), type=AccountType.EXPENSE, is_active=True).first() \
+                if common.safe_id(r["account"]) else None
             if account is None:
                 errors.append(f"Line {n}: choose an account from the list.")
                 continue

@@ -16,7 +16,7 @@ from sales.models import DocType
 from sales.numbering import next_number
 
 from ..balances import bill_balance, vendor_credit_unapplied
-from ..errors import PurchasingError
+from ..errors import MAX_QUANTITY, PurchasingError
 from ..models import (
     Bill, PurchasingSettings, VendorCredit, VendorCreditApplication, VendorCreditKind, VendorCreditLine,
 )
@@ -58,6 +58,8 @@ def create_return_credit(
                 raise PurchasingError(f"Line {n}: {line.item.sku} is not an active stock item.")
             if line.quantity is None or line.quantity <= 0:
                 raise PurchasingError(f"Line {n}: enter a quantity above zero.")
+            if line.quantity > MAX_QUANTITY:
+                raise PurchasingError(f"Line {n}: that quantity is too large.")
             amount = line.amount
             if amount is None:
                 amount = (line.quantity * current_unit_cost(line.item)).quantize(CENT, rounding=ROUND_HALF_UP)

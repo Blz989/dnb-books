@@ -42,8 +42,8 @@ def po_list(request):
     if status in OrderStatus.values:
         orders = orders.filter(status=status)
     vendor = request.GET.get("vendor", "")
-    if vendor.isdigit():
-        orders = orders.filter(vendor_id=vendor)
+    if common.safe_id(vendor):
+        orders = orders.filter(vendor_id=common.safe_id(vendor))
     q = request.GET.get("q", "").strip()
     if q:
         orders = orders.filter(Q(number__icontains=q) | Q(vendor__name__icontains=q))
@@ -69,7 +69,7 @@ def _form_context(form, rows, token, order=None, **extra):
 def _specs(parsed):
     return [
         POLineSpec(p["item"], p["quantity"], p["price"], description=p["description"],
-                   line_id=int(p["ref"]) if p["ref"].isdigit() else None)
+                   line_id=common.safe_id(p["ref"]))
         for p in parsed
     ]
 
@@ -167,8 +167,8 @@ def _drop_ship_rows(order, post=None):
     for name, lines in drop_ship_candidates(order).items():
         matched = Vendor.find_by_name(name)
         chosen = None
-        if post is not None and post.get(f"vendor-{name}", "").isdigit():
-            chosen = Vendor.objects.filter(pk=post[f"vendor-{name}"]).first()
+        if post is not None and common.safe_id(post.get(f"vendor-{name}", "")):
+            chosen = Vendor.objects.filter(pk=common.safe_id(post[f"vendor-{name}"])).first()
         rows.append({"name": name, "lines": lines, "matched": matched, "chosen": chosen or matched})
     return rows
 
@@ -187,8 +187,8 @@ def drop_ship_po(request, number):
             **context, "rows": _drop_ship_rows(order), "vendors": Vendor.objects.filter(is_active=True)})
     choices = {}
     for name in drop_ship_candidates(order):
-        value = request.POST.get(f"vendor-{name}", "")
-        vendor = Vendor.objects.filter(pk=value).first() if value.isdigit() else None
+        value = common.safe_id(request.POST.get(f"vendor-{name}", ""))
+        vendor = Vendor.objects.filter(pk=value).first() if value else None
         if vendor is not None:
             choices[name] = vendor
     try:

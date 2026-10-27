@@ -8,7 +8,7 @@ from ledger.periods import assert_open
 from ledger.posting import void_entry
 from sales.models import DocStatus
 
-from ..errors import PurchasingError
+from ..errors import MAX_AMOUNT_TEXT, PurchasingError
 
 
 def money(x: Decimal) -> str:
@@ -18,8 +18,10 @@ def money(x: Decimal) -> str:
 def check_amount(amount: Decimal, message: str = "Enter an amount above zero.") -> None:
     if not isinstance(amount, Decimal):
         raise TypeError("Amounts must be Decimal, never float or int.")
-    if amount <= 0:
+    if not amount.is_finite() or amount <= 0:
         raise PurchasingError(message)
+    if amount > Decimal(MAX_AMOUNT_TEXT):
+        raise PurchasingError("That amount is too large.")
     if amount.as_tuple().exponent < -2:
         raise PurchasingError("Amounts can have at most 2 decimal places.")
 

@@ -53,8 +53,8 @@ def bill_list(request):
     if status in DocStatus.values:
         bills = bills.filter(status=status)
     vendor = request.GET.get("vendor", "")
-    if vendor.isdigit():
-        bills = bills.filter(vendor_id=vendor)
+    if common.safe_id(vendor):
+        bills = bills.filter(vendor_id=common.safe_id(vendor))
     q = request.GET.get("q", "").strip()
     if q:
         bills = bills.filter(Q(number__icontains=q) | Q(vendor__name__icontains=q) | Q(vendor_invoice_number__icontains=q))
@@ -80,8 +80,8 @@ def _item_specs(parsed, po=None):
     specs = []
     for p in parsed:
         po_line = None
-        if p["ref"].isdigit() and po is not None:
-            po_line = PurchaseOrderLine.objects.filter(pk=int(p["ref"]), order=po).first()
+        if common.safe_id(p["ref"]) and po is not None:
+            po_line = PurchaseOrderLine.objects.filter(pk=common.safe_id(p["ref"]), order=po).first()
         specs.append(BillItemSpec(p["item"], p["quantity"], p["price"], description=p["description"], po_line=po_line))
     return specs
 
@@ -117,7 +117,8 @@ def _read_form(request):
 @login_required
 def bill_new(request):
     if request.GET.get("po"):
-        return redirect(reverse("purchasing:po-bill", args=[request.GET["po"]]))
+        po = po_or_404(request.GET["po"])
+        return redirect(reverse("purchasing:po-bill", args=[po.number]))
     if request.method != "POST":
         initial = {"date": _today().isoformat()}
         if request.GET.get("vendor", "").isdigit():
