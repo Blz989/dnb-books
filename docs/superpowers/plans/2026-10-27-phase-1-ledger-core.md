@@ -79,7 +79,7 @@ tests/
 **Interfaces:**
 - Produces: URL name `home` at `/`; template `core/base.html` with blocks `title`, `content`, `messages`; settings keys `DNB_BACKUP_DIR: Path`, `DNB_BACKUP_KEY: str`, `DNB_DB_PATH: Path`; management command `serve [--host 0.0.0.0] [--port 8000]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_anonymous_home_redirects_to_login(client):
@@ -99,18 +99,18 @@ def test_sqlite_options_for_concurrency(settings):
 
 `conftest.py` defines `standard_user` and `admin_user` fixtures (plain users for now; Task 2 adds groups).
 
-- [ ] **Step 2: Run tests, expect FAIL** (`uv run pytest tests/test_skeleton.py -v`, no project yet)
+- [x] **Step 2: Run tests, expect FAIL** (`uv run pytest tests/test_skeleton.py -v`, no project yet)
 
-- [ ] **Step 3: Implement the skeleton**
+- [x] **Step 3: Implement the skeleton**
   - `pyproject.toml`: `requires-python = ">=3.12"`, deps `Django>=5.2,<6.0`, `waitress`, `whitenoise`, `django-auditlog`, `cryptography`, `python-dotenv`; dev deps under `[dependency-groups] dev = ["pytest", "pytest-django", "hypothesis"]` (installed by `uv sync` and by the SessionStart hook in `.claude/hooks/session-start.sh`); `.gitignore` covers `.env`, `.venv/`, `data/`, `staticfiles/`, `__pycache__/`; `[tool.pytest.ini_options] DJANGO_SETTINGS_MODULE = "dnb.settings"`.
   - `settings.py` loads `.env` via `python-dotenv`; DB `NAME = DNB_DB_PATH` (default `BASE_DIR / "data" / "dnb.sqlite3"`), `OPTIONS = {"init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", "transaction_mode": "IMMEDIATE", "timeout": 20}`; `TEST = {"NAME": BASE_DIR / "data" / "test.sqlite3"}` so tests run on a real file (needed for the threaded posting test and backup snapshots); `LOGIN_URL = "/accounts/login/"`; include `django.contrib.auth.urls`; whitenoise middleware; `TIME_ZONE` from env, default `America/Los_Angeles` (override in `.env`); `USE_TZ = True`.
   - `serve` command runs `waitress.serve(get_wsgi_application(), host=..., port=...)`.
   - `start.*` runs `uv run python manage.py serve`. `update.*` runs in order and stops on first failure: `uv run python manage.py backup_now` (skip with a printed notice if the command does not exist yet), `git pull`, `uv sync`, `uv run python manage.py migrate`, `uv run python manage.py collectstatic --noinput`.
   - `README.md` "Getting started": first-time install (install uv, copy `.env.example` to `.env`, `uv sync`, `migrate`, `createsuperuser`, `setup_roles`), start, update.
 
-- [ ] **Step 4: Run tests, expect PASS**
+- [x] **Step 4: Run tests, expect PASS**
 
-- [ ] **Step 5: Commit** `feat: project skeleton with SQLite WAL, login, serve command`
+- [x] **Step 5: Commit** `feat: project skeleton with SQLite WAL, login, serve command`
 
 ---
 
@@ -125,7 +125,7 @@ def test_sqlite_options_for_concurrency(settings):
 - Produces: `ADMIN_GROUP = "Admin"`, `STANDARD_GROUP = "Standard"`, `is_admin(user) -> bool` (true if superuser or in Admin group), `require_admin(user) -> None` (raises `django.core.exceptions.PermissionDenied` with message "Only an admin can do this."). Command `setup_roles` is idempotent and gives Standard `add/change/view` on `ledger.Account`, `ledger.JournalEntry`, `ledger.JournalLine` and `view` on `ledger.AccountingPeriod`; Admin gets all ledger and backup permissions. Both groups are `is_staff`-eligible (admin site access).
 - Fixtures: `admin_user` (staff, Admin group), `standard_user` (staff, Standard group).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_is_admin(admin_user, standard_user):
@@ -142,10 +142,10 @@ def test_setup_roles_idempotent(db):
 
 Note: `setup_roles` runs after Task 3 models exist; write the permission assignment so missing models are skipped with a warning, and re-verify in Task 3 Step 4.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `core/roles.py` and `setup_roles`; enable auditlog middleware**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: admin/standard roles and audit log middleware`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `core/roles.py` and `setup_roles`; enable auditlog middleware**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: admin/standard roles and audit log middleware`
 
 ---
 
