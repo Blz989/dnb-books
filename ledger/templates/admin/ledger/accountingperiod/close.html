@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>{{ period }} can't close normally because of:</p>
+<ul>
+  {% for problem in problems %}<li>{{ problem }}</li>{% empty %}<li>No problems now. You can close it from the list.</li>{% endfor %}
+</ul>
+<p>Closing anyway saves your reason and these problems with the period.</p>
+<form method="post">{% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    <p>{{ field.label_tag }} {{ field }} {{ field.errors }}</p>
+  {% endfor %}
+  <input type="submit" value="Close anyway" class="default">
+  <a href="{% url 'admin:ledger_accountingperiod_changelist' %}">Cancel</a>
+</form>
+{% endblock %}

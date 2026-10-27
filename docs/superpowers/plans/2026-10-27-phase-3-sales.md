@@ -93,7 +93,7 @@ tests/  test_close_override.py, test_customers.py, test_sales_models.py, test_nu
   - Admin: the "Close selected periods" action, for each blocked period, shows the problems plus a link "Close anyway" to `admin:ledger_accountingperiod_close` (`<id>/close/`). That page shows the problems and a required `reason` field ("Enter a reason to close anyway.").
   - `ledger.posting.void_entry(..., system: bool = False)`: `system=True` skips `require_admin` (still requires a reason). `items.stock.void_movement(..., system: bool = False)`, same. Neither flag is passed by any view.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_override_closes_and_records(admin_user, blocked_check):   # fixture registers a check returning ["Off by 1.00."]
@@ -111,11 +111,11 @@ def test_system_void_entry_skips_admin(standard_user, posted_entry): ...     # v
 def test_system_void_movement_skips_admin(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Screenshots** of the blocked close message and the "Close anyway" page (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: admin can close a month anyway with a recorded reason`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Screenshots** of the blocked close message and the "Close anyway" page (light and dark), sent.
+- [x] **Step 6: Commit** `feat: admin can close a month anyway with a recorded reason`
 
 ---
 

@@ -36,12 +36,20 @@ def assert_open(d: date) -> None:
         )
 
 
-def close_period(year: int, month: int, user) -> AccountingPeriod:
+def close_problems(year: int, month: int) -> list[str]:
+    return [p for check in _close_checks for p in check(year, month)]
+
+
+def close_period(year: int, month: int, user, override_reason: str = "") -> AccountingPeriod:
     require_admin(user)
-    problems = [p for check in _close_checks for p in check(year, month)]
-    if problems:
+    problems = close_problems(year, month)
+    override_reason = (override_reason or "").strip()
+    if problems and not override_reason:
         raise PeriodCloseBlockedError(" ".join(problems))
     period = get_period(date(year, month, 1))
+    if problems:
+        period.close_override_reason = override_reason
+        period.close_override_problems = " ".join(problems)
     period.is_closed = True
     period.closed_by = user
     period.closed_at = timezone.now()

@@ -65,3 +65,10 @@ class JournalLineForm(forms.ModelForm):
         if debit == 0 and credit == 0:
             raise forms.ValidationError("Enter an amount.")
         return data
+
+
+class CloseAnywayForm(forms.Form):
+    reason = forms.CharField(
+        label="Reason", widget=forms.Textarea(attrs={"rows": 3}),
+        error_messages={"required": "Enter a reason to close anyway."},
+    )
