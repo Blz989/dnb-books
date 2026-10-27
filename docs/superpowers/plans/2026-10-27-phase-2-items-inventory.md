@@ -563,8 +563,8 @@ def test_bom_and_mixed_case_values(): ...
 - Create: `tests/test_phase2_acceptance.py`, `tests/fixtures/items_50.csv`
 - Modify: `README.md` (Status line: Phase 2 built; "What it does" unchanged)
 
-- [ ] **Step 1: Write the acceptance test** (spec section 1, through the test client as an admin): configure settings, import `items_50.csv` (50 items, 40 with opening stock), confirm valuation report Difference 0.00 and total equals the balance sheet Inventory Asset line; post a quantity adjustment, a count with one difference, and a value adjustment; each appears on its item's history with a journal entry link; `check_invariants() == []`.
-- [ ] **Step 2: Run full suite** `uv run pytest -q` → all pass, no warnings.
-- [ ] **Step 3: Final screenshots:** full tour (home, items list, item detail, adjustment, count review, valuation report) in light and dark from a fresh `seed_demo`; send.
-- [ ] **Step 4: Commit** `test: phase 2 acceptance`
+- [x] **Step 1: Write the acceptance test** (spec section 1, through the test client as an admin): configure settings, import `items_50.csv` (50 items, 40 with opening stock), confirm valuation report Difference 0.00 and total equals the balance sheet Inventory Asset line; post a quantity adjustment, a count with one difference, and a value adjustment; each appears on its item's history with a journal entry link; `check_invariants() == []`.
+- [x] **Step 2: Run full suite** `uv run pytest -q` → all pass, no warnings.
+- [x] **Step 3: Final screenshots:** full tour (home, items list, item detail, adjustment, count review, valuation report) in light and dark from a fresh `seed_demo`; send.
+- [x] **Step 4: Commit** `test: phase 2 acceptance`
 - [ ] **Step 5: Open the PR** `Phase 2: Items and inventory` into `main` per `CLAUDE.md`, listing tasks, test output, deviations, and every screenshot set sent.

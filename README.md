@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs on one computer in the office, and everyone else uses it from a web browser on the office network.
 
-> **Status:** Phase 1 (ledger core) is built and tested. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Phase 2 (items and inventory) is built and tested, on top of Phase 1 (ledger core). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -17,6 +17,17 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Migration | Full Zoho history import with month-by-month verification | 5 |
 
 **Not included:** multi-currency, sales tax, multiple warehouses, serial or batch tracking, kits, e-commerce sync, emailing from the app, payroll. See the spec for the full list.
+
+### Items and inventory (Phase 2)
+
+| Task | Where |
+|---|---|
+| Set up inventory accounts (once, admin) | Settings, then Items |
+| Load items and opening stock from a CSV (admin) | Items, Import CSV. The preview lists every bad row. Nothing saves until all rows are valid |
+| Add, edit, and look up items | Items |
+| Fix a quantity | Adjustments, New adjustment. Stock can go below zero after you confirm; the cost is estimated until stock is received or counted |
+| Count the shelves | Counts. Enter counts without seeing expected quantities, review the differences, then post |
+| Check stock value against the books | Reports, Inventory valuation. The difference must be 0.00 |
 
 ## How it works
 
