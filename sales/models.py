@@ -197,6 +197,9 @@ class Deposit(models.Model):
     void_reason = models.CharField(max_length=200, blank=True)
     created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
+    # Payment.deposit is the current deposit. This keeps every deposit a payment was ever in, so the
+    # undeposited total can be rebuilt for a past date after a deposit is voided and redone.
+    all_payments = models.ManyToManyField("Payment", related_name="all_deposits", blank=True)
 
     class Meta:
         ordering = ["-date", "-id"]

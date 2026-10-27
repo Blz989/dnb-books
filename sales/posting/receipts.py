@@ -247,15 +247,19 @@ def _finish_void(current, *, user, reason: str, when: date_type) -> None:
     current.save()
 
 
-def _void_date(current, date: date_type | None, applications) -> date_type:
-    """Default: the document date, or later if applications were made after it. An earlier date would leave an
-    application active on a document that no longer counts."""
-    latest = max([a.applied_on for a in applications], default=current.date)
-    when = date or max(current.date, latest)
+def _void_date(current, date: date_type | None, applications, others: Sequence[date_type] = ()) -> date_type:
+    """Default: the document date, or later if something already happened to it after that (an application or its
+    removal, a voided refund or deposit). Voiding earlier would leave the balances for the days in between
+    counting a document that no longer counts."""
+    latest = max(
+        [current.date, *others, *(a.applied_on for a in applications),
+         *(a.removed_on for a in applications if a.removed_on)]
+    )
+    when = date or latest
     if when < current.date:
         raise ReceiptError(f"The void date can't be before {current.number}'s date.")
     if when < latest:
-        raise ReceiptError(f"The void date can't be before the application dated {latest.isoformat()}.")
+        raise ReceiptError(f"The void date can't be before {latest.isoformat()}, when something else was done with it.")
     return when
 
 
@@ -267,7 +271,10 @@ def void_payment(payment: Payment, *, user, reason: str, date: date_type | None 
         if current.refunds.exclude(status=DocStatus.VOID).exists():
             raise ReceiptError(f"{current.number} has a refund drawn from it. Void the refund first.")
         active = list(current.applications.filter(removed=False))
-        when = _void_date(current, date, active)
+        history = [r.voided_on for r in current.refunds.all() if r.voided_on]
+        if current.deposit_id and current.deposit.voided_on:
+            history.append(current.deposit.voided_on)
+        when = _void_date(current, date, list(current.applications.all()), history)
         _finish_void(current, user=user, reason=reason, when=when)
         for app in active:
             app.removed, app.removed_on = True, when
@@ -283,7 +290,9 @@ def void_credit_note(credit_note: CreditNote, *, user, reason: str, date: date_t
             raise ReceiptError(f"{current.number} is applied to invoices. Remove the applications first.")
         if current.refunds.exclude(status=DocStatus.VOID).exists():
             raise ReceiptError(f"{current.number} has a refund drawn from it. Void the refund first.")
-        when = _void_date(current, date, list(current.applications.all()))
+        when = _void_date(
+            current, date, list(current.applications.all()),
+            [r.voided_on for r in current.refunds.all() if r.voided_on])
         _finish_void(current, user=user, reason=reason, when=when)
     credit_note.refresh_from_db()
     return credit_note

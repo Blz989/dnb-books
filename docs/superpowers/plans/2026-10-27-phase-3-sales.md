@@ -406,14 +406,14 @@ def test_void_reopens_closed_order(...): ...
   - `close_check(year, month) -> list[str]` runs both at month end, prefixing each problem with "{Month YYYY}: ".
 - Both read the ledger with Phase 1 `account_totals`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Both checks are empty after a mixed scenario.
   - Breaking A/R with a manual entry to the A/R account makes `ar_check` report it, and blocks `close_period` (then the admin override works).
   - A `hypothesis.extra.django.TestCase` property test: random sequences of invoice, edit, payment, application, removal, credit, refund, deposit, and void keep both checks empty at the end and at every as-of date touched.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review the tie-outs against the `finance:reconciliation` skill and record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: AR and undeposited funds checks at month close`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review the tie-outs against the `finance:reconciliation` skill and record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: AR and undeposited funds checks at month close`
 
 ---
 

@@ -54,6 +54,7 @@ def make_deposit(*, payments: Sequence[Payment], bank_account: Account, date: da
         deposit = Deposit.objects.create(
             number=number, date=date, bank_account=bank_account, journal_entry=entry, created_by=user)
         Payment.objects.filter(pk__in=[p.pk for p in current]).update(deposit=deposit)
+        deposit.all_payments.set(current)
         return deposit
 
 

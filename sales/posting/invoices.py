@@ -212,6 +212,12 @@ def edit_invoice(
         ):
             raise InvoiceError("The customer can't change after payments or credits are applied.")
         assert_open(current.date)
+        first_applied = min(
+            [a.applied_on for a in current.payment_applications.all()]
+            + [a.applied_on for a in current.credit_applications.all()], default=None)
+        if first_applied is not None and date > first_applied:
+            raise InvoiceError(
+                f"The invoice date can't be after {first_applied.isoformat()}, when a payment or credit was applied.")
         validate_invoice(
             customer=new_customer, date=date, lines=lines, sales_order=current.sales_order,
             exclude_invoice=current, check_customer=changed_customer,
@@ -259,9 +265,13 @@ def void_invoice(invoice: Invoice, *, user, reason: str, date: date_type | None 
             or current.credit_applications.filter(removed=False).exists()
         ):
             raise InvoiceError(f"{current.number} has payments or credits applied. Remove them first.")
-        when = date or current.date
+        removed = [a.removed_on for a in [*current.payment_applications.all(), *current.credit_applications.all()]
+                   if a.removed_on]
+        when = date or max([current.date, *removed])
         if when < current.date:
             raise InvoiceError("The void date can't be before the invoice date.")
+        if removed and when < max(removed):
+            raise InvoiceError(f"The void date can't be before {max(removed).isoformat()}, when a payment or credit was removed.")
         assert_open(when)
         _reverse_posting(current, user=user, when=when, reason=reason)
         current.status = DocStatus.VOID
