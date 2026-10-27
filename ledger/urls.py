@@ -2,6 +2,7 @@ from django.urls import path
 
 from items import views as item_views
 
+from purchasing.views import reports as purchasing_reports
 from sales.views import reports as sales_reports
 
 from . import views
@@ -22,4 +23,9 @@ urlpatterns = [
     path("open-sales-orders/", sales_reports.open_sales_orders, name="open-sales-orders"),
     path("undeposited-funds/", sales_reports.undeposited_funds, name="undeposited-funds"),
     path("drop-ship-awaiting-bill/", sales_reports.drop_ship_awaiting_bill, name="drop-ship-awaiting-bill"),
+    path("ap-aging/", purchasing_reports.ap_aging, name="ap-aging"),
+    path("bills-due/", purchasing_reports.bills_due, name="bills-due"),
+    path("vendor-balances/", purchasing_reports.vendor_balances, name="vendor-balances"),
+    path("open-purchase-orders/", purchasing_reports.open_purchase_orders, name="open-purchase-orders"),
+    path("1099-summary/", purchasing_reports.summary_1099, name="1099-summary"),
 ]

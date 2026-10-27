@@ -366,15 +366,15 @@ def test_invoice_void_releases_allocation(...):
     - Columns `vendor,tax_id,address,total_paid,file`.
   - The page shows the spec note text and the missing-threshold message.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Aging buckets and the ledger tie.
   - 1099: card excluded; a payment on Dec 31 vs Jan 1 lands in the right year; the 2026 threshold of 2000.00 marks 1,999.99 as not file and 2,000.00 as file; a missing year shows the message.
   - A Standard user sees masked tax IDs, and the CSV returns 403.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the five reports (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: purchasing reports and 1099 summary`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the five reports (light and dark), sent.
+- [x] **Step 6: Commit** `feat: purchasing reports and 1099 summary`
 
 ---
 
