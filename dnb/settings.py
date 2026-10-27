@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "items",
     "contacts",
     "sales",
+    "purchasing",
     "backup",
 ]
 

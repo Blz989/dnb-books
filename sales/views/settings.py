@@ -10,13 +10,13 @@ from ledger.errors import PostingError
 
 from ..errors import SalesError
 from ..forms import SalesSettingsForm
-from ..models import DocType, DocumentSequence, SalesSettings
+from ..models import SALES_DOC_TYPES, DocumentSequence, SalesSettings
 from ..numbering import _sequence, set_sequence
 
 
 def _numbering_rows(post=None, errors=None):
     rows = []
-    for doc_type in DocType:
+    for doc_type in SALES_DOC_TYPES:
         seq = _sequence(doc_type)
         rows.append({
             "type": doc_type.value, "label": doc_type.label,
@@ -54,7 +54,7 @@ def sales_settings(request):
             return redirect(reverse("sales:settings"))
     elif request.method == "POST" and request.POST.get("action") == "numbering":
         post = request.POST
-        for doc_type in DocType:
+        for doc_type in SALES_DOC_TYPES:
             seq = DocumentSequence.objects.get(doc_type=doc_type)
             prefix = post.get(f"prefix_{doc_type.value}", seq.prefix).strip()
             raw = post.get(f"next_{doc_type.value}", "").strip()

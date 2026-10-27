@@ -121,15 +121,15 @@ tests/ test_vendors.py, test_purchasing_models.py, test_purchase_orders.py, test
   - Bulk loaders `bills_with_balances()`, `vendor_payments_with_balances()`, `vendor_credits_with_balances()`.
 - Fixtures: `purchasing_settings` (A/P = existing `ap` 2000), `card` (2100 CREDIT_CARD "Company Visa"), `freight` (6150 EXPENSE "Freight in").
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - `next_number(DocType.BILL) == "BILL-00001"` inside a transaction.
   - `set_sequence` works for VP.
   - The seeded thresholds exist.
   - Balances as of a date before and after a removed application.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS** (Phase 3 numbering tests unchanged)
-- [ ] **Step 5: Commit** `feat: purchasing models, numbering, balances`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS** (Phase 3 numbering tests unchanged)
+- [x] **Step 5: Commit** `feat: purchasing models, numbering, balances`
 
 ---
 

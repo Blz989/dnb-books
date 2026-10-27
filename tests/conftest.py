@@ -266,3 +266,24 @@ def vendor(db):
     from contacts.models import Terms, Vendor
 
     return Vendor.objects.create(name="Acme Supply", terms=Terms.NET_30, is_1099=False)
+
+
+# ---- purchasing fixtures (Phase 4, Task 2) ----
+@pytest.fixture
+def purchasing_settings(db, ap):
+    from purchasing.models import PurchasingSettings
+
+    s = PurchasingSettings.load()
+    s.ap_account = ap
+    s.save()
+    return s
+
+
+@pytest.fixture
+def card(db):
+    return _account("2100", "Company Visa", AccountType.LIABILITY, AccountSubtype.CREDIT_CARD)
+
+
+@pytest.fixture
+def freight(db):
+    return _account("6150", "Freight in", AccountType.EXPENSE, AccountSubtype.EXPENSE)
