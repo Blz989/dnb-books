@@ -352,7 +352,7 @@ def test_void_reopens_closed_order(...): ...
   - "{invoice} belongs to a different customer."
   - The spec 5.4 void messages, verbatim.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A check goes to Undeposited Funds; an ACH needs a bank.
   - Overpayment leaves credit, applied later.
   - Applying more than an invoice's balance is refused.
@@ -360,10 +360,10 @@ def test_void_reopens_closed_order(...): ...
   - A credit note posts and applies.
   - A refund from a payment's unapplied amount; a refund above unapplied is refused.
   - Every void rule, including a payment void reopening invoices.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: payments, credit notes, refunds`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: payments, credit notes, refunds`
 
 ---
 
