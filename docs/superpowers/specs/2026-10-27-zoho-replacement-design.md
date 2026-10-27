@@ -39,6 +39,8 @@ Multi-currency, multiple warehouses, serial/batch tracking, kits/assemblies, sal
 
 ## 3. Architecture
 
+> **Update 2026-10-27:** hosting moved from an office PC to **Docker on a Linux server** (`docker-compose.yml`: `app` and `scheduler` services, data in `./data`). Off-site backups go to Google Drive through rclone (`DNB_BACKUP_REMOTE`), and the monthly restore drill checks the Google Drive copy. The diagram below shows the original plan; the README has the current setup.
+
 ```
    Office PC (always on)                     Other office computers
   ┌───────────────────────────────┐          ┌──────────────┐
@@ -134,6 +136,8 @@ Specific posting behavior (for example, whether inventory asset is recorded at r
 - Zoho exports and PDFs are archived alongside the backups as a permanent reference.
 
 ## 9. Backup and recovery
+
+> **Update 2026-10-27:** backups are uploaded with rclone to Google Drive and scheduled by the `scheduler` service (01:15 daily, restore drill 02:15 on the 1st). A failed upload marks the backup failed on the home screen.
 
 - Nightly consistent snapshot of the SQLite file (SQLite online backup API, not a raw file copy), encrypted, uploaded off-site (destination chosen in the Phase 1 plan; candidates are Google Drive or an S3-compatible bucket).
 - Retention: 30 daily copies plus one per month kept long term.

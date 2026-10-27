@@ -1,6 +1,6 @@
 # DNB Books
 
-Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs on one computer in the office, and everyone else uses it from a web browser on the office network.
+Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
 > **Status:** Phase 2 (items and inventory) is built and tested, on top of Phase 1 (ledger core). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
@@ -32,14 +32,15 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 ## How it works
 
 ```
-   Office PC (always on)                     Other office computers
-  ┌───────────────────────────────┐          ┌──────────────┐
-  │  DNB Books (Python / Django)  │◄─────────│  web browser │
-  │  Database: one SQLite file    │   LAN    └──────────────┘
-  └──────────────┬────────────────┘
-                 │ nightly encrypted copy
-                 ▼
-   Synced cloud folder (Google Drive / OneDrive / Dropbox)
+   Linux server (Docker)                                Office computers
+  ┌────────────────────── docker compose ──────────────┐   ┌──────────────┐
+  │  app        DNB Books (Python / Django) on :8000   │◄──│  web browser │
+  │  scheduler  nightly backup, monthly restore drill  │   └──────────────┘
+  │  ./data     database (one SQLite file), backups    │
+  └──────────────────────┬─────────────────────────────┘
+                         │ nightly encrypted copy (rclone)
+                         ▼
+                 Google Drive (dnb-backups folder)
 ```
 
 Rules the system enforces:
@@ -53,63 +54,74 @@ Rules the system enforces:
 
 ## Getting started
 
-### First-time install (on the office PC)
+### First-time install (on the server)
 
-1. Install [uv](https://docs.astral.sh/uv/) (it installs Python and the dependencies for you).
-2. Copy `.env.example` to `.env` and fill in `DNB_SECRET_KEY` (any long random text), `DNB_ALLOWED_HOSTS` (the office PC's name or IP address, plus `localhost`), and `DNB_BACKUP_DIR` (a folder inside your synced cloud folder, such as Google Drive, OneDrive, or Dropbox).
-3. Run these once:
+You need Docker with the Compose plugin, and git.
+
+1. Get the code: `git clone <repository URL> dnb-books && cd dnb-books`
+2. Copy `.env.example` to `.env` and fill in:
+   - `DNB_SECRET_KEY`: any long random text (for example the output of `openssl rand -hex 32`).
+   - `DNB_ALLOWED_HOSTS`: the server's name and IP address as people will type them, plus `localhost`.
+   - `DNB_TIME_ZONE`: your time zone, for example `America/Los_Angeles`. Backup times use it.
+3. Build and start: `docker compose up -d --build`. The first start creates the database in `./data`.
+4. Create the backup key and the first admin user:
 
 ```bash
-uv sync
-uv run python manage.py migrate
-uv run python manage.py createsuperuser
-uv run python manage.py setup_roles
-uv run python manage.py generate_backup_key
+docker compose exec -u dnb app python manage.py generate_backup_key
+docker compose exec -u dnb app python manage.py createsuperuser
 ```
 
-The last command prints a backup key. Put it in `.env` as `DNB_BACKUP_KEY` and keep a copy in your password manager.
+   Put the printed key in `.env` as `DNB_BACKUP_KEY`, save a copy in your password manager, then `docker compose up -d` so the app reads it.
+5. Connect Google Drive for off-site backups (next section).
+6. Open `http://<server>:8000` and log in.
+
+Always run commands inside the container with `-u dnb`, as shown, so files in `./data` stay owned by the app.
+
+### Connect Google Drive (once)
+
+Backups are encrypted, then copied to Google Drive with [rclone](https://rclone.org/drive/).
+
+1. On the server, start rclone's setup: `docker compose run --rm -u dnb app rclone config`
+2. Choose `n` (new remote), name it `gdrive`, storage type `drive`. Leave client id and secret blank, choose scope `1` (full access), and leave the rest at their defaults.
+3. When it asks "Use web browser to automatically authenticate?", answer `n`. The server has no browser, so rclone prints a command like `rclone authorize "drive" "..."`.
+4. On any computer with a browser, [install rclone](https://rclone.org/install/), run that exact command, sign in to the Google account that should hold the backups, and paste the token it prints back into the server prompt.
+5. Finish the prompts, then set `DNB_BACKUP_REMOTE=gdrive:dnb-backups` in `.env` and run `docker compose up -d`.
+6. Test it: `docker compose exec -u dnb app python manage.py backup_now`, then check that the file appears in the `dnb-backups` folder in Google Drive, and run `docker compose exec -u dnb app python manage.py restore_drill`.
 
 ### Everyday use
 
 | Task | How |
 |---|---|
-| Start the app | Run `start` (`start.bat` on Windows, `start.sh` on Linux), then open `http://<office-pc>:8000` |
-| Update the app | Run `update` (`update.bat` or `update.sh`). It takes a backup first, then pulls the new version and applies database changes |
-| Back up now | `uv run python manage.py backup_now` |
-| Check backups work | `uv run python manage.py restore_drill` |
+| Open the app | `http://<server>:8000` |
+| Update the app | `./update.sh`: backs up, pulls the new version, rebuilds, and restarts. Database changes apply on start. |
+| Back up now | `docker compose exec -u dnb app python manage.py backup_now` |
+| Check backups work | `docker compose exec -u dnb app python manage.py restore_drill` |
+| See what the scheduler did | `docker compose logs scheduler` |
+| Stop / start | `docker compose down` / `docker compose up -d` |
 
-### Nightly backup
+### Backups
 
-Backups are encrypted copies of the database written to `DNB_BACKUP_DIR`. Your sync app (Google Drive, OneDrive, Dropbox) uploads them off-site. The app keeps the last 30 days plus the newest backup of every month. If the backup folder is missing or unwritable, the home screen shows a red warning.
+The `scheduler` service runs `backup_now` every day at 1:15 AM and `restore_drill` on the 1st of each month at 2:15 AM (server time zone; change with `DNB_BACKUP_TIME` and `DNB_DRILL_TIME`). Each backup is encrypted, written to `./data/backups`, and copied to Google Drive. The app keeps the last 30 days plus the newest backup of every month, in both places. The restore drill downloads the backup from Google Drive, so it proves the off-site copy works.
 
-Schedule `backup_now` for 1:15 AM every day and `restore_drill` for the 1st of each month.
-
-**Windows (Task Scheduler)**
-
-1. Open Task Scheduler and choose Create Task.
-2. Trigger: Daily at 1:15 AM. Action: Start a program.
-   - Program: `uv`
-   - Arguments: `run python manage.py backup_now`
-   - Start in: the folder where DNB Books is installed (for example `C:\dnb-books`)
-3. Make a second task the same way with a Monthly trigger on day 1 at 2:00 AM and the arguments `run python manage.py restore_drill`.
-4. The next morning, check that the home screen shows "Last backup" with a recent time.
-
-**Linux (cron)**: run `crontab -e` and add (use the real paths):
-
-```
-15 1 * * * cd /home/office/dnb-books && uv run python manage.py backup_now >> data/backup.log 2>&1
-0 2 1 * * cd /home/office/dnb-books && uv run python manage.py restore_drill >> data/backup.log 2>&1
-```
+If a backup or upload fails, the home screen shows a red warning, for example "Backup saved locally but not uploaded: …".
 
 **Restore**
 
 ```bash
-uv run python manage.py restore_backup <backup file> --to <new database file>
+# 1. Copy the backup down from Google Drive (skip if it is still in ./data/backups)
+docker compose run --rm -u dnb app rclone copy gdrive:dnb-backups/<backup file> /data/backups/
+# 2. Decrypt it to a new file (never overwrites)
+docker compose run --rm -u dnb app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3
+# 3. Swap it in
+docker compose down
+mv data/dnb.sqlite3 data/dnb-before-restore.sqlite3 && rm -f data/dnb.sqlite3-wal data/dnb.sqlite3-shm
+mv data/restored.sqlite3 data/dnb.sqlite3
+docker compose up -d
 ```
 
-The command never overwrites a file. It prints the steps to swap the restored database in: stop the app, rename the current database, move the restored file to `DNB_DB_PATH`, start the app.
+**Important:** backups are encrypted. Keep a copy of the backup key (`DNB_BACKUP_KEY` in `.env`) in a password manager. Without it, backups cannot be restored. The rclone sign-in lives in `./data/rclone/rclone.conf`; treat it like a password.
 
-**Important:** backups are encrypted. Keep a copy of the backup key (`DNB_BACKUP_KEY` in `.env`) in a password manager. Without it, backups cannot be restored.
+**Network:** the app serves plain HTTP and is meant for the office network only. Do not expose port 8000 to the internet without putting a reverse proxy with HTTPS in front of it.
 
 ## Roadmap
 
@@ -127,7 +139,8 @@ Zoho is canceled only after all of these pass:
 ## Documentation
 
 - Design spec: [`docs/superpowers/specs/2026-10-27-zoho-replacement-design.md`](docs/superpowers/specs/2026-10-27-zoho-replacement-design.md)
-- Phase 1 plan: [`docs/superpowers/plans/2026-10-27-phase-1-ledger-core.md`](docs/superpowers/plans/2026-10-27-phase-1-ledger-core.md)
+- Phase plans: [`docs/superpowers/plans/`](docs/superpowers/plans/)
+- Phase specs: [`docs/superpowers/specs/`](docs/superpowers/specs/)
 - Instructions for Claude Code sessions: [`CLAUDE.md`](CLAUDE.md)
 
 ## Development
@@ -135,15 +148,12 @@ Zoho is canceled only after all of these pass:
 ```bash
 uv sync            # install dependencies
 uv run pytest -q   # run tests
+./start.sh         # run the app outside Docker (uses .env)
 ```
 
 Each phase gets its own spec and plan before any code is written. Work happens on `claude/*` branches and lands through pull requests into `main`.
 
-
-## Development
-
 ### Taking screenshots
-
 Screens are checked visually against `docs/design/items-mockup.html`. Use a throwaway database, never `data/`:
 
 ```bash

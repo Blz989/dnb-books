@@ -13,6 +13,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 from django.utils import timezone
 
+from . import remote
 from .models import BackupRun
 
 FILENAME_RE = re.compile(r"^dnb-(\d{8})-(\d{6})\.sqlite3\.enc$")
@@ -123,10 +124,16 @@ def run_backup(now: datetime | None = None) -> BackupRun:
             except OSError as exc:
                 partial.unlink(missing_ok=True)
                 raise BackupError(f"Couldn't write to the backup folder {dest_dir}: {exc.strerror or exc}.") from exc
-        apply_retention(dest_dir, now.date())
+        deleted = apply_retention(dest_dir, now.date())
+        run.filename = name
+        if remote.enabled():
+            try:
+                remote.upload(final)
+                remote.delete([p.name for p in deleted])
+            except remote.RemoteError as exc:
+                raise BackupError(f"Backup saved locally but not uploaded: {exc}") from exc
 
         run.status = BackupRun.Status.SUCCESS
-        run.filename = name
         run.size_bytes = final.stat().st_size
         run.ledger_fingerprint = fingerprint
     except BackupError as exc:
@@ -157,9 +164,16 @@ def restore_drill() -> DrillResult:
     def fail(message, actual=""):
         return DrillResult(False, run.filename, run.ledger_fingerprint, actual, f"Restore drill failed: {message}")
 
-    if not source.exists():
+    if not remote.enabled() and not source.exists():
         return fail(f"{run.filename} is missing from {settings.DNB_BACKUP_DIR}.")
     with tempfile.TemporaryDirectory() as tmp:
+        if remote.enabled():
+            # Check the off-site copy, the one that matters if this server is lost.
+            source = Path(tmp) / run.filename
+            try:
+                remote.download(run.filename, source)
+            except remote.RemoteError as exc:
+                return fail(f"couldn't download {run.filename} from {settings.DNB_BACKUP_REMOTE}: {exc}")
         restored = Path(tmp) / "restored.sqlite3"
         try:
             decrypt_file(source, restored, settings.DNB_BACKUP_KEY)
