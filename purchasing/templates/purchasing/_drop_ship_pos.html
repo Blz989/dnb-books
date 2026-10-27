@@ -1,0 +1,14 @@
+{% if purchase_orders %}
+<h2>Purchase orders</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Order</th><th>Vendor</th><th>Date</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for p in purchase_orders %}
+    <tr><td><a class="sku" href="{% url 'purchasing:po-detail' p.number %}">{{ p.number }}</a></td><td>{{ p.vendor.name }}</td>
+      <td>{{ p.date|date:"Y-m-d" }}</td><td><span class="tag{% if p.status == 'CLOSED' %} ns{% endif %}">{{ p.get_status_display }}</span></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}

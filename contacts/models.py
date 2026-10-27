@@ -4,6 +4,8 @@ from auditlog.registry import auditlog
 from django.db import models
 from django.db.models.functions import Lower
 
+from ledger.models import Account, AccountType
+
 
 class Terms(models.TextChoices):
     DUE_ON_RECEIPT = "DUE_ON_RECEIPT", "Due on receipt"
@@ -57,4 +59,66 @@ class Customer(models.Model):
         super().save(*args, **kwargs)
 
 
+def mask_tax_id(value: str) -> str:
+    digits = "".join(ch for ch in (value or "") if ch.isalnum())
+    return f"•••-••-{digits[-4:]}" if digits else ""
+
+
+def _normalize_name(name: str) -> str:
+    return " ".join((name or "").split()).casefold()
+
+
+class Vendor(models.Model):
+    name = models.CharField(max_length=200)
+    contact_name = models.CharField(max_length=200, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    address = models.TextField(blank=True)
+    terms = models.CharField(max_length=20, choices=Terms.choices, default=Terms.NET_30)
+    default_expense_account = models.ForeignKey(
+        Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    is_1099 = models.BooleanField(default=False)
+    tax_id = models.CharField(max_length=30, blank=True)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [models.UniqueConstraint(Lower("name"), name="vendor_name_ci_unique")]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def masked_tax_id(self) -> str:
+        return mask_tax_id(self.tax_id)
+
+    @classmethod
+    def find_by_name(cls, name: str) -> "Vendor | None":
+        """Match ignoring case, outer spaces, and runs of inner spaces."""
+        wanted = _normalize_name(name)
+        if not wanted:
+            return None
+        for vendor in cls.objects.all():
+            if _normalize_name(vendor.name) == wanted:
+                return vendor
+        return None
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        self.name = " ".join((self.name or "").split())
+        if self.name and Vendor.objects.filter(name__iexact=self.name).exclude(pk=self.pk).exists():
+            raise ValidationError({"name": f"A vendor named {self.name} already exists."})
+        account = self.default_expense_account
+        if account is not None and account.type != AccountType.EXPENSE:
+            raise ValidationError({"default_expense_account": "Choose an expense account."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean(validate_constraints=False)
+        super().save(*args, **kwargs)
+
+
 auditlog.register(Customer)
+auditlog.register(Vendor)

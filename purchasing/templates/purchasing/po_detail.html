@@ -1,0 +1,42 @@
+{% extends "core/base.html" %}
+{% block title %}{{ order.number }}{% endblock %}
+{% block page_title %}{{ order.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><a href="/vendors/{{ order.vendor.pk }}/">{{ order.vendor.name }}</a> · {{ order.date|date:"Y-m-d" }}{% if order.expected_date %} · expected {{ order.expected_date|date:"Y-m-d" }}{% endif %} · <span class="tag{% if order.status == 'CLOSED' %} ns{% endif %}">{{ order.get_status_display }}</span>
+  {% if order.sales_order %}· drop ship for <a href="/sales/orders/{{ order.sales_order.number }}/">{{ order.sales_order.number }}</a>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  {% if order.status == "OPEN" %}<a class="btn" href="{% url 'purchasing:po-edit' order.number %}">Edit</a>{% endif %}
+  {% if can_bill %}<a class="btn primary" href="{% url 'purchasing:po-bill' order.number %}">Bill this order</a>{% endif %}
+  <form method="post" action="{% url 'purchasing:po-close' order.number %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">{% if order.status == "OPEN" %}Close order{% else %}Reopen order{% endif %}</button></form>
+{% endblock %}
+{% block content %}
+{% if order.notes %}<div class="card"><div class="body"><dl class="facts"><dt>Notes</dt><dd>{{ order.notes|linebreaksbr }}</dd></dl></div></div>{% endif %}
+<h2>Lines</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Item</th><th>Description</th><th class="num">Price</th><th class="num">Ordered</th><th class="num">Billed</th><th class="num">Left</th></tr></thead>
+  <tbody>
+  {% for l in lines %}
+    <tr><td><a class="sku" href="/items/{{ l.line.item.sku }}/">{{ l.line.item.sku }}</a></td>
+      <td>{{ l.line.description|default:l.line.item.name }}</td>
+      <td class="num">{{ l.line.price|floatformat:"2g" }}</td><td class="num">{{ l.line.quantity }}</td>
+      <td class="num">{{ l.billed }}</td><td class="num{% if l.left > 0 %} neg{% endif %}">{{ l.left }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<h2>Bills</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Bill</th><th>Vendor invoice</th><th>Date</th><th>Status</th><th class="num">Total</th></tr></thead>
+  <tbody>
+  {% for b in bills %}
+    <tr><td><a class="sku" href="{% url 'purchasing:bill-detail' b.bill.number %}">{{ b.bill.number }}</a></td>
+      <td>{{ b.bill.vendor_invoice_number|default:"—" }}</td><td>{{ b.bill.date|date:"Y-m-d" }}</td>
+      <td>{% if b.bill.status == "VOID" %}<span class="tag void">Void</span>{% else %}Open{% endif %}</td>
+      <td class="num">{{ b.total|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nothing has been billed yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

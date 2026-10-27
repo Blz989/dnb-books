@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block title %}1099 summary{% endblock %}
+{% block page_title %}1099 summary{% endblock %}
+{% block page_subtitle %}<div class="sub">Check and ACH payments to vendors marked 1099, by calendar year. Card payments are left out.</div>{% endblock %}
+{% block content %}
+{% if report and report.threshold is None %}<div class="banner warning">Set the 1099 threshold for {{ report.year }} in Purchasing settings.</div>{% endif %}
+<div class="banner info">Check amounts and thresholds with your accountant before filing.</div>
+<div class="card">
+<form method="get" class="filters">
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    <label>{{ field.label }} {{ field }}
+    {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>
+  {% endfor %}
+  <button type="submit" class="btn primary">Run</button>
+  {% if report and csv_allowed %}<button type="submit" name="format" value="csv" class="btn">Download CSV</button>{% endif %}
+</form>
+{% if report %}
+<table class="data">
+  <thead><tr><th>Vendor</th><th>Tax ID</th><th class="num">Total paid</th><th>{% if report.threshold is not None %}Threshold {{ report.threshold|floatformat:"2g" }}{% else %}Threshold{% endif %}</th></tr></thead>
+  <tbody>
+  {% for r in report.rows %}
+    <tr><td><a href="/vendors/{{ r.vendor.pk }}/">{{ r.vendor.name }}</a></td><td>{{ r.vendor.masked_tax_id|default:"Not entered" }}</td>
+      <td class="num">{{ r.total|floatformat:"2g" }}</td>
+      <td>{% if r.file %}<span class="tag">File</span>{% else %}Below threshold{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No check or ACH payments to 1099 vendors in {{ report.year }}.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+<table class="data" id="exp-lines">
+  <thead><tr><th>#</th><th>Expense account</th><th>Description</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for r in exp_rows %}
+    <tr{% if r.index >= exp_shown %} hidden data-extra{% endif %}>
+      <td>{{ forloop.counter }}</td>
+      <td><select name="exp-{{ r.index }}-account"><option value="">Choose an account</option>{% for a in expense_accounts %}<option value="{{ a.pk }}"{% if r.account == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.number }} {{ a.name }}</option>{% endfor %}</select></td>
+      <td><input type="text" name="exp-{{ r.index }}-description" value="{{ r.description }}" maxlength="500" placeholder="Freight, services, rent"></td>
+      <td class="num"><input type="text" inputmode="decimal" name="exp-{{ r.index }}-amount" value="{{ r.amount }}" style="text-align:right"></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="foot"><button type="button" class="btn add-rows" data-table="exp-lines">+ Add expense line</button><span></span></div>

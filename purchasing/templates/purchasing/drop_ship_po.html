@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block title %}Create drop-ship PO{% endblock %}
+{% block page_title %}Create drop-ship PO{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ order.number }} · {{ order.customer.name }}. One purchase order per vendor, for the drop-ship lines not yet on one.</div>{% endblock %}
+{% block content %}
+{% include "purchasing/_errors.html" %}
+<form method="post">{% csrf_token %}
+  {% for r in rows %}
+  <div class="card"><div class="body">
+    <h2 style="margin-top:0">{{ r.name }}</h2>
+    {% if r.matched %}
+      <p>Matches vendor <a href="/vendors/{{ r.matched.pk }}/">{{ r.matched.name }}</a>.</p>
+    {% else %}
+      <div class="form-row">
+        <span class="field-error">No vendor named {{ r.name }}.</span>
+        <label for="vendor-{{ forloop.counter }}">Choose a vendor for these lines</label>
+        <select id="vendor-{{ forloop.counter }}" name="vendor-{{ r.name }}"><option value="">Choose a vendor</option>
+          {% for v in vendors %}<option value="{{ v.pk }}"{% if r.chosen.pk == v.pk %} selected{% endif %}>{{ v.name }}</option>{% endfor %}</select>
+        <span class="help">Not on the list? <a href="/vendors/new/">Add the vendor</a> first, then come back.</span>
+      </div>
+    {% endif %}
+    <table class="data">
+      <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Cost</th></tr></thead>
+      <tbody>{% for l in r.lines %}<tr><td><span class="sku">{{ l.item.sku }}</span> {{ l.description|default:l.item.name }}</td><td class="num">{{ l.quantity }}</td><td class="num">{{ l.item.purchase_cost|floatformat:"2g" }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div></div>
+  {% endfor %}
+  <button type="submit" class="btn primary">Create POs</button>
+  <a class="btn" href="{% url 'sales:order-detail' order.number %}">Cancel</a>
+</form>
+{% endblock %}

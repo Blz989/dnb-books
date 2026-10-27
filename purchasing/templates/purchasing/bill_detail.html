@@ -1,0 +1,96 @@
+{% extends "core/base.html" %}
+{% block title %}{{ bill.number }}{% endblock %}
+{% block page_title %}{{ bill.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><a href="/vendors/{{ bill.vendor.pk }}/">{{ bill.vendor.name }}</a> · {{ bill.date|date:"Y-m-d" }} · due {{ bill.due_date|date:"Y-m-d" }} · {{ bill.get_terms_display }}
+  {% if is_void %}<span class="tag void">Void</span>{% endif %}{% if bill.revision > 1 %} <span class="tag ns">Revision {{ bill.revision }}</span>{% endif %}
+  {% if bill.purchase_order %}· <a href="{% url 'purchasing:po-detail' bill.purchase_order.number %}">{{ bill.purchase_order.number }}</a>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  {% if not is_void %}<a class="btn" href="{% url 'purchasing:bill-edit' bill.number %}">Edit</a>{% endif %}
+  {% if not is_void and balance > 0 %}<a class="btn primary" href="/purchasing/pay/?vendor={{ bill.vendor.pk }}">Pay</a>{% endif %}
+  {% if is_admin and not is_void %}<a class="btn" href="{% url 'purchasing:bill-void' bill.number %}">Void</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% if is_void %}<div class="banner error">Voided on {{ bill.voided_on|date:"Y-m-d" }}: {{ bill.void_reason }}</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Total</div><div class="v">{{ total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Payments and credits</div><div class="v">{{ applied|floatformat:"2g" }}</div></div>
+  <div class="kpi{% if balance > 0 and not is_void %} warn{% endif %}"><div class="l">Balance</div><div class="v">{{ balance|floatformat:"2g" }}</div></div>
+</div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Item or account</th><th>Description</th><th>Kind</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for l in item_lines %}
+    <tr><td><a class="sku" href="/items/{{ l.item.sku }}/">{{ l.item.sku }}</a></td><td>{{ l.description|default:l.item.name }}</td>
+      <td>{{ l.get_kind_display }}</td>
+      <td class="num">{{ l.quantity }}</td><td class="num">{{ l.price|floatformat:"2g" }}</td><td class="num">{{ l.amount|floatformat:"2g" }}</td></tr>
+  {% endfor %}
+  {% for l in expense_lines %}
+    <tr><td>{{ l.account.number }} {{ l.account.name }}</td><td>{{ l.description|default:"—" }}</td><td>Expense</td>
+      <td class="num"></td><td class="num"></td><td class="num">{{ l.amount|floatformat:"2g" }}</td></tr>
+  {% endfor %}
+    <tr class="total"><td></td><td>Total</td><td></td><td></td><td></td><td class="num">{{ total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Vendor invoice #</dt><dd>{{ bill.vendor_invoice_number|default:"—" }}</dd>
+    <dt>Notes</dt><dd>{{ bill.notes|linebreaksbr|default:"—" }}</dd>
+    <dt>Journal entries</dt><dd>{% for label, e in entries %}<a href="{% url 'admin:ledger_journalentry_change' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="dash">None. The total is zero.</span>{% endfor %}</dd>
+  </dl>
+</div></div>
+
+{% if has_drop_ship %}
+<h2>Drop-ship allocations</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Item</th><th>Customer invoice</th><th>Customer</th><th class="num">Quantity</th></tr></thead>
+  <tbody>
+  {% for l in item_lines %}{% if l.kind == "DROP_SHIP" %}
+    {% for a in l.drop_ship_allocations %}
+    <tr><td><span class="sku">{{ l.item.sku }}</span></td>
+      <td><a class="sku" href="/sales/invoices/{{ a.invoice_line.invoice.number }}/">{{ a.invoice_line.invoice.number }}</a></td>
+      <td>{{ a.invoice_line.invoice.customer.name }}</td><td class="num">{{ a.quantity }}</td></tr>
+    {% endfor %}
+    {% if l.drop_ship_unmatched > 0 %}<tr><td><span class="sku">{{ l.item.sku }}</span></td><td colspan="2"><span class="dash">Not yet matched to a customer invoice. The next invoice for this sales order line picks it up.</span></td><td class="num">{{ l.drop_ship_unmatched }}</td></tr>{% endif %}
+  {% endif %}{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<h2>Payments and credits applied</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Document</th><th>Applied on</th><th class="num">Amount</th><th></th></tr></thead>
+  <tbody>
+  {% for a in payment_apps %}
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/payments/{{ a.payment.number }}/">{{ a.payment.number }}</a> <span class="dash">Payment ({{ a.payment.get_method_display }})</span></td>
+      <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
+      <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'purchasing:application-remove' bill.number 'payment' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
+  {% endfor %}
+  {% for a in credit_apps %}
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/credits/{{ a.credit.number }}/">{{ a.credit.number }}</a> <span class="dash">Vendor credit</span></td>
+      <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
+      <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'purchasing:application-remove' bill.number 'credit' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
+  {% endfor %}
+  {% if not payment_apps and not credit_apps %}<tr><td colspan="4" class="empty">Nothing applied yet.</td></tr>{% endif %}
+  </tbody>
+</table>
+</div>
+
+<h2>Revisions</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Revision</th><th>Saved over on</th><th>By</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for r in revisions %}
+    <tr><td><a class="sku" href="{% url 'purchasing:bill-revision' bill.number r.revision %}">Revision {{ r.revision }}</a></td>
+      <td>{{ r.edited_at|date:"Y-m-d H:i" }}</td><td>{{ r.edited_by.get_username }}</td><td>{{ r.reason|default:"—" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">This bill hasn't been edited.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

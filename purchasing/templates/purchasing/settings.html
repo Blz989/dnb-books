@@ -1,0 +1,62 @@
+{% extends "core/base.html" %}
+{% block title %}Purchasing settings{% endblock %}
+{% block page_title %}Purchasing settings{% endblock %}
+{% block page_subtitle %}<div class="sub">Accounts payable account, document numbering, and 1099 thresholds</div>{% endblock %}
+{% block content %}
+{% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="action" value="settings">
+  {% for field in form %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn primary">Save settings</button>
+</form>
+</div></div>
+
+<h2>Numbering</h2>
+<div class="card"><div class="body">
+<p class="help">Set the prefix and the next number for each document. Use this to carry on from Zoho's last numbers. A next number can't be at or below a number already used.</p>
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="action" value="numbering">
+  <table class="data">
+    <thead><tr><th>Document</th><th>Prefix</th><th>Next number</th></tr></thead>
+    <tbody>
+    {% for r in numbering %}
+      <tr><td>{{ r.label }}</td>
+        <td><input type="text" name="prefix_{{ r.type }}" value="{{ r.prefix }}" maxlength="20" style="width:8rem"></td>
+        <td><input type="text" inputmode="numeric" name="next_{{ r.type }}" value="{{ r.next_number }}" style="width:8rem">
+          {% if r.error %}<span class="field-error">{{ r.error }}</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p><button type="submit" class="btn primary">Save numbering</button></p>
+</form>
+</div></div>
+
+<h2>1099 thresholds</h2>
+<div class="card"><div class="body">
+<p class="help">The amount a vendor must be paid by check or ACH in a calendar year before a 1099 is filed. Add a new year here before filing season.</p>
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="action" value="thresholds">
+  <table class="data">
+    <thead><tr><th>Year</th><th>Threshold</th></tr></thead>
+    <tbody>
+    {% for t in thresholds %}
+      <tr><td>{{ t.year }}</td>
+        <td><input type="text" inputmode="decimal" name="amount_{{ t.year }}" value="{{ t.amount }}" style="width:8rem">
+          {% if t.error %}<span class="field-error">{{ t.error }}</span>{% endif %}</td></tr>
+    {% endfor %}
+      <tr><td><input type="text" inputmode="numeric" name="new_year" value="{{ new_row.year }}" placeholder="Add a year" style="width:8rem"></td>
+        <td><input type="text" inputmode="decimal" name="new_amount" value="{{ new_row.amount }}" placeholder="Amount" style="width:8rem">
+          {% if new_row.error %}<span class="field-error">{{ new_row.error }}</span>{% endif %}</td></tr>
+    </tbody>
+  </table>
+  <p><button type="submit" class="btn primary">Save thresholds</button></p>
+</form>
+</div></div>
+{% endblock %}

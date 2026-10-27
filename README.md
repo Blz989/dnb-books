@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Phase 3 (sales) is built and tested, on top of Phase 2 (items and inventory) and Phase 1 (ledger core). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Phase 4 (purchasing) is built and tested, on top of Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -12,7 +12,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Backups | Nightly encrypted off-site backup, monthly restore drill | 1 |
 | Items and inventory | Item catalog, stock movements, FIFO or weighted average cost per item | 2 |
 | Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging | 3 |
-| Purchasing | Vendors, purchase orders, receiving, bills, vendor payments and credits | 4 |
+| Purchasing | Vendors, purchase orders (including drop-ship POs), bills that receive stock at the bill price, vendor payments by check, ACH, or company card, vendor credits and returns, A/P aging, 1099 summary | 4 |
 | Banking | Plaid bank feeds, file import, check printing on existing check stock, reconciliation | 5 |
 | Migration | Full Zoho history import with month-by-month verification | 5 |
 
@@ -45,7 +45,24 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Void a sales document | Admin only, with a reason. Voided documents keep their numbers |
 | Check A/R against the books | Reports, A/R aging and Undeposited funds. Both show a Difference that must be 0.00 |
 
-A month won't close while customer balances or undeposited payments disagree with the ledger. An admin can close it anyway from Admin, Accounting periods, with a reason that is saved on the period.
+### Purchasing (Phase 4)
+
+| Task | Where |
+|---|---|
+| Set up the accounts payable account, the next document numbers, and the 1099 thresholds (once, admin) | Purchasing settings. Set the next numbers to carry on from Zoho's |
+| Add a vendor, mark 1099 vendors, and enter tax IDs | Vendors, New vendor. Only an admin sees a full tax ID, and only on the edit form |
+| Track what was ordered | Purchase orders, New purchase order. Nothing is sent to the vendor |
+| Receive and bill stock | Open the purchase order, then Bill this order. Stock comes in at the price on the bill. Bill in parts by lowering a quantity, and add freight as an expense line |
+| Enter a bill with no purchase order, or an expense bill (rent, utilities) | Bills, New bill. Item lines and expense lines can share a bill |
+| Buy something that ships straight to the customer | Open the sales order, then Create drop-ship PO. Billing it posts the cost and clears the invoice from Drop shipments awaiting bill |
+| Fix a saved bill | Bills, open it, Edit. The number stays, the books are reposted, and the old version stays under Revisions. Voids are admin only |
+| Pay bills | Pay bills. Tick amounts (partial is fine), choose check, ACH, or company card. One payment is made for each vendor, and each check needs its own number |
+| Pay a vendor ahead, or without a bill | Pay bills, Single payment. Anything not applied stays as credit with the vendor |
+| Send stock back, or get a credit with no return | Vendor credits, Return to vendor or Credit without a return, then Apply to a bill |
+| Check A/P against the books | Reports, A/P aging. The Difference must be 0.00 |
+| Year-end 1099 totals | Reports, 1099 summary. Check and ACH payments only. Admins can download the CSV for the accountant. Confirm amounts and thresholds with the accountant before filing |
+
+A month won't close while customer balances, undeposited payments, or vendor balances disagree with the ledger. An admin can close it anyway from Admin, Accounting periods, with a reason that is saved on the period.
 
 ## How it works
 

@@ -1,0 +1,34 @@
+{% extends "core/base.html" %}
+{% block title %}Bills{% endblock %}
+{% block page_title %}Bills{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ page.paginator.count }} bill{{ page.paginator.count|pluralize }}</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="/purchasing/pay/">Pay bills</a><a class="btn primary" href="{% url 'purchasing:bill-new' %}">+ New bill</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <form method="get" class="filters">
+    <label class="grow">Search<input type="search" name="q" value="{{ q }}" placeholder="Bill number, vendor, or vendor invoice"></label>
+    <label>Status<select name="status"><option value="">All</option><option value="OPEN"{% if status == "OPEN" %} selected{% endif %}>Open</option><option value="VOID"{% if status == "VOID" %} selected{% endif %}>Void</option></select></label>
+    <label>Vendor<select name="vendor"><option value="">All vendors</option>{% for v in vendors %}<option value="{{ v.pk }}"{% if vendor == v.pk|stringformat:"s" %} selected{% endif %}>{{ v.name }}</option>{% endfor %}</select></label>
+    <label><span><input type="checkbox" name="overdue" value="1"{% if overdue %} checked{% endif %}> Overdue only</span></label>
+    <button type="submit" class="btn primary">Search</button>
+  </form>
+  <table class="data">
+    <thead><tr><th>Bill</th><th>Vendor</th><th>Vendor invoice</th><th>Date</th><th>Due</th><th class="num">Total</th><th class="num">Balance</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td><a class="sku" href="{% url 'purchasing:bill-detail' r.bill.number %}">{{ r.bill.number }}</a></td>
+        <td>{{ r.bill.vendor.name }}</td><td>{{ r.bill.vendor_invoice_number|default:"—" }}</td>
+        <td>{{ r.bill.date|date:"Y-m-d" }}</td><td>{{ r.bill.due_date|date:"Y-m-d" }}</td>
+        <td class="num">{{ r.total|floatformat:"2g" }}</td><td class="num">{{ r.balance|floatformat:"2g" }}</td>
+        <td>{% if r.bill.status == "VOID" %}<span class="tag void">Void</span>{% elif r.overdue %}<span class="tag overdue">Overdue</span>{% elif r.balance == 0 %}<span class="tag ns">Paid</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="8" class="empty">No bills yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>{% if page.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+      {% if page.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

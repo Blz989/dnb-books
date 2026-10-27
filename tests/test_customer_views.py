@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from contacts.models import Customer
 from items.models import ItemType
-from sales.models import DocType, Invoice, PaymentMethod, SalesSettings
+from sales.models import SALES_DOC_TYPES, DocType, Invoice, PaymentMethod, SalesSettings
 from sales.posting.invoices import InvoiceLineSpec, create_invoice
 from sales.posting.receipts import receive_payment
 
@@ -187,7 +187,7 @@ def test_settings_need_accounts(adm, sales_settings):
 
 def numbering_post(**extra):
     data = {"action": "numbering"}
-    for t in DocType:
+    for t in SALES_DOC_TYPES:
         data[f"prefix_{t.value}"] = {"SO": "SO-", "INV": "INV-", "PMT": "PMT-", "CN": "CN-", "DEP": "DEP-", "REF": "REF-"}[t.value]
         data[f"next_{t.value}"] = "1"
     data.update(extra)

@@ -1,0 +1,33 @@
+{% extends "core/base.html" %}
+{% block title %}{{ bill.number }} revision {{ rev.revision }}{% endblock %}
+{% block page_title %}{{ bill.number }}, revision {{ rev.revision }}{% endblock %}
+{% block page_subtitle %}<div class="sub">As it was before the edit by {{ rev.edited_by.get_username }} on {{ rev.edited_at|date:"Y-m-d H:i" }}. Read only.</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="{% url 'purchasing:bill-detail' bill.number %}">Back to {{ bill.number }}</a>{% endblock %}
+{% block content %}
+<div class="banner info">This is an old version. The current bill is revision {{ bill.revision }}.</div>
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Vendor</dt><dd>{{ vendor.name|default:"—" }}</dd>
+    <dt>Vendor invoice #</dt><dd>{{ snap.vendor_invoice_number|default:"—" }}</dd>
+    <dt>Date</dt><dd>{{ snap.date }}</dd>
+    <dt>Terms</dt><dd>{{ snap.terms }}</dd>
+    <dt>Due</dt><dd>{{ snap.due_date }}</dd>
+    <dt>Notes</dt><dd>{{ snap.notes|linebreaksbr|default:"—" }}</dd>
+    {% if rev.reason %}<dt>Reason for the change</dt><dd>{{ rev.reason }}</dd>{% endif %}
+  </dl>
+</div></div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Item or account</th><th>Description</th><th>Kind</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for l in snap.item_lines %}
+    <tr><td><span class="sku">{{ l.sku }}</span></td><td>{{ l.description }}</td><td>{{ l.kind }}</td>
+      <td class="num">{{ l.quantity }}</td><td class="num">{{ l.price }}</td><td class="num">{{ l.amount }}</td></tr>
+  {% endfor %}
+  {% for l in snap.expense_lines %}
+    <tr><td>{{ l.account }}</td><td>{{ l.description }}</td><td>Expense</td><td class="num"></td><td class="num"></td><td class="num">{{ l.amount }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

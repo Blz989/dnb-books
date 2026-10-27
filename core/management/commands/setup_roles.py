@@ -17,8 +17,9 @@ STANDARD_PERMISSIONS = {
     "items.stockmovement": ("view",),
     "items.inventorysettings": ("view",),
     "contacts.customer": ("add", "change", "view"),
+    "contacts.vendor": ("add", "change", "view"),
 }
-ADMIN_APPS = ("ledger", "backup", "items", "contacts", "sales")
+ADMIN_APPS = ("ledger", "backup", "items", "contacts", "sales", "purchasing")
 
 
 class Command(BaseCommand):

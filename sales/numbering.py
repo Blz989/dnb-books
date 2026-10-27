@@ -23,6 +23,12 @@ MODELS = {
 }
 
 
+def register_document(doc_type: DocType, model, prefix: str, padding: int) -> None:
+    """Lets another app add its own document type to the numbering."""
+    DEFAULTS[doc_type] = (prefix, padding)
+    MODELS[doc_type] = model
+
+
 def _sequence(doc_type: DocType) -> DocumentSequence:
     prefix, padding = DEFAULTS[DocType(doc_type)]
     seq, _ = DocumentSequence.objects.get_or_create(

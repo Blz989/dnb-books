@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+{% block title %}Vendor payments{% endblock %}
+{% block page_title %}Vendor payments{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ page.paginator.count }} payment{{ page.paginator.count|pluralize }}</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="{% url 'purchasing:payment-new' %}">Single payment</a><a class="btn primary" href="{% url 'purchasing:pay-bills' %}">Pay bills</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <form method="get" class="filters">
+    <label class="grow">Search<input type="search" name="q" value="{{ q }}" placeholder="Number, vendor, or check number"></label>
+    <label>Method<select name="method"><option value="">All</option>{% for v, l in methods %}<option value="{{ v }}"{% if method == v %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+    <label>Vendor<select name="vendor"><option value="">All vendors</option>{% for v in vendors %}<option value="{{ v.pk }}"{% if vendor == v.pk|stringformat:"s" %} selected{% endif %}>{{ v.name }}</option>{% endfor %}</select></label>
+    <label>Status<select name="status"><option value="">All</option><option value="OPEN"{% if status == "OPEN" %} selected{% endif %}>Open</option><option value="VOID"{% if status == "VOID" %} selected{% endif %}>Void</option></select></label>
+    <button type="submit" class="btn primary">Search</button>
+  </form>
+  <table class="data">
+    <thead><tr><th>Payment</th><th>Vendor</th><th>Date</th><th>Method</th><th>Paid from</th><th class="num">Amount</th><th class="num">Unapplied</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr{% if r.payment.status == "VOID" %} style="text-decoration: line-through"{% endif %}>
+        <td><a class="sku" href="{% url 'purchasing:payment-detail' r.payment.number %}">{{ r.payment.number }}</a></td>
+        <td>{{ r.payment.vendor.name }}</td><td>{{ r.payment.date|date:"Y-m-d" }}</td>
+        <td>{{ r.payment.get_method_display }}{% if r.payment.check_number %} <span class="dash">#{{ r.payment.check_number }}</span>{% endif %}</td>
+        <td>{{ r.payment.paid_from.name }}</td>
+        <td class="num">{{ r.payment.amount|floatformat:"2g" }}</td><td class="num">{{ r.unapplied|floatformat:"2g" }}</td>
+        <td>{% if r.payment.status == "VOID" %}<span class="tag void">Void</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="8" class="empty">No vendor payments yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>{% if page.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+      {% if page.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

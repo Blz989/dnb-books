@@ -1,0 +1,60 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Pay bills{% endblock %}
+{% block page_title %}Pay bills{% endblock %}
+{% block page_subtitle %}<div class="sub">One payment is made for each vendor you pay. Type an amount, or part of one, next to each bill.</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="{% url 'purchasing:payment-new' %}">Single payment</a><a class="btn" href="{% url 'purchasing:payment-list' %}">All payments</a>{% endblock %}
+{% block content %}
+{% include "purchasing/_errors.html" %}
+<div class="card">
+  <form method="get" class="filters">
+    {{ filter_form.non_field_errors }}
+    {% for field in filter_form %}
+      <label>{{ field.label }} {{ field }}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>
+    {% endfor %}
+    <button type="submit" class="btn primary">Show bills</button>
+  </form>
+</div>
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="vendor" value="{{ filter_form.vendor.value|default:'' }}">
+  <input type="hidden" name="through" value="{{ filter_form.through.value|default:'' }}">
+  <div class="card"><div class="body form-grid">
+    <div class="form-row"><label for="id_date">{{ details.date.label }}</label>{{ details.date }}{% for e in details.date.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    <div class="form-row"><label for="id_method">Method</label>{{ details.method }}{% for e in details.method.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    <div class="form-row"><label for="id_paid_from">Paid from</label>{% with paid_from_value=details.paid_from.value|default:""|stringformat:"s" %}{% include "purchasing/_pay_from.html" %}{% endwith %}
+      <span class="help">Check and ACH come from a bank account. Company card payments go on a credit card account.</span>
+      {% for e in details.paid_from.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  </div>
+  <table class="data">
+    <thead><tr><th>Bill</th><th>Vendor</th><th>Vendor invoice</th><th>Due</th><th class="num">Balance</th><th class="num">Pay</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td><a class="sku" href="/purchasing/bills/{{ r.bill.number }}/">{{ r.bill.number }}</a></td>
+        <td>{{ r.bill.vendor.name }}</td><td>{{ r.bill.vendor_invoice_number|default:"—" }}</td>
+        <td>{{ r.bill.due_date|date:"Y-m-d" }}</td>
+        <td class="num">{{ r.balance|floatformat:"2g" }}</td>
+        <td class="num"><input type="text" inputmode="decimal" name="pay-{{ r.bill.pk }}" value="{{ r.value }}" data-balance="{{ r.balance }}" style="width:7rem;text-align:right"></td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">No bills are waiting to be paid.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if vendors %}
+  <div class="body check-only">
+    <h2 style="margin-top:0">Check numbers</h2>
+    <p class="help">Each vendor gets its own check. A number can only be used once on a bank account.</p>
+    <div class="form-grid">
+    {% for v in vendors %}
+      <div class="form-row"><label for="check-{{ v.vendor.pk }}">{{ v.vendor.name }}</label><input type="text" id="check-{{ v.vendor.pk }}" name="check-{{ v.vendor.pk }}" value="{{ v.check }}" maxlength="30"></div>
+    {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  <div class="foot"><span>{% if rows %}<button type="button" class="btn" id="pay-in-full">Pay in full</button>{% endif %}</span>
+    <span>Paying <strong id="apply-total">0.00</strong></span></div>
+  </div>
+  <button type="submit" class="btn primary">Pay</button>
+  <a class="btn" href="{% url 'purchasing:bill-list' %}">Cancel</a>
+</form>
+<script src="{% static 'purchasing/pay.js' %}" defer></script>
+{% endblock %}

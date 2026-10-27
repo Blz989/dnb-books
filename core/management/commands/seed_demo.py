@@ -20,6 +20,7 @@ ACCOUNTS = [
     ("1250", "Undeposited Funds", AccountType.ASSET, AccountSubtype.OTHER_CURRENT_ASSET),
     ("1300", "Inventory Asset", AccountType.ASSET, AccountSubtype.INVENTORY),
     ("2000", "Accounts Payable", AccountType.LIABILITY, AccountSubtype.ACCOUNTS_PAYABLE),
+    ("2100", "Company Visa", AccountType.LIABILITY, AccountSubtype.CREDIT_CARD),
     ("3000", "Owner's Equity", AccountType.EQUITY, AccountSubtype.EQUITY),
     ("3900", "Opening Balance Equity", AccountType.EQUITY, AccountSubtype.EQUITY),
     ("4000", "Sales", AccountType.INCOME, AccountSubtype.INCOME),
@@ -27,6 +28,7 @@ ACCOUNTS = [
     ("5000", "Cost of Goods Sold", AccountType.EXPENSE, AccountSubtype.COST_OF_GOODS_SOLD),
     ("6000", "Rent", AccountType.EXPENSE, AccountSubtype.EXPENSE),
     ("6100", "Utilities", AccountType.EXPENSE, AccountSubtype.EXPENSE),
+    ("6150", "Freight in", AccountType.EXPENSE, AccountSubtype.EXPENSE),
     ("6500", "Inventory Shrinkage", AccountType.EXPENSE, AccountSubtype.EXPENSE),
     ("6510", "Inventory Write-down", AccountType.EXPENSE, AccountSubtype.EXPENSE),
 ]
@@ -61,9 +63,11 @@ class Command(BaseCommand):
         post(first - timedelta(days=5), "6100", "1000", "310.45", "Utilities")
         from items.demo import seed_counts, seed_items
 
+        from purchasing.demo import seed_purchasing
         from sales.demo import seed_sales
 
         items = seed_items(user)
         seed_counts(user, items)
         seed_sales(user, items)
+        seed_purchasing(user, items)
         self.stdout.write("Demo data ready. Log in as demo / demo-pass-123.")

@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block title %}Purchase orders{% endblock %}
+{% block page_title %}Purchase orders{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ page.paginator.count }} order{{ page.paginator.count|pluralize }}. For tracking only; nothing is sent to the vendor.</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'purchasing:po-new' %}">+ New purchase order</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <form method="get" class="filters">
+    <label class="grow">Search<input type="search" name="q" value="{{ q }}" placeholder="Order number or vendor"></label>
+    <label>Status<select name="status"><option value="">All</option><option value="OPEN"{% if status == "OPEN" %} selected{% endif %}>Open</option><option value="CLOSED"{% if status == "CLOSED" %} selected{% endif %}>Closed</option></select></label>
+    <label>Vendor<select name="vendor"><option value="">All vendors</option>{% for v in vendors %}<option value="{{ v.pk }}"{% if vendor == v.pk|stringformat:"s" %} selected{% endif %}>{{ v.name }}</option>{% endfor %}</select></label>
+    <button type="submit" class="btn primary">Search</button>
+  </form>
+  <table class="data">
+    <thead><tr><th>Order</th><th>Vendor</th><th>Date</th><th>Expected</th><th>Status</th><th class="num">Units left to bill</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td><a class="sku" href="{% url 'purchasing:po-detail' r.order.number %}">{{ r.order.number }}</a>{% if r.order.sales_order_id %} <span class="tag">Drop ship</span>{% endif %}</td>
+        <td>{{ r.order.vendor.name }}</td><td>{{ r.order.date|date:"Y-m-d" }}</td><td>{{ r.order.expected_date|date:"Y-m-d"|default:"—" }}</td>
+        <td><span class="tag{% if r.order.status == 'CLOSED' %} ns{% endif %}">{{ r.order.get_status_display }}</span></td>
+        <td class="num">{% if r.order.status == "OPEN" %}{{ r.left }}{% else %}<span class="dash">—</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">No purchase orders yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>{% if page.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+      {% if page.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

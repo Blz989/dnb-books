@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Apply {{ doc.number }}{% endblock %}
+{% block page_title %}Apply {{ doc.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ doc.vendor.name }} · {{ unapplied|floatformat:"2g" }} left to apply on this {{ doc_kind }}</div>{% endblock %}
+{% block content %}
+{% include "purchasing/_errors.html" %}
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <div class="card"><div class="body">
+    <div class="form-row" style="max-width:14rem"><label for="id_date">{{ form.date.label }}</label>{{ form.date }}{% for e in form.date.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  </div>
+  <table class="data">
+    <thead><tr><th>Bill</th><th>Vendor invoice</th><th>Due</th><th class="num">Balance</th><th class="num">Apply</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td><a class="sku" href="/purchasing/bills/{{ r.bill.number }}/">{{ r.bill.number }}</a></td>
+        <td>{{ r.bill.vendor_invoice_number|default:"—" }}</td><td>{{ r.bill.due_date|date:"Y-m-d" }}</td>
+        <td class="num">{{ r.balance|floatformat:"2g" }}</td>
+        <td class="num"><input type="text" inputmode="decimal" name="apply-{{ r.bill.pk }}" value="{{ r.value }}" data-balance="{{ r.balance }}" style="width:7rem;text-align:right"></td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">{{ doc.vendor.name }} has no open bills.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot"><span></span><span>Applied <strong id="apply-total">0.00</strong> · Left <strong id="unapplied" data-available="{{ unapplied }}">{{ unapplied|floatformat:"2" }}</strong></span></div>
+  </div>
+  <button type="submit" class="btn primary">Apply</button>
+  <a class="btn" href="{{ back }}">Cancel</a>
+</form>
+<script src="{% static 'purchasing/pay.js' %}" defer></script>
+{% endblock %}

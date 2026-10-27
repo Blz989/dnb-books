@@ -46,6 +46,13 @@ class DocType(models.TextChoices):
     CN = "CN", "Credit note"
     DEP = "DEP", "Deposit"
     REF = "REF", "Refund"
+    PO = "PO", "Purchase order"
+    BILL = "BILL", "Bill"
+    VP = "VP", "Vendor payment"
+    VC = "VC", "Vendor credit"
+
+# The sales settings page numbers only these; Purchasing settings numbers PO, BILL, VP, VC.
+SALES_DOC_TYPES = (DocType.SO, DocType.INV, DocType.PMT, DocType.CN, DocType.DEP, DocType.REF)
 
 
 class SalesSettings(models.Model):
@@ -84,7 +91,7 @@ class SalesSettings(models.Model):
 
 
 class DocumentSequence(models.Model):
-    doc_type = models.CharField(max_length=3, choices=DocType.choices, unique=True)
+    doc_type = models.CharField(max_length=10, choices=DocType.choices, unique=True)
     prefix = models.CharField(max_length=20)
     next_number = models.PositiveIntegerField(default=1)
     padding = models.PositiveSmallIntegerField(default=5)

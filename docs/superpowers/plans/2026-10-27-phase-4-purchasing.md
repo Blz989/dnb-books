@@ -81,15 +81,15 @@ tests/ test_vendors.py, test_purchasing_models.py, test_purchase_orders.py, test
 - Roles: Standard gets add, change, and view on `contacts.vendor`. `ADMIN_APPS` gains `purchasing`.
 - Fixture: `vendor` ("Acme Supply", NET_30, `is_1099=False`).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A duplicate name in different case is rejected.
   - `find_by_name("  acme   supply ")` returns the vendor.
   - `mask_tax_id("12-3456789") == "•••-••-6789"`.
   - An income account as the default expense account is rejected.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: vendors`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: vendors`
 
 ---
 
@@ -121,15 +121,15 @@ tests/ test_vendors.py, test_purchasing_models.py, test_purchase_orders.py, test
   - Bulk loaders `bills_with_balances()`, `vendor_payments_with_balances()`, `vendor_credits_with_balances()`.
 - Fixtures: `purchasing_settings` (A/P = existing `ap` 2000), `card` (2100 CREDIT_CARD "Company Visa"), `freight` (6150 EXPENSE "Freight in").
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - `next_number(DocType.BILL) == "BILL-00001"` inside a transaction.
   - `set_sequence` works for VP.
   - The seeded thresholds exist.
   - Balances as of a date before and after a removed application.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS** (Phase 3 numbering tests unchanged)
-- [ ] **Step 5: Commit** `feat: purchasing models, numbering, balances`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS** (Phase 3 numbering tests unchanged)
+- [x] **Step 5: Commit** `feat: purchasing models, numbering, balances`
 
 ---
 
@@ -152,17 +152,17 @@ tests/ test_vendors.py, test_purchasing_models.py, test_purchase_orders.py, test
     - Any unresolved name raises `PurchasingError("No vendor named {name}. Choose a vendor for these lines.")` with attribute `unresolved: list[str]`, and nothing is created.
     - Line quantity = SO line quantity. Price = the item's `purchase_cost`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - PO create, update, and close rules.
   - Drop-ship POs: two vendors make two POs.
   - Lines already on a PO are skipped.
   - Fuzzy name match works.
   - An unmatched name raises and creates nothing (Review Focus 2).
   - With `vendor_choices`, it succeeds.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: purchase orders and drop-ship POs`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: purchase orders and drop-ship POs`
 
 ---
 
@@ -207,7 +207,7 @@ tests/ test_vendors.py, test_purchasing_models.py, test_purchase_orders.py, test
     4. Set each invoice line's `drop_ship_billed = allocated == quantity`.
   - `on_invoice_changed(invoice) -> None` calls `rebuild` for the invoice's drop-ship SO lines, including the lines a just-edited invoice used to have (taken from its latest `InvoiceRevision` snapshot).
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```python
 def test_stock_bill_raises_stock_at_bill_price(...):    # PO 1000 @0.50; bill 500 @0.48 → on_hand +500, layer 0.48; A/P 240.00
@@ -223,10 +223,10 @@ def test_bill_before_invoice_allocates_on_invoice(...): # bill first, then invoi
 def test_invoice_void_releases_allocation(...):
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review against the `finance:journal-entry` skill and record findings in the commit body.
-- [ ] **Step 4: Run full suite, expect PASS** (Phase 3 tests unchanged)
-- [ ] **Step 5: Commit** `feat: bills with stock, drop-ship, and expense lines`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review against the `finance:journal-entry` skill and record findings in the commit body.
+- [x] **Step 4: Run full suite, expect PASS** (Phase 3 tests unchanged)
+- [x] **Step 5: Commit** `feat: bills with stock, drop-ship, and expense lines`
 
 ---
 
@@ -245,17 +245,17 @@ def test_invoice_void_releases_allocation(...):
     - PO remaining is calculated with `exclude_bill=bill`.
   - `void_bill(bill, *, user, reason, date=None, allow_negative=False) -> Bill`: blocked by active applications (spec message). Then the stock voids, `refresh_po_status`, and `dropship.rebuild`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Snapshot and reposting.
   - Editing the price of a stock line recosts a later sale (an invoice made after the bill shows the changed COGS through a Phase 2 revision).
   - Voiding a bill whose stock was sold raises `NegativeStockWarning`, then succeeds with `allow_negative`.
   - An edit below the applied amount is refused.
   - A void with applications is refused.
   - A Standard user can edit but not void.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: edit and void bills`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: edit and void bills`
 
 ---
 
@@ -280,7 +280,7 @@ def test_invoice_void_releases_allocation(...):
   - "The date can't be before {number}'s date." (Review Focus 5)
   - "{bill} belongs to a different vendor."
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A batch of three bills from two vendors makes two payments with the correct applications.
   - A partial payment.
   - A card payment credits the card account.
@@ -288,10 +288,10 @@ def test_invoice_void_releases_allocation(...):
   - A payment dated before a bill is refused.
   - A single payment over the bills keeps the extra as unapplied, and it's applied later.
   - A void reopens the bills.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: vendor payments and pay bills`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: vendor payments and pay bills`
 
 ---
 
@@ -310,17 +310,17 @@ def test_invoice_void_releases_allocation(...):
   - `apply_vendor_credit(credit, bill, amount, *, date, user)`.
   - `void_vendor_credit(credit, *, user, reason, date=None, allow_negative=False)`: blocked by applications (spec message). A return void puts the stock back through a system void of its movements.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A return of 10 FIFO @ 0.48 credited at 5.00: inventory −4.80, A/P −5.00, COGS net −0.20.
   - The negative-stock warning on a return.
   - An allowance posts to the vendor's default account.
   - Apply to a bill.
   - A void restores stock.
   - `check_invariants() == []` after each step.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: vendor credits and returns`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: vendor credits and returns`
 
 ---
 
@@ -336,14 +336,14 @@ def test_invoice_void_releases_allocation(...):
   - `ap_check(as_of: date | None = None) -> list[str]`. A/P ledger balance = credits − debits on the settings A/P account. The message is "Vendor balances say {x}, the A/P account says {y}."
   - `close_check(year, month) -> list[str]`, prefixed "{Month YYYY}: " and registered in `ready()`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Empty after a mixed scenario.
   - A manual entry to A/P is reported and blocks the close; the admin override works.
   - A `hypothesis.extra.django.TestCase` property test: random sequences of PO, bill (stock, drop-ship, expense), edit, payment, application, removal, credit, and void keep `ap_check`, `items.stock.check_invariants`, `sales.checks.ar_check`, and `undeposited_check` empty, at the end and at every date touched.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review against the `finance:reconciliation` skill and record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: A/P check at month close`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review against the `finance:reconciliation` skill and record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: A/P check at month close`
 
 ---
 
@@ -366,15 +366,15 @@ def test_invoice_void_releases_allocation(...):
     - Columns `vendor,tax_id,address,total_paid,file`.
   - The page shows the spec note text and the missing-threshold message.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Aging buckets and the ledger tie.
   - 1099: card excluded; a payment on Dec 31 vs Jan 1 lands in the right year; the 2026 threshold of 2000.00 marks 1,999.99 as not file and 2,000.00 as file; a missing year shows the message.
   - A Standard user sees masked tax IDs, and the CSV returns 403.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the five reports (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: purchasing reports and 1099 summary`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the five reports (light and dark), sent.
+- [x] **Step 6: Commit** `feat: purchasing reports and 1099 summary`
 
 ---
 
@@ -391,17 +391,17 @@ def test_invoice_void_releases_allocation(...):
 - Deactivating a vendor with a balance: spec message.
 - Settings (admin): the A/P account (ACCOUNTS_PAYABLE subtype), the numbering table (Phase 3 `set_sequence` for PO, BILL, VP, VC), and 1099 thresholds (add or edit a year; amount > 0).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Vendor CRUD.
   - Masking for Standard users on list and detail.
   - The deactivate rule.
   - Settings admin only.
   - Threshold editing.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: 4 vendors, one 1099 vendor, settings)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the vendor list, vendor detail, vendor form, and purchasing settings (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: vendor and purchasing settings screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: 4 vendors, one 1099 vendor, settings)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the vendor list, vendor detail, vendor form, and purchasing settings (light and dark), sent.
+- [x] **Step 6: Commit** `feat: vendor and purchasing settings screens`
 
 ---
 
@@ -419,18 +419,18 @@ def test_invoice_void_releases_allocation(...):
 - The drop-ship PO page lists the vendor names. Unresolved ones get a vendor select (Review Focus 2) before "Create POs".
 - Bill detail shows drop-ship allocations linking to invoices.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Create a PO and bill it partially through the views.
   - Over-receiving shows the message.
   - The duplicate confirm flow.
   - A drop-ship PO with an unmatched vendor, then choosing one.
   - A double submit posts once.
   - Edit creates a revision; void is admin only.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: 2 POs, 3 bills including a drop-ship and an expense bill)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the PO list, PO form, PO detail, the drop-ship PO page (with an unmatched vendor), the sales order with the new button, bill form (from a PO, with an expense line), duplicate confirm, bill detail with allocations, and a bill revision. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: purchase order and bill screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: 2 POs, 3 bills including a drop-ship and an expense bill)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the PO list, PO form, PO detail, the drop-ship PO page (with an unmatched vendor), the sales order with the new button, bill form (from a PO, with an expense line), duplicate confirm, bill detail with allocations, and a bill revision. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: purchase order and bill screens`
 
 ---
 
@@ -445,18 +445,18 @@ def test_invoice_void_releases_allocation(...):
 - **Pay bills:** filters (vendor, due through), one row per open bill with a pay amount, a "Pay in full" button, method, pay-from account (filtered by method), and a check number field per vendor group when the method is CHECK. The result page lists the payments created.
 - **Single payment, credit (return or allowance), apply, void** per spec section 7.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Pay bills creates one payment per vendor.
   - The duplicate check number message.
   - Card requires a card account.
   - A return credit through the view moves stock.
   - Applying a credit.
   - Voids are admin only.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: payments by check, ACH, and card; one return credit)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of Pay bills (with a check-number error), the payments created, payment detail, the return credit form, the allowance credit form, and credit detail. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: pay bills, vendor payment, and vendor credit screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: payments by check, ACH, and card; one return credit)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of Pay bills (with a check-number error), the payments created, payment detail, the return credit form, the allowance credit form, and credit detail. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: pay bills, vendor payment, and vendor credit screens`
 
 ---
 
@@ -466,12 +466,12 @@ def test_invoice_void_releases_allocation(...):
 - Modify: `core/views.py`, `core/templates/core/home.html`, `README.md` (Status; What it does: Purchasing row)
 - Create: `tests/test_phase4_acceptance.py`
 
-- [ ] **Step 1: Home cards:** "Bills due in 7 days" (total, linking to Bills due) and "Overdue bills" (total). Test the values.
-- [ ] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with `ap_check`, `ar_check`, `undeposited_check`, and `items.stock.check_invariants` all empty after each step), plus the 1099 summary totals at the end.
-- [ ] **Step 3: Full suite** `uv run pytest -q` passes with no new warnings.
-- [ ] **Step 4: Final screenshots:** a tour (home, vendor, PO, bill, Pay bills, A/P aging, 1099 summary), light and dark, sent.
-- [ ] **Step 5: Commit** `test: phase 4 acceptance`
-- [ ] **Step 6: Open the PR** `Phase 4: Purchasing`. **The body must be filled in** per `CLAUDE.md`: a task table, the test output, deviations, screenshot sets, and manual checks:
+- [x] **Step 1: Home cards:** "Bills due in 7 days" (total, linking to Bills due) and "Overdue bills" (total). Test the values.
+- [x] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with `ap_check`, `ar_check`, `undeposited_check`, and `items.stock.check_invariants` all empty after each step), plus the 1099 summary totals at the end.
+- [x] **Step 3: Full suite** `uv run pytest -q` passes with no new warnings.
+- [x] **Step 4: Final screenshots:** a tour (home, vendor, PO, bill, Pay bills, A/P aging, 1099 summary), light and dark, sent.
+- [x] **Step 5: Commit** `test: phase 4 acceptance`
+- [x] **Step 6: Open the PR** `Phase 4: Purchasing`. **The body must be filled in** per `CLAUDE.md`: a task table, the test output, deviations, screenshot sets, and manual checks:
   - Run `./update.sh`.
   - Fill in Purchasing settings.
   - Set next numbers to continue Zoho.

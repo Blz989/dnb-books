@@ -1,0 +1,26 @@
+{% extends "core/base.html" %}
+{% block title %}Payments made{% endblock %}
+{% block page_title %}Payments made{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ rows|length }} payment{{ rows|length|pluralize }}, {{ total|floatformat:"2g" }} in all</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'purchasing:pay-bills' %}">Pay more bills</a>{% endblock %}
+{% block content %}
+{% for r in rows %}
+<div class="card">
+  <div class="body">
+    <h2 style="margin-top:0"><a class="sku" href="{% url 'purchasing:payment-detail' r.payment.number %}">{{ r.payment.number }}</a> · {{ r.payment.vendor.name }}</h2>
+    <p class="help">{{ r.payment.get_method_display }}{% if r.payment.check_number %} #{{ r.payment.check_number }}{% endif %} from {{ r.payment.paid_from.number }} {{ r.payment.paid_from.name }} · {{ r.payment.date|date:"Y-m-d" }}</p>
+  </div>
+  <table class="data">
+    <thead><tr><th>Bill</th><th>Vendor invoice</th><th class="num">Paid</th></tr></thead>
+    <tbody>
+    {% for a in r.applications %}
+      <tr><td><a class="sku" href="/purchasing/bills/{{ a.bill.number }}/">{{ a.bill.number }}</a></td><td>{{ a.bill.vendor_invoice_number|default:"—" }}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td></tr>
+    {% endfor %}
+      <tr class="total"><td>Total</td><td></td><td class="num">{{ r.payment.amount|floatformat:"2g" }}</td></tr>
+    </tbody>
+  </table>
+</div>
+{% empty %}
+<div class="card"><div class="body">No payments to show.</div></div>
+{% endfor %}
+{% endblock %}

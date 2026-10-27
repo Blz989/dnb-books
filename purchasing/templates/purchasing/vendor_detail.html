@@ -1,0 +1,78 @@
+{% extends "core/base.html" %}
+{% block title %}{{ vendor.name }}{% endblock %}
+{% block page_title %}{{ vendor.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><span class="tag">{{ vendor.get_terms_display }}</span>{% if vendor.is_1099 %} <span class="tag">1099</span>{% endif %}{% if not vendor.is_active %} <span class="tag ns">Inactive</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  <a class="btn" href="{% url 'vendors:edit' vendor.pk %}">Edit</a>
+  <a class="btn" href="/purchasing/orders/new/?vendor={{ vendor.pk }}">New purchase order</a>
+  <a class="btn" href="/purchasing/bills/new/?vendor={{ vendor.pk }}">New bill</a>
+  <a class="btn primary" href="/purchasing/pay/?vendor={{ vendor.pk }}">Pay bills</a>
+  {% if vendor.is_active %}
+  <form method="post" action="{% url 'vendors:deactivate' vendor.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Deactivate</button></form>
+  {% endif %}
+{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi{% if balance > 0 %} warn{% endif %}"><div class="l">Balance</div><div class="v">{{ balance|floatformat:"2g" }}</div><div class="note">{% if balance < 0 %}The vendor owes you credit{% elif balance > 0 %}You owe this vendor{% else %}Settled{% endif %}</div></div>
+  <div class="kpi"><div class="l">Open bills</div><div class="v">{{ open_rows|length }}</div></div>
+  <div class="kpi"><div class="l">Unapplied credits and payments</div><div class="v">{{ credits|length }}</div></div>
+</div>
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Contact</dt><dd>{{ vendor.contact_name|default:"—" }}</dd>
+    <dt>Email</dt><dd>{{ vendor.email|default:"—" }}</dd>
+    <dt>Phone</dt><dd>{{ vendor.phone|default:"—" }}</dd>
+    <dt>Address</dt><dd>{{ vendor.address|linebreaksbr|default:"—" }}</dd>
+    <dt>Default expense account</dt><dd>{{ vendor.default_expense_account|default:"—" }}</dd>
+    <dt>1099</dt><dd>{% if vendor.is_1099 %}Yes. Tax ID {{ vendor.masked_tax_id|default:"not entered" }}{% else %}No{% endif %}</dd>
+    {% if vendor.notes %}<dt>Notes</dt><dd>{{ vendor.notes|linebreaksbr }}</dd>{% endif %}
+  </dl>
+</div></div>
+
+<h2>Open bills</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Bill</th><th>Vendor invoice</th><th>Date</th><th>Due</th><th class="num">Balance</th><th></th></tr></thead>
+  <tbody>
+  {% for r in open_rows %}
+    <tr><td><a class="sku" href="/purchasing/bills/{{ r.bill.number }}/">{{ r.bill.number }}</a></td>
+      <td>{{ r.bill.vendor_invoice_number|default:"—" }}</td>
+      <td>{{ r.bill.date|date:"Y-m-d" }}</td><td>{{ r.bill.due_date|date:"Y-m-d" }}</td>
+      <td class="num">{{ r.balance|floatformat:"2g" }}</td>
+      <td>{% if r.days_overdue > 0 %}<span class="tag overdue">{{ r.days_overdue }} day{{ r.days_overdue|pluralize }} overdue</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nothing is owed.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Unapplied credits and payments</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Document</th><th>Date</th><th class="num">Unapplied</th><th></th></tr></thead>
+  <tbody>
+  {% for c in credits %}
+    <tr><td><a class="sku" href="/purchasing/{{ c.path }}/{{ c.doc.number }}/">{{ c.doc.number }}</a> <span class="dash">{{ c.kind }}</span></td>
+      <td>{{ c.doc.date|date:"Y-m-d" }}</td><td class="num">{{ c.unapplied|floatformat:"2g" }}</td>
+      <td><a href="/purchasing/{{ c.path }}/{{ c.doc.number }}/apply/">Apply</a></td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No unapplied payments or credits.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>History</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Date</th><th>Document</th><th></th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for h in history %}
+    <tr{% if h.void %} style="text-decoration: line-through"{% endif %}><td>{{ h.date|date:"Y-m-d" }}</td>
+      <td><a class="sku" href="{{ h.url }}">{{ h.number }}</a></td><td>{{ h.kind }}{% if h.void %} <span class="tag ns">Void</span>{% endif %}</td>
+      <td class="num">{{ h.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No activity yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

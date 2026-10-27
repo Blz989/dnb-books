@@ -1,0 +1,11 @@
+{% extends "core/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="banner warning"><div>{% for m in warnings %}<div>{{ m }}</div>{% endfor %}</div></div>
+<form method="post" action="{{ action }}">{% csrf_token %}
+  {% for key, value in hidden %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+  <button type="submit" name="{{ flag }}" value="1" class="btn primary">{{ button }}</button>
+  <button type="submit" name="back" value="1" class="btn">Go back</button>
+</form>
+{% endblock %}

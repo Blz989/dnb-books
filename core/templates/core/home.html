@@ -12,12 +12,19 @@
 {% if sales_unconfigured %}
 <div class="banner info">Sales isn't set up yet. Choose the sales accounts in Sales settings. <a href="/sales/settings/">Open settings</a></div>
 {% endif %}
+{% if purchasing_unconfigured %}
+<div class="banner info">Purchasing isn't set up yet. Choose the accounts payable account in Purchasing settings. <a href="/purchasing/settings/">Open settings</a></div>
+{% endif %}
 {% if backup.level != "ok" %}<div class="banner {{ backup.level }}">{{ backup.message }}</div>{% endif %}
 <div class="kpis">
   <div class="kpi"><div class="l">Open A/R</div><div class="v">{{ open_ar|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:ar-aging' %}">A/R aging</a></div></div>
   <div class="kpi{% if overdue_count %} warn{% endif %}"><div class="l">Overdue</div><div class="v">{{ overdue_total|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:open-invoices' %}?overdue=1">{{ overdue_count }} overdue invoice{{ overdue_count|pluralize }}</a></div></div>
   <div class="kpi"><div class="l">Undeposited</div><div class="v">{{ undeposited|floatformat:"2g" }}</div><div class="note"><a href="{% url 'sales:deposit-new' %}">Make a deposit</a></div></div>
   <div class="kpi{% if awaiting_bill %} warn{% endif %}"><div class="l">Drop shipments awaiting bill</div><div class="v">{{ awaiting_bill }}</div><div class="note"><a href="{% url 'reports:drop-ship-awaiting-bill' %}">Awaiting bill report</a></div></div>
+</div>
+<div class="kpis">
+  <div class="kpi"><div class="l">Bills due in 7 days</div><div class="v">{{ bills_due_total|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:bills-due' %}?through={{ bills_due_through }}">{{ bills_due_count }} bill{{ bills_due_count|pluralize }} due</a></div></div>
+  <div class="kpi{% if bills_overdue_count %} warn{% endif %}"><div class="l">Overdue bills</div><div class="v">{{ bills_overdue_total|floatformat:"2g" }}</div><div class="note"><a href="/purchasing/bills/?overdue=1">{{ bills_overdue_count }} overdue bill{{ bills_overdue_count|pluralize }}</a></div></div>
 </div>
 <div class="kpis">
   <div class="kpi{% if backup.level != "ok" %} warn{% endif %}"><div class="l">Backups</div><div class="v">{% if backup.level == "ok" %}OK{% else %}Needs attention{% endif %}</div><div class="note">{{ backup.message }}</div></div>
@@ -43,6 +50,15 @@
     <li><a href="{% url 'sales:deposit-new' %}">New deposit</a></li>
     <li><a href="{% url 'sales:credit-new' %}">New credit note</a></li>
   </ul>
+  <h2>Purchasing</h2>
+  <ul class="links">
+    <li><a href="{% url 'vendors:list' %}">Vendors</a></li>
+    <li><a href="{% url 'purchasing:po-new' %}">New purchase order</a></li>
+    <li><a href="{% url 'purchasing:bill-new' %}">New bill</a></li>
+    <li><a href="{% url 'purchasing:pay-bills' %}">Pay bills</a></li>
+    <li><a href="{% url 'purchasing:credit-new' %}?kind=return">Return to vendor</a></li>
+    <li><a href="{% url 'purchasing:credit-new' %}?kind=allowance">Credit without a return</a></li>
+  </ul>
   <h2>Reports</h2>
   <ul class="links">
     <li><a href="{% url 'reports:trial-balance' %}">Trial balance</a></li>
@@ -55,6 +71,11 @@
     <li><a href="{% url 'reports:open-sales-orders' %}">Open sales orders</a></li>
     <li><a href="{% url 'reports:undeposited-funds' %}">Undeposited funds</a></li>
     <li><a href="{% url 'reports:drop-ship-awaiting-bill' %}">Drop shipments awaiting bill</a></li>
+    <li><a href="{% url 'reports:ap-aging' %}">A/P aging</a></li>
+    <li><a href="{% url 'reports:bills-due' %}">Bills due</a></li>
+    <li><a href="{% url 'reports:vendor-balances' %}">Vendor balances</a></li>
+    <li><a href="{% url 'reports:open-purchase-orders' %}">Open purchase orders</a></li>
+    <li><a href="{% url 'reports:1099-summary' %}">1099 summary</a></li>
   </ul>
   <h2>Books</h2>
   <ul class="links">
