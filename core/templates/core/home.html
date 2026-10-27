@@ -3,13 +3,29 @@
 {% block page_title %}DNB Books{% endblock %}
 {% block page_subtitle %}<div class="sub">Books and inventory</div>{% endblock %}
 {% block content %}
+{% if negative_stock_count %}
+<div class="banner warning">{{ negative_stock_count }} item{{ negative_stock_count|pluralize }} {{ negative_stock_count|pluralize:"is,are" }} below zero. Their cost is estimated until stock is received or counted. <a href="/reports/negative-stock/">Review →</a></div>
+{% endif %}
+{% if inventory_unconfigured %}
+<div class="banner info">Inventory isn't set up yet. Choose the inventory accounts in Settings. <a href="/items/settings/">Open settings</a></div>
+{% endif %}
+{% if backup.level != "ok" %}<div class="banner {{ backup.level }}">{{ backup.message }}</div>{% endif %}
 <div class="kpis">
   <div class="kpi{% if backup.level != "ok" %} warn{% endif %}"><div class="l">Backups</div><div class="v">{% if backup.level == "ok" %}OK{% else %}Needs attention{% endif %}</div><div class="note">{{ backup.message }}</div></div>
-  <div class="kpi{% if negative_stock_count %} warn{% endif %}"><div class="l">Items below zero</div><div class="v">{{ negative_stock_count }}</div></div>
+  <div class="kpi"><div class="l">Stock value</div><div class="v">{{ stock_value|floatformat:"2g" }}</div><div class="note"><a href="/reports/inventory-valuation/">Inventory valuation</a></div></div>
+  <div class="kpi{% if negative_stock_count %} warn{% endif %}"><div class="l">Items below zero</div><div class="v">{{ negative_stock_count }}</div><div class="note"><a href="/reports/negative-stock/">Negative stock report</a></div></div>
 </div>
-{% if backup.level != "ok" %}<div class="banner {{ backup.level }}">{{ backup.message }}</div>{% endif %}
 <div class="card"><div class="body">
-  <h2 style="margin-top:0">Reports</h2>
+  <h2 style="margin-top:0">Inventory</h2>
+  <ul class="links">
+    <li><a href="/items/">Items</a></li>
+    <li><a href="/items/adjust/">New adjustment</a></li>
+    <li><a href="/items/adjustments/">Adjustments</a></li>
+    <li><a href="/items/counts/">Counts</a></li>
+    <li><a href="/reports/inventory-valuation/">Inventory valuation</a></li>
+    <li><a href="/reports/stock-movements/">Stock movements</a></li>
+  </ul>
+  <h2>Reports</h2>
   <ul class="links">
     <li><a href="{% url 'reports:trial-balance' %}">Trial balance</a></li>
     <li><a href="{% url 'reports:profit-and-loss' %}">Profit and loss</a></li>

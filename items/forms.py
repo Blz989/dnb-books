@@ -158,3 +158,43 @@ class CountPostForm(forms.Form):
         label="Post on", input_formats=["%Y-%m-%d"], widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         error_messages={"invalid": DATE_ERROR, "required": DATE_ERROR})
     confirm_moved = forms.BooleanField(required=False, label="I've checked the flagged items")
+
+
+class SettingsForm(forms.ModelForm):
+    class Meta:
+        model = InventorySettings
+        fields = [
+            "default_inventory_account", "default_cogs_account", "default_income_account",
+            "shrinkage_account", "writedown_account", "opening_equity_account",
+        ]
+        labels = {
+            "default_inventory_account": "Inventory account (default)",
+            "default_cogs_account": "Cost of goods sold account (default)",
+            "default_income_account": "Income account (default)",
+            "shrinkage_account": "Shrinkage account",
+            "writedown_account": "Write-down account",
+            "opening_equity_account": "Opening balance equity account",
+        }
+        help_texts = {
+            "shrinkage_account": "Used for quantity adjustments and counts.",
+            "writedown_account": "Used for value adjustments.",
+            "opening_equity_account": "The other side of opening stock.",
+        }
+
+    SUBTYPES = {
+        "default_inventory_account": [AccountSubtype.INVENTORY],
+        "default_cogs_account": [AccountSubtype.COST_OF_GOODS_SOLD],
+        "default_income_account": [AccountSubtype.INCOME, AccountSubtype.OTHER_INCOME],
+        "shrinkage_account": [AccountSubtype.EXPENSE, AccountSubtype.OTHER_EXPENSE, AccountSubtype.COST_OF_GOODS_SOLD],
+        "writedown_account": [AccountSubtype.EXPENSE, AccountSubtype.OTHER_EXPENSE, AccountSubtype.COST_OF_GOODS_SOLD],
+        "opening_equity_account": [AccountSubtype.EQUITY],
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, subtypes in self.SUBTYPES.items():
+            field = self.fields[name]
+            field.queryset = Account.objects.filter(subtype__in=subtypes, is_active=True).order_by("number")
+            field.required = True
+            field.error_messages["required"] = "Choose an account."
+            field.error_messages["invalid_choice"] = "Choose an account from the list."

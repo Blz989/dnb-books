@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+{% block title %}Inventory settings{% endblock %}
+{% block page_title %}Inventory settings{% endblock %}
+{% block page_subtitle %}<div class="sub">Accounts used by stock movements and new items</div>{% endblock %}
+{% block content %}
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  {% for field in form %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn primary">Save settings</button>
+</form>
+</div></div>
+{% endblock %}

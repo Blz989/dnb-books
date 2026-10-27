@@ -22,9 +22,11 @@ from ledger.errors import PostingError
 from ledger.models import Account, AccountType
 
 from . import counts as count_service
+from . import imports as import_service
 from .errors import CountError, CountNeedsConfirmation, NegativeStockWarning, SettingsMissingError, StockError
 from .forms import (
-    REASONS, AdjustDateForm, CountPostForm, CountStartForm, ItemForm, MovementsForm, ValueAdjustForm, VoidMovementForm,
+    REASONS, AdjustDateForm, CountPostForm, CountStartForm, ItemForm, MovementsForm, SettingsForm, ValueAdjustForm,
+    VoidMovementForm,
 )
 from .models import (
     Category, CountStatus, InventorySettings, Item, ItemType, MovementKind, StockCount, StockMovement, SubmittedToken,
@@ -35,6 +37,11 @@ from .stock import (
 )
 
 PAGE_SIZE = 50
+
+
+def _posted(request):
+    """Bind a form only on POST; `request.POST or None` would treat an empty POST as unbound."""
+    return request.POST if request.method == "POST" else None
 
 
 def _item_or_404(sku: str) -> Item:
@@ -119,7 +126,7 @@ def _save_item_form(request, form, item=None):
 @login_required
 @permission_required("items.add_item", raise_exception=True)
 def item_new(request):
-    form = ItemForm(request.POST or None)
+    form = ItemForm(_posted(request))
     if request.method == "POST":
         response = _save_item_form(request, form)
         if response:
@@ -131,7 +138,7 @@ def item_new(request):
 @permission_required("items.change_item", raise_exception=True)
 def item_edit(request, sku):
     item = _item_or_404(sku)
-    form = ItemForm(request.POST or None, instance=item)
+    form = ItemForm(_posted(request), instance=item)
     if request.method == "POST":
         response = _save_item_form(request, form, item)
         if response:
@@ -387,7 +394,7 @@ def count_list(request):
 
 @login_required
 def count_start(request):
-    form = CountStartForm(request.POST or None, initial={"name": f"Count {_today().isoformat()}", "scope": "ALL"})
+    form = CountStartForm(_posted(request), initial={"name": f"Count {_today().isoformat()}", "scope": "ALL"})
     if request.method == "POST" and form.is_valid():
         d = form.cleaned_data
         category = d["category"] if d["scope"] == "CATEGORY" else None
@@ -455,7 +462,7 @@ def count_review(request, pk):
     open_count = count.status == CountStatus.OPEN
     diffs = count_service.review(count)
     flagged = [d for d in diffs if d.moved_since_start]
-    form = CountPostForm(request.POST or None, initial={"date": _today().isoformat()})
+    form = CountPostForm(_posted(request), initial={"date": _today().isoformat()})
     context = {
         "count": count, "diffs": diffs, "flagged": flagged, "form": form, "open": open_count, "nav_active": "counts",
         "uncounted": count.lines.filter(counted_quantity__isnull=True).count(),
@@ -487,3 +494,72 @@ def count_cancel(request, pk):
     count_service.cancel_count(count, request.user)
     messages.success(request, f"Canceled {count.name}.")
     return redirect(reverse("items:counts"))
+
+
+# ---- import and settings ----
+
+MAX_UPLOAD = 2 * 1024 * 1024
+IMPORT_SESSION_KEY = "items_import_csv"
+
+
+def _import_page(request, **extra):
+    return render(request, "items/import_upload.html", {"headers": import_service.HEADERS, "nav_active": "items", **extra})
+
+
+@login_required
+def import_items(request):
+    require_admin(request.user)
+    if request.method != "POST":
+        return _import_page(request)
+    upload = request.FILES.get("file")
+    if upload is None:
+        return _import_page(request, errors=["Choose a CSV file to upload."])
+    if upload.size > MAX_UPLOAD:
+        return _import_page(request, errors=["The file is too large (2 MB limit)."])
+    try:
+        text = upload.read().decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return _import_page(request, errors=["The file isn't UTF-8 text. Save it as CSV (UTF-8) and try again."])
+    preview = import_service.parse_items_csv(text)
+    request.session[IMPORT_SESSION_KEY] = text
+    stock_rows = [r for r in preview.rows if r.item_type == ItemType.STOCK]
+    opening = [r for r in preview.rows if r.opening_quantity]
+    summary = {
+        "items": len(preview.rows), "stock_items": len(stock_rows), "with_opening": len(opening),
+        "opening_value": sum((r.opening_quantity * r.opening_unit_cost for r in opening), Decimal("0")).quantize(Decimal("0.01")),
+    }
+    return render(request, "items/import_preview.html", {
+        "preview": preview, "summary": summary, "filename": upload.name, "nav_active": "items"})
+
+
+@login_required
+@require_POST
+def import_confirm(request):
+    require_admin(request.user)
+    text = request.session.get(IMPORT_SESSION_KEY)
+    if not text:
+        messages.error(request, "Upload a file first.")
+        return redirect(reverse("items:import"))
+    preview = import_service.parse_items_csv(text)  # parsed again so a stale preview can't post
+    if preview.errors:
+        request.session.pop(IMPORT_SESSION_KEY, None)
+        return render(request, "items/import_preview.html", {
+            "preview": preview, "summary": None, "filename": "", "nav_active": "items"})
+    try:
+        items = import_service.apply_import(preview, user=request.user)
+    except (StockError, PostingError) as exc:
+        return _import_page(request, **_error_messages(exc))
+    request.session.pop(IMPORT_SESSION_KEY, None)
+    messages.success(request, f"Imported {len(items)} item{'s' if len(items) != 1 else ''}.")
+    return redirect(reverse("items:list"))
+
+
+@login_required
+def inventory_settings(request):
+    require_admin(request.user)
+    form = SettingsForm(_posted(request), instance=InventorySettings.load())
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Settings saved.")
+        return redirect(reverse("items:settings"))
+    return render(request, "items/settings.html", {"form": form, "nav_active": "settings"})

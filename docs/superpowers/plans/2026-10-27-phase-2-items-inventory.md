@@ -548,12 +548,12 @@ def test_bom_and_mixed_case_values(): ...
 - Home: Items card (stock value, below-zero count linking to the negative stock report), Inventory links; warning banner "{n} items are below zero. Their cost is estimated until stock is received or counted." when any; `negative_stock_count` context processor now real.
 - Settings not configured: home shows an info banner "Inventory isn't set up yet. Choose the inventory accounts in Settings." for admins.
 
-- [ ] **Step 1: Write failing tests** (standard user 403 on import and settings; preview with errors shows every row error and no confirm button; confirm imports; settings form rejects an account of the wrong subtype; home banner text with 3 below zero; sidebar pill shows "3 below zero")
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (finish `seed_demo`: settings configured)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of home (with and without the below-zero banner), import upload, preview with errors, preview ready, settings; light and dark; send.
-- [ ] **Step 6: Commit** `feat: item import and inventory settings screens, home wiring`
+- [x] **Step 1: Write failing tests** (standard user 403 on import and settings; preview with errors shows every row error and no confirm button; confirm imports; settings form rejects an account of the wrong subtype; home banner text with 3 below zero; sidebar pill shows "3 below zero")
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (finish `seed_demo`: settings configured)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of home (with and without the below-zero banner), import upload, preview with errors, preview ready, settings; light and dark; send.
+- [x] **Step 6: Commit** `feat: item import and inventory settings screens, home wiring`
 
 ---
 
