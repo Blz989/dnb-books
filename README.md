@@ -42,12 +42,25 @@ Rules the system enforces:
 
 ## Getting started
 
-Install, start, update, and backup instructions are added here as Phase 1 is built. Planned workflow:
+### First-time install (on the office PC)
+
+1. Install [uv](https://docs.astral.sh/uv/) (it installs Python and the dependencies for you).
+2. Copy `.env.example` to `.env` and fill in `DNB_SECRET_KEY` (any long random text) and `DNB_ALLOWED_HOSTS` (the office PC's name or IP address, plus `localhost`).
+3. Run these once:
+
+```bash
+uv sync
+uv run python manage.py migrate
+uv run python manage.py createsuperuser
+uv run python manage.py setup_roles
+```
+
+### Everyday use
 
 | Task | How |
 |---|---|
 | Start the app | Run `start` (`start.bat` on Windows, `start.sh` on Linux), then open `http://<office-pc>:8000` |
-| Update the app | Run `update`. It takes a backup first, then pulls the new version and applies database changes |
+| Update the app | Run `update` (`update.bat` or `update.sh`). It takes a backup first, then pulls the new version and applies database changes |
 | Back up now | `uv run python manage.py backup_now` |
 | Check backups work | `uv run python manage.py restore_drill` |
 

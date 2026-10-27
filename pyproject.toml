@@ -1,0 +1,27 @@
+[project]
+name = "dnb-books"
+version = "0.1.0"
+description = "Self-hosted replacement for Zoho Books and Zoho Inventory"
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.2,<6.0",
+    "waitress",
+    "whitenoise",
+    "django-auditlog",
+    "cryptography",
+    "python-dotenv",
+]
+
+[dependency-groups]
+dev = ["pytest", "pytest-django", "hypothesis"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "dnb.settings"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:No directory at.*staticfiles:UserWarning",
+    "error::RuntimeWarning",
+]
+
+[tool.uv]
+package = false

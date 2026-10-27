@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}DNB Books{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; color: #1a1a1a; background: #f6f6f4; }
+    header { background: #23395b; color: #fff; padding: .75rem 1.5rem; display: flex; justify-content: space-between; }
+    header a { color: #fff; }
+    main { max-width: 60rem; margin: 1.5rem auto; padding: 0 1rem; }
+    .banner { padding: .75rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+    .banner.ok { background: #e3f3e6; } .banner.warning { background: #fff2cc; } .banner.error { background: #f8d7da; }
+    .messages li { list-style: none; padding: .5rem 1rem; background: #e8eef7; margin-bottom: .5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="{% url 'home' %}"><strong>DNB Books</strong></a>
+    {% if user.is_authenticated %}
+    <span>{{ user.get_username }} &middot;
+      <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}<button type="submit">Log out</button></form>
+    </span>
+    {% endif %}
+  </header>
+  <main>
+    {% block messages %}
+    {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+    {% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
