@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import invoices, orders, settings as settings_views
+from .views import deposits, invoices, orders, receipts, settings as settings_views
 
 app_name = "sales"
 
@@ -21,4 +21,21 @@ urlpatterns = [
     path("invoices/<str:number>/void/", invoices.invoice_void, name="invoice-void"),
     path("invoices/<str:number>/revisions/<int:revision>/", invoices.invoice_revision, name="invoice-revision"),
     path("invoices/<str:number>/applications/<str:kind>/<int:pk>/remove/", invoices.application_remove, name="application-remove"),
+    path("payments/", receipts.payment_list, name="payment-list"),
+    path("payments/new/", receipts.payment_new, name="payment-new"),
+    path("payments/<str:number>/", receipts.payment_detail, name="payment-detail"),
+    path("payments/<str:number>/apply/", receipts.payment_apply, name="payment-apply"),
+    path("payments/<str:number>/void/", receipts.payment_void, name="payment-void"),
+    path("deposits/", deposits.deposit_list, name="deposit-list"),
+    path("deposits/new/", deposits.deposit_new, name="deposit-new"),
+    path("deposits/<str:number>/", deposits.deposit_detail, name="deposit-detail"),
+    path("deposits/<str:number>/void/", deposits.deposit_void, name="deposit-void"),
+    path("credits/", receipts.credit_list, name="credit-list"),
+    path("credits/new/", receipts.credit_new, name="credit-new"),
+    path("credits/<str:number>/", receipts.credit_detail, name="credit-detail"),
+    path("credits/<str:number>/apply/", receipts.credit_apply, name="credit-apply"),
+    path("credits/<str:number>/void/", receipts.credit_void, name="credit-void"),
+    path("refunds/new/", receipts.refund_new, name="refund-new"),
+    path("refunds/<str:number>/", receipts.refund_detail, name="refund-detail"),
+    path("refunds/<str:number>/void/", receipts.refund_void, name="refund-void"),
 ]

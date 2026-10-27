@@ -544,17 +544,17 @@ def test_void_reopens_closed_order(...): ...
 - **Refund:** reached from a payment or credit with unapplied value. Admin only.
 - All forms use the one-time token.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Payment applied across two invoices.
   - An overpayment shows as credit on the customer page.
   - A deposit removes payments from the undeposited list.
   - A refund over the available amount shows the message.
   - Standard users get 403 on refunds and voids.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (extend demo: payments by check, cash, and ACH; one deposit; one credit note; one refund)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of receive payment (with applications), payment detail, the deposit form and detail, credit note form and detail, the refund form with an error, and the customer detail with credits. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: payment, credit, refund, and deposit screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (extend demo: payments by check, cash, and ACH; one deposit; one credit note; one refund)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of receive payment (with applications), payment detail, the deposit form and detail, credit note form and detail, the refund form with an error, and the customer detail with credits. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: payment, credit, refund, and deposit screens`
 
 ---
 

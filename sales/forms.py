@@ -4,7 +4,7 @@ from contacts.models import Customer, Terms
 from ledger.forms import date_field
 from ledger.models import Account, AccountSubtype
 
-from .models import SalesSettings
+from .models import PaymentMethod, RefundMethod, SalesSettings
 
 LOGO_MAX_BYTES = 1024 * 1024
 LOGO_MESSAGE = "Logo must be a PNG or JPEG under 1 MB."
@@ -111,3 +111,90 @@ class ShipmentHeaderForm(forms.Form):
 class VoidDocForm(forms.Form):
     date = date_field("Void date")
     reason = forms.CharField(label="Reason", max_length=200, error_messages={"required": "Enter a reason."})
+
+
+def amount_field(label="Amount"):
+    return forms.DecimalField(
+        label=label, max_digits=14, decimal_places=2,
+        error_messages={
+            "invalid": "Enter an amount above zero.", "required": "Enter an amount above zero.",
+            "max_decimal_places": "Amounts can have at most 2 decimal places.",
+            "max_digits": "That amount is too large.", "max_whole_digits": "That amount is too large.",
+        })
+
+
+def bank_accounts():
+    return Account.objects.filter(subtype=AccountSubtype.BANK, is_active=True)
+
+
+class PaymentForm(forms.Form):
+    customer = forms.ModelChoiceField(
+        Customer.objects.none(),
+        error_messages={"required": "Choose a customer.", "invalid_choice": "Choose a customer."})
+    date = date_field("Date")
+    method = forms.ChoiceField(label="Method", choices=PaymentMethod.choices)
+    reference = forms.CharField(label="Check or transfer number", required=False, max_length=100)
+    amount = amount_field()
+    bank_account = forms.ModelChoiceField(
+        bank_accounts(), required=False, label="Bank account", empty_label="Choose a bank account",
+        help_text="Needed for ACH and wire. Checks and cash go to Undeposited Funds.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["customer"].queryset = Customer.objects.filter(is_active=True)
+        self.fields["bank_account"].queryset = bank_accounts()
+
+    def clean_amount(self):
+        amount = self.cleaned_data["amount"]
+        if amount <= 0:
+            raise forms.ValidationError("Enter an amount above zero.")
+        return amount
+
+
+class CreditNoteForm(forms.Form):
+    customer = forms.ModelChoiceField(
+        Customer.objects.none(),
+        error_messages={"required": "Choose a customer.", "invalid_choice": "Choose a customer."})
+    date = date_field("Date")
+    reason = forms.CharField(label="Reason", required=False, max_length=200)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["customer"].queryset = Customer.objects.filter(is_active=True)
+
+
+class RefundForm(forms.Form):
+    date = date_field("Date")
+    method = forms.ChoiceField(label="Method", choices=RefundMethod.choices)
+    reference = forms.CharField(label="Check number or transfer reference", required=False, max_length=100)
+    bank_account = forms.ModelChoiceField(
+        bank_accounts(), label="Paid from", empty_label="Choose a bank account",
+        error_messages={"required": "Choose the bank account the refund comes from.",
+                        "invalid_choice": "Choose the bank account the refund comes from."})
+    amount = amount_field()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["bank_account"].queryset = bank_accounts()
+
+    def clean_amount(self):
+        amount = self.cleaned_data["amount"]
+        if amount <= 0:
+            raise forms.ValidationError("Enter an amount above zero.")
+        return amount
+
+
+class DepositForm(forms.Form):
+    date = date_field("Deposit date")
+    bank_account = forms.ModelChoiceField(
+        bank_accounts(), label="Deposit to", empty_label="Choose a bank account",
+        error_messages={"required": "Choose the bank account for the deposit.",
+                        "invalid_choice": "Choose the bank account for the deposit."})
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["bank_account"].queryset = bank_accounts()
+
+
+class ApplyForm(forms.Form):
+    date = date_field("Apply on")

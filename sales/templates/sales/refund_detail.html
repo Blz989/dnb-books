@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% block title %}{{ refund.number }}{% endblock %}
+{% block page_title %}{{ refund.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><a href="/customers/{{ refund.customer.pk }}/">{{ refund.customer.name }}</a> · {{ refund.date|date:"Y-m-d" }}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}{% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:refund-void' refund.number %}">Void</a>{% endif %}{% endblock %}
+{% block content %}
+{% if is_void %}<div class="banner error">Voided on {{ refund.voided_on|date:"Y-m-d" }}: {{ refund.void_reason }}</div>{% endif %}
+<div class="kpis"><div class="kpi"><div class="l">Amount</div><div class="v">{{ refund.amount|floatformat:"2g" }}</div></div></div>
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Drawn from</dt><dd>{% if refund.source_payment %}<a href="{% url 'sales:payment-detail' refund.source_payment.number %}">{{ refund.source_payment.number }}</a>{% else %}<a href="{% url 'sales:credit-detail' refund.source_credit_note.number %}">{{ refund.source_credit_note.number }}</a>{% endif %}</dd>
+    <dt>Method</dt><dd>{{ refund.get_method_display }}{% if refund.reference %} {{ refund.reference }}{% endif %}</dd>
+    <dt>Paid from</dt><dd>{{ refund.bank_account }}</dd>
+    <dt>Journal entry</dt><dd>{% if refund.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' refund.journal_entry.pk %}">{{ refund.journal_entry.display_number }}</a>{% endif %}</dd>
+  </dl>
+</div></div>
+{% endblock %}

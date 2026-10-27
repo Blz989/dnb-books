@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+{% block title %}{{ deposit.number }}{% endblock %}
+{% block page_title %}{{ deposit.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ deposit.date|date:"Y-m-d" }} · {{ deposit.bank_account }}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}{% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:deposit-void' deposit.number %}">Void</a>{% endif %}{% endblock %}
+{% block content %}
+{% if is_void %}<div class="banner error">Voided on {{ deposit.voided_on|date:"Y-m-d" }}: {{ deposit.void_reason }}. Its payments are waiting to be deposited again.</div>{% endif %}
+<div class="kpis"><div class="kpi"><div class="l">Deposit total</div><div class="v">{{ total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Payments</div><div class="v">{{ payments|length }}</div></div></div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Payment</th><th>Customer</th><th>Date</th><th>Method</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for p in payments %}
+    <tr><td><a class="sku" href="{% url 'sales:payment-detail' p.number %}">{{ p.number }}</a></td><td>{{ p.customer.name }}</td><td>{{ p.date|date:"Y-m-d" }}</td>
+      <td>{{ p.get_method_display }}{% if p.reference %} <span class="dash">{{ p.reference }}</span>{% endif %}</td><td class="num">{{ p.amount|floatformat:"2g" }}</td></tr>
+  {% endfor %}
+    <tr class="total"><td></td><td>Total</td><td></td><td></td><td class="num">{{ total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+</div>
+{% if deposit.journal_entry %}<p class="help">Journal entry <a href="{% url 'admin:ledger_journalentry_change' deposit.journal_entry.pk %}">{{ deposit.journal_entry.display_number }}</a></p>{% endif %}
+{% endblock %}

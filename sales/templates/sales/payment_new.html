@@ -1,0 +1,49 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Receive payment{% endblock %}
+{% block page_title %}Receive payment{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if customer %}{{ customer.name }}{% else %}Choose a customer to see what they owe.{% endif %}</div>{% endblock %}
+{% block content %}
+{% include "sales/_errors.html" %}
+{% if not customer %}
+<div class="card"><div class="body">
+  <form method="get">
+    <div class="form-row"><label for="id_customer">Customer</label>{{ form.customer }}
+      {% for e in form.customer.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    <button type="submit" class="btn primary">Continue</button>
+    <a class="btn" href="{% url 'sales:payment-list' %}">Cancel</a>
+  </form>
+</div></div>
+{% else %}
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="customer" value="{{ customer.pk }}">
+  <div class="card"><div class="body form-grid">
+    <div class="form-row"><label for="id_date">Date</label>{{ form.date }}{% for e in form.date.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    <div class="form-row"><label for="id_method">Method</label>{{ form.method }}{% for e in form.method.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    <div class="form-row"><label for="id_reference">{{ form.reference.label }}</label>{{ form.reference }}</div>
+    <div class="form-row"><label for="id_amount">Amount</label>{{ form.amount }}{% for e in form.amount.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    <div class="form-row" id="bank-row"{% if form.method.value != "ACH" and form.method.value != "WIRE" %} hidden{% endif %}><label for="id_bank_account">{{ form.bank_account.label }}</label>{{ form.bank_account }}
+      <span class="help">{{ form.bank_account.help_text }}</span>{% for e in form.bank_account.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  </div>
+  <table class="data">
+    <thead><tr><th>Invoice</th><th>Date</th><th>Due</th><th class="num">Balance</th><th class="num">Apply</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td><a class="sku" href="/sales/invoices/{{ r.invoice.number }}/">{{ r.invoice.number }}</a></td>
+        <td>{{ r.invoice.date|date:"Y-m-d" }}</td><td>{{ r.invoice.due_date|date:"Y-m-d" }}</td>
+        <td class="num">{{ r.balance|floatformat:"2g" }}</td>
+        <td class="num"><input type="text" inputmode="decimal" name="apply-{{ r.invoice.pk }}" value="{{ r.value }}" data-balance="{{ r.balance }}" style="width:7rem;text-align:right"></td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">{{ customer.name }} has no open invoices. The whole payment will stay as credit.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot"><span>{% if rows %}<button type="submit" name="fill" value="oldest" class="btn" id="fill-oldest">Apply oldest first</button>{% endif %}</span>
+    <span>Applied <strong id="apply-total">0.00</strong> · Left as credit <strong id="unapplied">0.00</strong></span></div>
+  </div>
+  <button type="submit" class="btn primary">Save payment</button>
+  <a class="btn" href="/customers/{{ customer.pk }}/">Cancel</a>
+</form>
+<script src="{% static 'sales/payment.js' %}" defer></script>
+{% endif %}
+{% endblock %}

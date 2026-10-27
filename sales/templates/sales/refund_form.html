@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Refund{% endblock %}
+{% block page_title %}Refund from {{ source.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ source.customer.name }} · {{ available|floatformat:"2g" }} available to refund</div>{% endblock %}
+{% block content %}
+{% include "sales/_errors.html" %}
+<div class="banner info">A refund pays the customer back out of the bank. Printing refund checks comes later; for now, enter the check number you wrote.</div>
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="{% if is_payment %}source_payment{% else %}source_credit{% endif %}" value="{{ source.number }}">
+  {% for field in form %}
+  <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  {% endfor %}
+  <button type="submit" class="btn primary">Save refund</button>
+  <a class="btn" href="{{ back }}">Cancel</a>
+</form>
+</div></div>
+{% endblock %}

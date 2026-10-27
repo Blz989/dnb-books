@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}New credit note{% endblock %}
+{% block page_title %}New credit note{% endblock %}
+{% block page_subtitle %}<div class="sub">A credit with no stock coming back. Apply it to invoices afterward, or refund it.</div>{% endblock %}
+{% block content %}
+{% include "sales/_errors.html" %}
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <div class="card"><div class="body form-grid">
+    {% for field in form %}
+    <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    {% endfor %}
+  </div>
+  <table class="data" id="doc-lines">
+    <thead><tr><th>#</th><th>Description</th><th class="num">Amount</th><th>Account</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr{% if r.index >= shown %} hidden data-extra{% endif %}>
+        <td>{{ forloop.counter }}</td>
+        <td><input type="text" name="lines-{{ r.index }}-description" value="{{ r.description }}" maxlength="500"></td>
+        <td class="num"><input type="text" inputmode="decimal" name="lines-{{ r.index }}-amount" value="{{ r.amount }}" style="text-align:right"></td>
+        <td><select name="lines-{{ r.index }}-account"><option value="">{{ default_account.name }}</option>
+          {% for a in accounts %}<option value="{{ a.pk }}"{% if r.account == a.pk|stringformat:"s" %} selected{% endif %}>{{ a }}</option>{% endfor %}</select></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot"><button type="button" class="btn" id="add-line">+ Add line</button><span></span></div>
+  </div>
+  <button type="submit" class="btn primary">Save credit note</button>
+  <a class="btn" href="{% url 'sales:credit-list' %}">Cancel</a>
+</form>
+<script src="{% static 'core/lines.js' %}" defer></script>
+{% endblock %}
