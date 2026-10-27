@@ -504,23 +504,23 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - Modify: `core/views.py`, `core/templates/core/home.html`, `README.md` (Status; What it does: Banking row; Getting started: generate `DNB_FIELD_KEY`, Plaid `.env` values, how to run `plaid_sandbox_check`, check calibration steps)
 - Create: `tests/test_phase5a_acceptance.py`
 
-- [ ] **Step 1: Home cards:**
+- [x] **Step 1: Home cards:**
   - **Inbox items waiting** (count, linking to the inbox).
   - **Bank sync** ("Last sync {time}"; a warning if over 24 hours or any item is NEEDS_LOGIN, with "Re-link").
   - **Not reconciled in 40 days** (account names).
 
   Test them.
-- [ ] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with all ledger checks (`check_invariants`, `ar_check`, `undeposited_check`, `ap_check`) empty after each step):
+- [x] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with all ledger checks (`check_invariants`, `ar_check`, `undeposited_check`, `ap_check`) empty after each step):
   - Import `checking.ofx` and `card.qfx`.
   - Match an ACH payment, a deposit, and a printed check.
   - Book a fee by rule.
   - A card payoff matched from both sides.
   - A loan payment.
   - Reconcile both accounts to 0.00.
-- [ ] **Step 3: Full suite** `uv run pytest -q` passes.
-- [ ] **Step 4: Final screenshots:** home with banking cards, inbox, a reconciliation, and the check PDF. Sent.
-- [ ] **Step 5: Commit** `test: phase 5a acceptance`
-- [ ] **Step 6: Open the PR** `Phase 5a: Banking` with a full body per `CLAUDE.md`. List the manual checks:
+- [x] **Step 3: Full suite** `uv run pytest -q` passes.
+- [x] **Step 4: Final screenshots:** home with banking cards, inbox, a reconciliation, and the check PDF. Sent.
+- [x] **Step 5: Commit** `test: phase 5a acceptance`
+- [x] **Step 6: Open the PR** `Phase 5a: Banking` with a full body per `CLAUDE.md`. List the manual checks:
   1. `./update.sh`.
   2. `generate_field_key` into `.env`, saved in the password manager.
   3. Plaid keys in `.env`; Production approval status checked.

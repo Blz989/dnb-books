@@ -20,5 +20,6 @@ def test_seed_demo_purchasing_ties_out_to_the_ledger(db):
 
     call_command("seed_demo", verbosity=0)
     assert ap_check() == [] and ar_check() == [] and undeposited_check() == [] and check_invariants() == []
-    assert Bill.objects.count() >= 6 and VendorPayment.objects.count() == 5 and VendorCredit.objects.count() == 2
+    # Seven payments: five from the purchasing demo, plus two vendor checks left to print by the banking demo.
+    assert Bill.objects.count() >= 6 and VendorPayment.objects.count() == 7 and VendorCredit.objects.count() == 2
     assert DropShipAllocation.objects.exists()

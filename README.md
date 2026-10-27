@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Phase 4 (purchasing) is built and tested, on top of Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Phase 5a (banking) is built and tested, on top of Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import (Phase 5b) is next. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -13,8 +13,8 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Items and inventory | Item catalog, stock movements, FIFO or weighted average cost per item | 2 |
 | Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging | 3 |
 | Purchasing | Vendors, purchase orders (including drop-ship POs), bills that receive stock at the bill price, vendor payments by check, ACH, or company card, vendor credits and returns, A/P aging, 1099 summary | 4 |
-| Banking | Plaid bank feeds, file import, check printing on existing check stock, reconciliation | 5 |
-| Migration | Full Zoho history import with month-by-month verification | 5 |
+| Banking | Plaid bank feeds or OFX, QFX, and CSV files, an inbox that suggests matches for you to confirm, transfers and loan payments, reconciliation that locks what it clears, check printing on existing voucher stock | 5a |
+| Migration | Full Zoho history import with month-by-month verification | 5b |
 
 **Not included:** multi-currency, sales tax, multiple warehouses, serial or batch tracking, kits, e-commerce sync, emailing from the app, payroll. See the spec for the full list.
 
@@ -62,6 +62,24 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Check A/P against the books | Reports, A/P aging. The Difference must be 0.00 |
 | Year-end 1099 totals | Reports, 1099 summary. Check and ACH payments only. Admins can download the CSV for the accountant. Confirm amounts and thresholds with the accountant before filing |
 
+### Banking (Phase 5a)
+
+Nothing is booked from the bank feed until you confirm it. Confirming a row that matches a document already in the books only links the two.
+
+| Task | Where |
+|---|---|
+| Add a bank, card, or loan account (once, admin) | Bank accounts, Add account. Pick the ledger account and its kind. Set the next check number for a checking account |
+| Bring in a statement | Bank accounts, Import file. OFX and QFX files read themselves. The first CSV for an account asks which column is which and remembers it. Rows already imported are skipped |
+| Bring in transactions automatically (admin) | Bank accounts, Link with Plaid. The bank's own sign-in opens in a pop-up. It syncs four times a day, or press Sync now |
+| Work the inbox | Inbox. Confirm a suggestion, Change it to another match or an account, make it a Transfer, or Exclude it with a reason. Tick rows and Confirm ticked rows to do several at once |
+| Book the same fee every month | Inbox, Rules. The first active rule that matches the description suggests its account |
+| Move money between your accounts, pay the card, pay the loan | Transfers, New transfer, or Transfer on an inbox row. Make it once from either side. The other account's row matches the same transfer and books nothing new |
+| Reconcile an account to its statement | Reconcile. Enter the statement date and ending balance (for a card or loan, the amount owed as a positive number), tick what is on the statement, and finish at 0.00 difference. Only an admin can finish or undo it |
+| Print a vendor or refund check | Pay by check and leave the number blank, then Checks to print, Print check. Print at 100%, then answer whether it printed correctly. A spoiled number is never used again |
+| Fit the printing to your check stock (admin) | Checks to print, open a check, or Bank accounts. Use the layout page: Print calibration page, hold it against a check in front of a light, nudge the offsets, and print it again |
+
+A reconciled month is locked: the documents behind it can't be voided or edited until an admin undoes that reconciliation (the most recent one only).
+
 A month won't close while customer balances, undeposited payments, or vendor balances disagree with the ledger. An admin can close it anyway from Admin, Accounting periods, with a reason that is saved on the period.
 
 ## How it works
@@ -70,7 +88,7 @@ A month won't close while customer balances, undeposited payments, or vendor bal
    Linux server (Docker)                                Office computers
   ┌────────────────────── docker compose ──────────────┐   ┌──────────────┐
   │  app        DNB Books (Python / Django) on :8000   │◄──│  web browser │
-  │  scheduler  nightly backup, monthly restore drill  │   └──────────────┘
+  │  scheduler  nightly backup, restore drill, bank sync│  └──────────────┘
   │  ./data     database (one SQLite file), backups    │
   └──────────────────────┬─────────────────────────────┘
                          │ nightly encrypted copy (rclone)
@@ -123,6 +141,16 @@ Backups are encrypted, then copied to Google Drive with [rclone](https://rclone.
 5. Finish the prompts, then set `DNB_BACKUP_REMOTE=gdrive:dnb-backups` in `.env` and run `docker compose up -d`.
 6. Test it: `docker compose exec -u dnb app python manage.py backup_now`, then check that the file appears in the `dnb-backups` folder in Google Drive, and run `docker compose exec -u dnb app python manage.py restore_drill`.
 
+### Banking setup (Phase 5a)
+
+Do these once after `./update.sh`.
+
+1. **Make the key that protects bank sign-ins.** Run `docker compose exec -u dnb app python manage.py generate_field_key`, put the printed key in `.env` as `DNB_FIELD_KEY`, and save a copy in your password manager. Without it, linked banks can't sync and have to be linked again. Then `docker compose up -d`.
+2. **Plaid keys (optional).** From your Plaid developer account, put `PLAID_CLIENT_ID` and `PLAID_SECRET` in `.env`, and `PLAID_ENV=sandbox` or `production`. Production needs Plaid's approval for live banks. Without keys, the Link button is hidden and file import still works. Sync times default to 06:00, 10:00, 14:00, and 18:00 (`DNB_BANK_SYNC_TIMES`).
+3. **Try Plaid safely (with Sandbox keys only).** `docker compose exec -u dnb app python manage.py plaid_sandbox_check` links Plaid's test bank, syncs it, and prints the counts. It refuses to run against production.
+4. **Add the bank accounts** under Banking, Bank accounts, then link or import. Set each checking account's next check number.
+5. **Calibrate the check printing.** Open the layout page for the account, print the calibration page at 100% on plain paper, hold it against a voucher check in front of a light, and nudge the offsets until the boxes sit on the lines. Then print one real check on plain paper held against the stock before using the stock.
+
 ### Everyday use
 
 | Task | How |
@@ -136,7 +164,7 @@ Backups are encrypted, then copied to Google Drive with [rclone](https://rclone.
 
 ### Backups
 
-The `scheduler` service runs `backup_now` every day at 1:15 AM and `restore_drill` on the 1st of each month at 2:15 AM (server time zone; change with `DNB_BACKUP_TIME` and `DNB_DRILL_TIME`). Each backup is encrypted, written to `./data/backups`, and copied to Google Drive. The app keeps the last 30 days plus the newest backup of every month, in both places. The restore drill downloads the backup from Google Drive, so it proves the off-site copy works.
+The `scheduler` service runs `backup_now` every day at 1:15 AM, `restore_drill` on the 1st of each month at 2:15 AM, and `sync_banks` at the times in `DNB_BANK_SYNC_TIMES` (server time zone; change with `DNB_BACKUP_TIME` and `DNB_DRILL_TIME`). Each backup is encrypted, written to `./data/backups`, and copied to Google Drive. The app keeps the last 30 days plus the newest backup of every month, in both places. The restore drill downloads the backup from Google Drive, so it proves the off-site copy works.
 
 If a backup or upload fails, the home screen shows a red warning, for example "Backup saved locally but not uploaded: …".
 
@@ -161,7 +189,7 @@ docker compose up -d
 ## Roadmap
 
 ```
- P1 Ledger core ─► P2 Items+Inventory ─► P3 Sales ─► P4 Purchasing ─► P5 Banking+Checks+Migration ─► Parallel month ─► Cancel Zoho
+ P1 Ledger core ─► P2 Items+Inventory ─► P3 Sales ─► P4 Purchasing ─► P5a Banking+Checks ─► P5b Zoho migration ─► Parallel month ─► Cancel Zoho
 ```
 
 Zoho is canceled only after all of these pass:

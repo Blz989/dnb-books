@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from backup.service import backup_status
+from banking import status as banking_status
 from core.roles import is_admin
 from items.models import InventorySettings
 from items.reports import item_totals
@@ -32,6 +33,9 @@ def home(request):
         "bills_overdue_total": bills.overdue_total, "bills_overdue_count": bills.overdue_count,
         "bills_due_through": (today + timedelta(days=7)).isoformat(),
         "backup": backup_status(timezone.now()),
+        "bank_inbox_count": banking_status.inbox_count(),
+        "bank_sync": banking_status.sync_status(),
+        "unreconciled": banking_status.unreconciled_accounts(today),
         "nav_active": "home",
         "stock_value": stock_value,
         "inventory_unconfigured": is_admin(request.user) and not InventorySettings.load().is_configured,
