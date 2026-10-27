@@ -310,17 +310,17 @@ def test_invoice_void_releases_allocation(...):
   - `apply_vendor_credit(credit, bill, amount, *, date, user)`.
   - `void_vendor_credit(credit, *, user, reason, date=None, allow_negative=False)`: blocked by applications (spec message). A return void puts the stock back through a system void of its movements.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A return of 10 FIFO @ 0.48 credited at 5.00: inventory −4.80, A/P −5.00, COGS net −0.20.
   - The negative-stock warning on a return.
   - An allowance posts to the vendor's default account.
   - Apply to a bill.
   - A void restores stock.
   - `check_invariants() == []` after each step.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: vendor credits and returns`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: vendor credits and returns`
 
 ---
 
