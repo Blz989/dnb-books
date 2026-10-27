@@ -471,7 +471,7 @@ def test_invoice_void_releases_allocation(...):
 - [x] **Step 3: Full suite** `uv run pytest -q` passes with no new warnings.
 - [x] **Step 4: Final screenshots:** a tour (home, vendor, PO, bill, Pay bills, A/P aging, 1099 summary), light and dark, sent.
 - [x] **Step 5: Commit** `test: phase 4 acceptance`
-- [ ] **Step 6: Open the PR** `Phase 4: Purchasing`. **The body must be filled in** per `CLAUDE.md`: a task table, the test output, deviations, screenshot sets, and manual checks:
+- [x] **Step 6: Open the PR** `Phase 4: Purchasing`. **The body must be filled in** per `CLAUDE.md`: a task table, the test output, deviations, screenshot sets, and manual checks:
   - Run `./update.sh`.
   - Fill in Purchasing settings.
   - Set next numbers to continue Zoho.
