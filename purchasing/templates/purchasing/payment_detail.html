@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block title %}{{ payment.number }}{% endblock %}
+{% block page_title %}{{ payment.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><a href="/vendors/{{ payment.vendor.pk }}/">{{ payment.vendor.name }}</a> · {{ payment.date|date:"Y-m-d" }} · {{ payment.get_method_display }}{% if payment.check_number %} #{{ payment.check_number }}{% endif %}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  {% if not is_void and unapplied > 0 %}<a class="btn primary" href="{% url 'purchasing:payment-apply' payment.number %}">Apply</a>{% endif %}
+  {% if is_admin and not is_void %}<a class="btn" href="{% url 'purchasing:payment-void' payment.number %}">Void</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% if is_void %}<div class="banner error">Voided on {{ payment.voided_on|date:"Y-m-d" }}: {{ payment.void_reason }}</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Amount</div><div class="v">{{ payment.amount|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Unapplied</div><div class="v">{{ unapplied|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Paid from</div><div class="v" style="font-size:16px">{{ payment.paid_from.name }}</div></div>
+</div>
+{% if payment.reference %}<div class="card"><div class="body"><dl class="facts"><dt>Reference</dt><dd>{{ payment.reference }}</dd></dl></div></div>{% endif %}
+<h2>Applied to</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Bill</th><th>Applied on</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for a in applications %}
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/bills/{{ a.bill.number }}/">{{ a.bill.number }}</a></td>
+      <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="3" class="empty">Not applied to any bill.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if payment.journal_entry %}<p class="help">Journal entry <a href="{% url 'admin:ledger_journalentry_change' payment.journal_entry.pk %}">{{ payment.journal_entry.display_number }}</a></p>{% endif %}
+{% endblock %}

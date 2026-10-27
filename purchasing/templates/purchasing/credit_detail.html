@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% block title %}{{ credit.number }}{% endblock %}
+{% block page_title %}{{ credit.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><a href="/vendors/{{ credit.vendor.pk }}/">{{ credit.vendor.name }}</a> · {{ credit.date|date:"Y-m-d" }} · {{ credit.get_kind_display }}{% if credit.reason %} · {{ credit.reason }}{% endif %}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  {% if not is_void and unapplied > 0 %}<a class="btn primary" href="{% url 'purchasing:credit-apply' credit.number %}">Apply</a>{% endif %}
+  {% if is_admin and not is_void %}<a class="btn" href="{% url 'purchasing:credit-void' credit.number %}">Void</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% if is_void %}<div class="banner error">Voided on {{ credit.voided_on|date:"Y-m-d" }}: {{ credit.void_reason }}</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Credit</div><div class="v">{{ total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Unapplied</div><div class="v">{{ unapplied|floatformat:"2g" }}</div></div>
+</div>
+<h2>Lines</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>{% if credit.kind == "RETURN" %}Item{% else %}Account{% endif %}</th><th>Description</th><th class="num">Qty</th><th class="num">Credit</th></tr></thead>
+  <tbody>
+  {% for l in lines %}
+    <tr><td>{% if l.item %}<a class="sku" href="/items/{{ l.item.sku }}/">{{ l.item.sku }}</a>{% else %}{{ l.account.number }} {{ l.account.name }}{% endif %}</td>
+      <td>{{ l.description|default:"—" }}</td><td class="num">{{ l.quantity|default_if_none:"" }}</td><td class="num">{{ l.amount|floatformat:"2g" }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<h2>Applied to</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Bill</th><th>Applied on</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for a in applications %}
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/bills/{{ a.bill.number }}/">{{ a.bill.number }}</a></td>
+      <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="3" class="empty">Not applied to any bill.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="help">Journal entries: {% for label, e in entries %}<a href="{% url 'admin:ledger_journalentry_change' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{% endblock %}

@@ -445,18 +445,18 @@ def test_invoice_void_releases_allocation(...):
 - **Pay bills:** filters (vendor, due through), one row per open bill with a pay amount, a "Pay in full" button, method, pay-from account (filtered by method), and a check number field per vendor group when the method is CHECK. The result page lists the payments created.
 - **Single payment, credit (return or allowance), apply, void** per spec section 7.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Pay bills creates one payment per vendor.
   - The duplicate check number message.
   - Card requires a card account.
   - A return credit through the view moves stock.
   - Applying a credit.
   - Voids are admin only.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: payments by check, ACH, and card; one return credit)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of Pay bills (with a check-number error), the payments created, payment detail, the return credit form, the allowance credit form, and credit detail. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: pay bills, vendor payment, and vendor credit screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: payments by check, ACH, and card; one return credit)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of Pay bills (with a check-number error), the payments created, payment detail, the return credit form, the allowance credit form, and credit detail. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: pay bills, vendor payment, and vendor credit screens`
 
 ---
 

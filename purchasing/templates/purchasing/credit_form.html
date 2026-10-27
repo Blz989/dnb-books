@@ -1,0 +1,49 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}{% if kind == "return" %}Return to vendor{% else %}Credit without a return{% endif %}{% endblock %}
+{% block page_title %}{% if kind == "return" %}Return to vendor{% else %}Credit without a return{% endif %}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if kind == "return" %}The stock leaves at its current cost. Enter the credit the vendor gives; leave it blank to credit the cost.{% else %}A credit with no stock going back, such as a late-delivery allowance. Apply it to a bill afterward.{% endif %}
+  <a href="?kind={% if kind == 'return' %}allowance{% else %}return{% endif %}">{% if kind == "return" %}Credit without a return instead{% else %}Return stock instead{% endif %}</a></div>{% endblock %}
+{% block content %}
+{% include "purchasing/_errors.html" %}
+<form method="post" action="?kind={{ kind }}">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <div class="card"><div class="body form-grid">
+    {% for field in form %}
+    <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    {% endfor %}
+  </div>
+  {% if kind == "return" %}
+  <datalist id="sku-list">{% for i in sku_options %}<option value="{{ i.sku }}">{{ i.name }}</option>{% endfor %}</datalist>
+  <table class="data" id="doc-lines">
+    <thead><tr><th>#</th><th>Item SKU</th><th class="num">Qty</th><th class="num">Credit amount</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr{% if r.index >= shown %} hidden data-extra{% endif %}><td>{{ forloop.counter }}</td>
+        <td><input type="text" list="sku-list" name="ret-{{ r.index }}-sku" value="{{ r.sku }}" autocapitalize="characters" maxlength="50"></td>
+        <td class="num"><input type="text" inputmode="numeric" name="ret-{{ r.index }}-quantity" value="{{ r.quantity }}" style="text-align:right"></td>
+        <td class="num"><input type="text" inputmode="decimal" name="ret-{{ r.index }}-amount" value="{{ r.amount }}" placeholder="Cost" style="text-align:right"></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <table class="data" id="doc-lines">
+    <thead><tr><th>#</th><th>Account</th><th>Description</th><th class="num">Amount</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr{% if r.index >= shown %} hidden data-extra{% endif %}><td>{{ forloop.counter }}</td>
+        <td><select name="lines-{{ r.index }}-account"><option value="">Vendor's default account</option>{% for a in expense_accounts %}<option value="{{ a.pk }}"{% if r.account == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.number }} {{ a.name }}</option>{% endfor %}</select></td>
+        <td><input type="text" name="lines-{{ r.index }}-description" value="{{ r.description }}" maxlength="500"></td>
+        <td class="num"><input type="text" inputmode="decimal" name="lines-{{ r.index }}-amount" value="{{ r.amount }}" style="text-align:right"></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <div class="foot"><button type="button" class="btn add-rows" data-table="doc-lines">+ Add line</button><span></span></div>
+  </div>
+  <button type="submit" class="btn primary">Save credit</button>
+  <a class="btn" href="{% url 'purchasing:credit-list' %}">Cancel</a>
+</form>
+<script src="{% static 'purchasing/rows.js' %}" defer></script>
+{% endblock %}

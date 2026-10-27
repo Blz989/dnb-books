@@ -122,3 +122,67 @@ class BillFromPOForm(forms.Form):
     date = date_field("Bill date")
     terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Vendor's default")] + list(Terms.choices))
     notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+
+
+# ---- payments and credits ----
+from sales.forms import amount_field  # noqa: E402
+
+
+def pay_from_accounts():
+    return Account.objects.filter(
+        subtype__in=[AccountSubtype.BANK, AccountSubtype.CREDIT_CARD], is_active=True).order_by("number")
+
+
+class PayDetailsForm(forms.Form):
+    """What every payment needs besides the bills: a date, a method, and where the money comes from."""
+    date = date_field("Payment date")
+    method = forms.ChoiceField(label="Method", choices=[("CHECK", "Check"), ("ACH", "ACH"), ("CARD", "Company card")])
+    paid_from = forms.ModelChoiceField(
+        Account.objects.none(), required=False, label="Paid from",
+        error_messages={"invalid_choice": "Choose the account the payment came from."})
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["paid_from"].queryset = pay_from_accounts()
+
+
+class PayFilterForm(forms.Form):
+    vendor = forms.ModelChoiceField(Vendor.objects.none(), required=False, empty_label="All vendors", label="Vendor")
+    through = forms.DateField(
+        label="Due through", required=False, input_formats=["%Y-%m-%d"],
+        error_messages={"invalid": "Enter a date like 2026-01-31."},
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vendor"].queryset = Vendor.objects.all()
+
+
+class VendorPaymentForm(PayDetailsForm):
+    vendor = forms.ModelChoiceField(
+        Vendor.objects.none(), error_messages={"required": "Choose a vendor.", "invalid_choice": "Choose a vendor."})
+    check_number = forms.CharField(label="Check number", required=False, max_length=30)
+    reference = forms.CharField(label="Reference", required=False, max_length=100)
+    amount = amount_field()
+    field_order = ["vendor", "date", "method", "paid_from", "check_number", "reference", "amount"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vendor"].queryset = Vendor.objects.all()
+
+    def clean_amount(self):
+        amount = self.cleaned_data["amount"]
+        if amount <= 0:
+            raise forms.ValidationError("Enter an amount above zero.")
+        return amount
+
+
+class VendorCreditHeaderForm(forms.Form):
+    vendor = forms.ModelChoiceField(
+        Vendor.objects.none(), error_messages={"required": "Choose a vendor.", "invalid_choice": "Choose a vendor."})
+    date = date_field("Date")
+    reason = forms.CharField(label="Reason", required=False, max_length=200)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vendor"].queryset = Vendor.objects.filter(is_active=True)

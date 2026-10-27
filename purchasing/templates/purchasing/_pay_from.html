@@ -1,0 +1,4 @@
+<select name="paid_from" id="id_paid_from">
+  <option value="">Choose an account</option>
+  {% for a in pay_accounts %}<option value="{{ a.pk }}" data-subtype="{{ a.subtype }}"{% if paid_from_value == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.number }} {{ a.name }}</option>{% endfor %}
+</select>
