@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}
+{% block title %}A/R aging{% endblock %}
+{% block page_title %}A/R aging{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">As of {{ report.as_of|date:"Y-m-d" }}, days past due</div>{% endif %}{% endblock %}
+{% block content %}
+{% if report %}
+{% if report.difference != 0 %}<div class="banner error">Customer balances and the A/R account don't match. Difference: {{ report.difference|floatformat:"2g" }}.</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Customer balances</div><div class="v">{{ report.totals.total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">A/R account</div><div class="v">{{ report.ledger_balance|floatformat:"2g" }}</div></div>
+  <div class="kpi{% if report.difference != 0 %} warn{% endif %}"><div class="l">Difference</div><div class="v">{{ report.difference|floatformat:"2g" }}</div></div>
+</div>
+{% endif %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>Customer</th><th class="num">Current</th><th class="num">1-30</th><th class="num">31-60</th><th class="num">61-90</th><th class="num">Over 90</th><th class="num">Unapplied credits</th><th class="num">Total</th></tr></thead>
+  <tbody>
+  {% for r in report.rows %}
+    <tr><td><a href="/customers/{{ r.customer.pk }}/">{{ r.customer.name }}</a></td>
+      <td class="num">{{ r.current|floatformat:"2g" }}</td><td class="num">{{ r.d1_30|floatformat:"2g" }}</td>
+      <td class="num">{{ r.d31_60|floatformat:"2g" }}</td><td class="num">{{ r.d61_90|floatformat:"2g" }}</td>
+      <td class="num{% if r.over_90 %} neg{% endif %}">{{ r.over_90|floatformat:"2g" }}</td>
+      <td class="num">{{ r.unapplied_credits|floatformat:"2g" }}</td><td class="num">{{ r.total|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="8" class="empty">Nothing is owed on this date.</td></tr>
+  {% endfor %}
+    <tr class="total"><td>Total</td>
+      <td class="num">{{ report.totals.current|floatformat:"2g" }}</td><td class="num">{{ report.totals.d1_30|floatformat:"2g" }}</td>
+      <td class="num">{{ report.totals.d31_60|floatformat:"2g" }}</td><td class="num">{{ report.totals.d61_90|floatformat:"2g" }}</td>
+      <td class="num">{{ report.totals.over_90|floatformat:"2g" }}</td><td class="num">{{ report.totals.unapplied_credits|floatformat:"2g" }}</td>
+      <td class="num">{{ report.totals.total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

@@ -430,17 +430,17 @@ def test_void_reopens_closed_order(...): ...
   - `open_invoices(as_of=None, customer=None)`, `customer_balances(as_of=None)`, `open_sales_orders()` (lines with remaining > 0), `undeposited_funds() -> (payments, total, ledger_balance, difference)`, `drop_ship_awaiting_bill()` (non-void invoice drop-ship lines with `drop_ship_billed=False`).
   - URL names: `reports:ar-aging`, `reports:open-invoices`, `reports:customer-balances`, `reports:open-sales-orders`, `reports:undeposited-funds`, `reports:drop-ship-awaiting-bill`. `?format=csv` like the other reports. The AR aging and Undeposited pages show the "Difference" card, and a nonzero difference shows an error banner.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Bucket edges: due today is current; 1 day past due is 1–30; 30 is 1–30; 31 is 31–60; 91 is over 90.
   - As-of before and after a removed application.
   - AR aging total equals A/R.
   - CSV output.
   - A bad date shows "Enter a date like 2026-01-31."
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of all six reports (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: sales reports`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of all six reports (light and dark), sent.
+- [x] **Step 6: Commit** `feat: sales reports`
 
 ---
 

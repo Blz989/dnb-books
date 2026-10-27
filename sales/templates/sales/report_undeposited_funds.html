@@ -1,0 +1,26 @@
+{% extends "core/base.html" %}
+{% block title %}Undeposited funds{% endblock %}
+{% block page_title %}Undeposited funds{% endblock %}
+{% block page_subtitle %}<div class="sub">Checks and cash not yet taken to the bank</div>{% endblock %}
+{% block content %}
+{% if report.difference != 0 %}<div class="banner error">Undeposited payments and the Undeposited Funds account don't match. Difference: {{ report.difference|floatformat:"2g" }}.</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Undeposited payments</div><div class="v">{{ report.total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Undeposited Funds account</div><div class="v">{{ report.ledger_balance|floatformat:"2g" }}</div></div>
+  <div class="kpi{% if report.difference != 0 %} warn{% endif %}"><div class="l">Difference</div><div class="v">{{ report.difference|floatformat:"2g" }}</div></div>
+</div>
+<div class="card">
+<form method="get" class="filters"><a class="btn primary" href="/sales/deposits/new/">Make a deposit</a><button type="submit" name="format" value="csv" class="btn">Download CSV</button></form>
+<table class="data">
+  <thead><tr><th>Payment</th><th>Customer</th><th>Date</th><th>Method</th><th>Reference</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for p in report.payments %}
+    <tr><td><a class="sku" href="/sales/payments/{{ p.number }}/">{{ p.number }}</a></td><td>{{ p.customer.name }}</td><td>{{ p.date|date:"Y-m-d" }}</td>
+      <td>{{ p.get_method_display }}</td><td>{{ p.reference }}</td><td class="num">{{ p.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nothing is waiting to be deposited.</td></tr>
+  {% endfor %}
+    <tr class="total"><td></td><td>Total</td><td></td><td></td><td></td><td class="num">{{ report.total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+</div>
+{% endblock %}

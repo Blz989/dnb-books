@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Open sales orders{% endblock %}
+{% block page_title %}Open sales orders{% endblock %}
+{% block page_subtitle %}<div class="sub">Lines still to invoice</div>{% endblock %}
+{% block content %}
+<div class="card">
+<form method="get" class="filters"><button type="submit" name="format" value="csv" class="btn">Download CSV</button></form>
+<table class="data">
+  <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>SKU</th><th>Ship from</th><th class="num">Ordered</th><th class="num">Left</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td><a class="sku" href="/sales/orders/{{ r.order.number }}/">{{ r.order.number }}</a></td><td>{{ r.order.customer.name }}</td>
+      <td>{{ r.order.date|date:"Y-m-d" }}</td><td>{{ r.line.item.sku }}</td><td>{{ r.line.get_fulfillment_display }}</td>
+      <td class="num">{{ r.ordered }}</td><td class="num">{{ r.left }}</td></tr>
+  {% empty %}<tr><td colspan="7" class="empty">No open sales orders.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
