@@ -5,16 +5,16 @@ Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. 
 ## Source of truth
 
 - **System spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md` (whole system, approved).
-- **Current phase spec:** `docs/superpowers/specs/2026-10-27-phase-4-purchasing-design.md` (Phase 4, approved).
-- **Current plan:** `docs/superpowers/plans/2026-10-27-phase-4-purchasing.md` (Phase 4, approved).
-- **Visual references:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`; all screens match it) and `docs/design/invoice-mockup.html` (invoice PDF).
-- **Done:** Phases 1 to 3 (specs and plans in `docs/superpowers/`, merged), Docker deployment.
+- **Current phase spec:** `docs/superpowers/specs/2026-10-27-phase-5a-banking-design.md` (Phase 5a, approved).
+- **Current plan:** `docs/superpowers/plans/2026-10-27-phase-5a-banking.md` (Phase 5a, approved).
+- **Visual references:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`; all screens match it) `docs/design/invoice-mockup.html` (invoice PDF), and `docs/design/check-mockup.html` (printed check).
+- **Done:** Phases 1 to 4 (specs and plans in `docs/superpowers/`, merged), Docker deployment.
 
 Read the specs and the current plan before starting. The plan's Global Constraints, Review Focus, and per-task Interfaces blocks are binding. If the plan and spec conflict, or a plan step cannot work as written, stop and ask the owner rather than improvising a different design. Small mechanical fixes to the plan (a wrong import path, a typo in a test) are fine; note them in the PR.
 
 ## How to execute the current plan
 
-1. Work on a new branch from `main` named after the phase (Phase 4: `claude/phase-4-purchasing`).
+1. Work on a new branch from `main` named after the phase (Phase 5a: `claude/phase-5a-banking`).
 2. Use the `superpowers:subagent-driven-development` skill to execute the plan task by task, unless the owner chooses inline execution (`superpowers:executing-plans`). Follow TDD as each task's steps describe: failing test, confirm it fails, implement, confirm it passes, commit.
 3. One commit per task at minimum, using the commit message given in the task.
 4. Tick the plan's checkboxes (`- [ ]` to `- [x]`) as steps complete, and commit that with the task.
@@ -58,7 +58,7 @@ docker compose up -d --build     # production-like run (app + scheduler); see RE
 ## Conventions
 
 - Python 3.12+, Django 5.2 LTS. Keep dependencies to the list in the plan's Tech Stack; ask before adding any other.
-- One Django app per module (`core`, `ledger`, `backup`, `items`, `contacts`, `sales`, `purchasing`). Keep files focused; split a file when it grows past one clear responsibility.
+- One Django app per module (`core`, `ledger`, `backup`, `items`, `contacts`, `sales`, `purchasing`, `banking`). Keep files focused; split a file when it grows past one clear responsibility.
 - Tests live in `tests/`, pytest style, one file per task area as the plan names them.
 - American English (-ize spellings) in code, UI text, and docs.
 - UI text is plain and short. No marketing tone.
@@ -66,4 +66,4 @@ docker compose up -d --build     # production-like run (app + scheduler); see RE
 
 ## Later phases (not now)
 
-Phase 5 banking (Plaid, check printing, reconciliation) and Zoho migration. Each gets its own spec and plan before any code.
+Phase 5b: Zoho migration (needs the Zoho data export). It gets its own spec and plan before any code.
