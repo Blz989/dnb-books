@@ -459,12 +459,12 @@ def test_bom_and_mixed_case_values(): ...
   - URLs: `reports:inventory-valuation` `/reports/inventory-valuation/?as_of=`, `reports:stock-movements` `/reports/stock-movements/?start=&end=&item=<sku>`, `reports:negative-stock` `/reports/negative-stock/`; `&format=csv` like Phase 1 (plain numbers, 2 dp, no separators).
   - Valuation page shows Stock total, Inventory accounts total, and Difference as three `.kpi` cards; a nonzero difference shows an error banner "Stock value and the inventory accounts don't match. Difference: {d}."
 
-- [ ] **Step 1: Write failing tests** (valuation equals ledger after a mixed scenario; as-of before a void includes the movement, after excludes it; as-of before a revision date excludes the revision; CSV output; bad date shows "Enter a date like 2026-01-31.")
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review the valuation-to-ledger tie-out against the `finance:reconciliation` skill; record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the three reports (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: inventory valuation, stock movement, and negative stock reports`
+- [x] **Step 1: Write failing tests** (valuation equals ledger after a mixed scenario; as-of before a void includes the movement, after excludes it; as-of before a revision date excludes the revision; CSV output; bad date shows "Enter a date like 2026-01-31.")
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review the valuation-to-ledger tie-out against the `finance:reconciliation` skill; record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the three reports (light and dark), sent.
+- [x] **Step 6: Commit** `feat: inventory valuation, stock movement, and negative stock reports`
 
 ---
 

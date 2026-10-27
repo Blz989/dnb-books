@@ -227,6 +227,8 @@ def void_movement(movement: StockMovement, *, user, reason: str, date: date_type
         if current.voided:
             raise ItemStateError("This movement is already voided.")
         when = date or current.date
+        if when < current.date:
+            raise ItemStateError("The void date can't be before the movement date.")
         assert_open(when)
         item = current.item
         effective = effective_total(current)

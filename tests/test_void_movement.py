@@ -95,3 +95,11 @@ def test_void_that_breaks_a_value_adjustment_rolls_back(inv_settings, admin_user
     with pytest.raises(CostingError):
         void_movement(m, user=admin_user, reason="x", date=d(10, 3))
     assert not StockMovement.objects.get(pk=m.pk).voided and check_invariants() == []
+
+
+def test_void_date_cannot_precede_the_movement(inv_settings, admin_user, make_item):
+    item = make_item("V-8")
+    m, = record_movements(kind=ADJ, date=d(10, 10), lines=[StockLine(item, 3, unit_cost=D("1.00"))], user=admin_user)
+    with pytest.raises(ItemStateError, match="The void date can't be before the movement date."):
+        void_movement(m, user=admin_user, reason="x", date=d(10, 9))
+    assert not StockMovement.objects.get(pk=m.pk).voided

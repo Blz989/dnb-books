@@ -58,4 +58,7 @@ class Command(BaseCommand):
         post(first - timedelta(days=15), "1200", "4000", "3150.00", "Invoices")
         post(first - timedelta(days=10), "6000", "1000", "2400.00", "Rent")
         post(first - timedelta(days=5), "6100", "1000", "310.45", "Utilities")
-        self.stdout.write(f"Demo data ready. Log in as demo / demo-pass-123.")
+        from items.demo import seed_items
+
+        seed_items(user)
+        self.stdout.write("Demo data ready. Log in as demo / demo-pass-123.")

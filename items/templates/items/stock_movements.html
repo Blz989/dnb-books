@@ -1,0 +1,30 @@
+{% extends "core/base.html" %}
+{% block title %}Stock movements{% endblock %}
+{% block page_title %}Stock movements{% endblock %}
+{% block page_subtitle %}{% if rows is not None %}<div class="sub">{{ rows|length }} movement{{ rows|length|pluralize }}</div>{% endif %}{% endblock %}
+{% block content %}
+<div class="card">
+{% include "ledger/_filter_form.html" with report=rows %}
+{% if rows is not None %}
+<table class="data">
+  <thead><tr><th>Date</th><th>SKU</th><th>Kind</th><th class="num">Quantity</th><th class="num">Unit cost</th>
+    <th class="num">Value</th><th class="num">Balance</th><th>Entry</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr{% if r.movement.voided %} style="text-decoration: line-through"{% endif %}>
+      <td>{{ r.movement.date|date:"Y-m-d" }}</td>
+      <td><a class="sku" href="/items/{{ r.movement.item.sku }}/">{{ r.movement.item.sku }}</a></td>
+      <td>{{ r.movement.get_kind_display }}{% if r.movement.voided %} <span class="tag ns">Voided</span>{% endif %}</td>
+      <td class="num{% if r.movement.quantity < 0 %} neg{% endif %}">{{ r.movement.quantity }}</td>
+      <td class="num">{{ r.movement.unit_cost|floatformat:4 }}</td>
+      <td class="num{% if r.effective_value < 0 %} neg{% endif %}">{{ r.effective_value|floatformat:"2g" }}</td>
+      <td class="num{% if r.running_quantity < 0 %} neg{% endif %}">{{ r.running_quantity }}</td>
+      <td>{% if r.movement.journal_entry %}{{ r.movement.journal_entry.display_number }}{% else %}<span class="dash">—</span>{% endif %}</td>
+      <td>{{ r.movement.reason }}</td></tr>
+  {% empty %}<tr><td colspan="9" class="empty">No movements in this range.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

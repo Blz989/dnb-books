@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block title %}Inventory valuation{% endblock %}
+{% block page_title %}Inventory valuation{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">As of {{ report.as_of|date:"Y-m-d" }}</div>{% endif %}{% endblock %}
+{% block content %}
+{% if report %}
+{% if report.difference != 0 %}<div class="banner error">Stock value and the inventory accounts don't match. Difference: {{ report.difference|floatformat:"2g" }}.</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Stock total</div><div class="v">{{ report.total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Inventory accounts</div><div class="v">{{ report.ledger_balance|floatformat:"2g" }}</div></div>
+  <div class="kpi{% if report.difference != 0 %} warn{% endif %}"><div class="l">Difference</div><div class="v">{{ report.difference|floatformat:"2g" }}</div></div>
+</div>
+{% endif %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>SKU</th><th>Name</th><th class="num">Quantity</th><th class="num">Value</th></tr></thead>
+  <tbody>
+  {% for r in report.rows %}
+    <tr><td><a class="sku" href="/items/{{ r.item.sku }}/">{{ r.item.sku }}</a></td><td>{{ r.item.name }}</td>
+        <td class="num{% if r.quantity < 0 %} neg{% endif %}">{{ r.quantity }}</td>
+        <td class="num{% if r.value < 0 %} neg{% endif %}">{{ r.value|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No stock on hand on this date.</td></tr>
+  {% endfor %}
+    <tr class="total"><td></td><td>Total</td><td></td><td class="num">{{ report.total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}
