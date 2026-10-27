@@ -6,8 +6,11 @@ from decimal import Decimal
 from ledger.balances import account_totals, money
 from ledger.models import Account
 
-from .balances import _counts, credit_unapplied, invoice_balance, payment_unapplied
-from .models import CreditNote, DocStatus, Invoice, Payment, PaymentMethod, SalesSettings
+from .balances import (
+    _counts, credit_notes_with_balances, credit_unapplied, invoice_balance, invoices_with_balances, payment_unapplied,
+    payments_with_balances,
+)
+from .models import Payment, PaymentMethod, SalesSettings
 
 ZERO = Decimal("0.00")
 
@@ -19,9 +22,9 @@ def _account_balance(account: Account, as_of: date | None) -> Decimal:
 
 
 def customer_balances_total(as_of: date | None = None) -> Decimal:
-    owed = sum((invoice_balance(i, as_of) for i in Invoice.objects.all()), ZERO)
-    paid = sum((payment_unapplied(p, as_of) for p in Payment.objects.all()), ZERO)
-    credits = sum((credit_unapplied(c, as_of) for c in CreditNote.objects.all()), ZERO)
+    owed = sum((invoice_balance(i, as_of) for i in invoices_with_balances()), ZERO)
+    paid = sum((payment_unapplied(p, as_of) for p in payments_with_balances()), ZERO)
+    credits = sum((credit_unapplied(c, as_of) for c in credit_notes_with_balances()), ZERO)
     return money(owed - paid - credits)
 
 

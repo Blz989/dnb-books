@@ -56,7 +56,7 @@ def _customer_or_404(pk) -> Customer:
 
 def _history(customer: Customer) -> list[dict]:
     rows = []
-    for inv in customer.invoices.all():
+    for inv in customer.invoices.prefetch_related("lines"):
         rows.append({"date": inv.date, "kind": "Invoice", "number": inv.number, "void": inv.status == DocStatus.VOID,
                      "url": f"/sales/invoices/{inv.number}/", "sign": 1,
                      "amount": sum((l.amount for l in inv.lines.all()), 0)})
@@ -64,7 +64,7 @@ def _history(customer: Customer) -> list[dict]:
         rows.append({"date": pay.date, "kind": f"Payment ({pay.get_method_display()})", "number": pay.number,
                      "void": pay.status == DocStatus.VOID, "url": f"/sales/payments/{pay.number}/", "sign": -1,
                      "amount": pay.amount})
-    for note in customer.credit_notes.all():
+    for note in customer.credit_notes.prefetch_related("lines"):
         rows.append({"date": note.date, "kind": "Credit note", "number": note.number,
                      "void": note.status == DocStatus.VOID, "url": f"/sales/credits/{note.number}/", "sign": -1,
                      "amount": sum((l.amount for l in note.lines.all()), 0)})

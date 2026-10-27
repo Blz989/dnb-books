@@ -31,8 +31,21 @@ def _total(amounts) -> Decimal:
     return money(sum(amounts, ZERO))
 
 
+def invoices_with_balances():
+    """Invoices with what balance math reads already loaded, so a report doesn't query per invoice."""
+    return Invoice.objects.select_related("customer").prefetch_related("lines", "payment_applications", "credit_applications")
+
+
+def payments_with_balances():
+    return Payment.objects.select_related("customer").prefetch_related("applications", "refunds")
+
+
+def credit_notes_with_balances():
+    return CreditNote.objects.select_related("customer").prefetch_related("lines", "applications", "refunds")
+
+
 def invoice_total(invoice: Invoice) -> Decimal:
-    return _total(invoice.lines.values_list("amount", flat=True))
+    return _total(l.amount for l in invoice.lines.all())
 
 
 def invoice_applied(invoice: Invoice, as_of: date | None = None) -> Decimal:
@@ -62,7 +75,7 @@ def payment_unapplied(payment: Payment, as_of: date | None = None) -> Decimal:
 
 
 def credit_total(credit_note: CreditNote) -> Decimal:
-    return _total(credit_note.lines.values_list("amount", flat=True))
+    return _total(l.amount for l in credit_note.lines.all())
 
 
 def credit_unapplied(credit_note: CreditNote, as_of: date | None = None) -> Decimal:
@@ -73,7 +86,7 @@ def credit_unapplied(credit_note: CreditNote, as_of: date | None = None) -> Deci
 
 
 def customer_balance(customer, as_of: date | None = None) -> Decimal:
-    owed = _total(invoice_balance(i, as_of) for i in customer.invoices.all())
-    paid = _total(payment_unapplied(p, as_of) for p in customer.payments.all())
-    credits = _total(credit_unapplied(c, as_of) for c in customer.credit_notes.all())
+    owed = _total(invoice_balance(i, as_of) for i in invoices_with_balances().filter(customer=customer))
+    paid = _total(payment_unapplied(p, as_of) for p in payments_with_balances().filter(customer=customer))
+    credits = _total(credit_unapplied(c, as_of) for c in credit_notes_with_balances().filter(customer=customer))
     return money(owed - paid - credits)

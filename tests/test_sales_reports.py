@@ -184,3 +184,25 @@ def test_difference_banner(logged, invoice, ar, revenue, admin_user):
     post_entry(date=d(10, 2), user=admin_user, lines=[LineSpec(ar, debit=D("5.00")), LineSpec(revenue, credit=D("5.00"))])
     page = logged.get(reverse("reports:ar-aging"), {"as_of": "2026-10-31"}).content.decode()
     assert "banner error" in page and "Difference: -5.00" in page
+
+
+def test_report_and_check_queries_do_not_grow_with_the_number_of_documents(
+    service, customer, admin_user, django_assert_max_num_queries, bank
+):
+    from sales.checks import ar_check, undeposited_check
+    from sales.reports import ar_aging, customer_balances, open_invoices, undeposited_funds
+
+    for n in range(1, 26):
+        inv = create_invoice(customer=customer, date=d(10, 1), user=admin_user, lines=[InvoiceLineSpec(service, 1, D("10.00"))])
+        receive_payment(customer=customer, date=d(10, 2), method=PaymentMethod.CHECK, amount=D("4.00"), user=admin_user,
+                        applications=[(inv, D("4.00"))])
+    with django_assert_max_num_queries(25):
+        assert ar_aging(d(10, 31)).difference == D("0.00")
+    with django_assert_max_num_queries(25):
+        assert ar_check() == [] and undeposited_check() == []
+    with django_assert_max_num_queries(25):
+        assert len(open_invoices(d(10, 31))) == 25
+    with django_assert_max_num_queries(25):
+        assert len(customer_balances()) == 1
+    with django_assert_max_num_queries(25):
+        assert undeposited_funds().total == D("100.00")
