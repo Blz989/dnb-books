@@ -139,3 +139,10 @@ table.data tr.total td { font-weight: 600; border-top: 2px solid var(--text); }
 .form-grid .form-row { max-width: none; }
 .on-hand { color: var(--muted); font-size: 12px; }
 [hidden] { display: none !important; }
+.recon-bar { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; margin-bottom: 8px; }
+.recon-bar .l { display: block; color: var(--muted); font-size: 12px; }
+.recon-bar .v, .recon-bar .difference { display: block; font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.recon-bar .difference.warn { color: var(--warn-text-strong); }
+.recon-bar .difference.ok { color: var(--accent-text); }
+.recon-actions { margin: 4px 0 24px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button.btn:disabled { opacity: .5; cursor: not-allowed; }

@@ -161,3 +161,11 @@ class TransferForm(forms.Form):
         self.fields["to_account"].queryset = accounts
         self.fields["interest_account"].queryset = Account.objects.filter(
             is_active=True, type=AccountType.EXPENSE).order_by("number")
+
+
+class ReconcileStartForm(forms.Form):
+    statement_date = date_field("Statement date")
+    statement_balance = forms.DecimalField(
+        label="Statement ending balance", max_digits=14, decimal_places=2,
+        error_messages={"required": "Enter the balance printed on the statement.",
+                        "invalid": "Enter the balance like 1250.00."})

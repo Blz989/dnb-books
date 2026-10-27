@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import accounts, inbox, transfers
+from .views import accounts, inbox, reconcile, transfers
 
 app_name = "banking"
 
@@ -33,4 +33,13 @@ urlpatterns = [
     path("transfers/", transfers.transfer_list, name="transfers"),
     path("transfers/new/", transfers.transfer_new, name="transfer-new"),
     path("transfers/<int:pk>/void/", transfers.transfer_void, name="transfer-void"),
+    path("reconcile/", reconcile.reconcile_index, name="reconcile"),
+    path("reconcile/<int:account_id>/", reconcile.reconcile_start, name="reconcile-start"),
+    path("reconcile/<int:account_id>/<int:pk>/", reconcile.reconcile_work, name="reconcile-work"),
+    path("reconcile/<int:account_id>/<int:pk>/toggle/<int:item_id>/", reconcile.reconcile_toggle, name="reconcile-toggle"),
+    path("reconcile/<int:account_id>/<int:pk>/ticks/", reconcile.reconcile_ticks, name="reconcile-ticks"),
+    path("reconcile/<int:account_id>/<int:pk>/finish/", reconcile.reconcile_finish, name="reconcile-finish"),
+    path("reconcile/<int:account_id>/<int:pk>/cancel/", reconcile.reconcile_cancel, name="reconcile-cancel"),
+    path("reconcile/<int:account_id>/<int:pk>/undo/", reconcile.reconcile_undo, name="reconcile-undo"),
+    path("reconcile/<int:account_id>/<int:pk>/report.pdf", reconcile.reconcile_report, name="reconcile-report"),
 ]

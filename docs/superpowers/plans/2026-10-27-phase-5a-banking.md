@@ -452,16 +452,16 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Buttons: Finish (admin, enabled at 0.00), Cancel.
 - **Finished:** the reconciliation page links to `report.pdf` and offers Undo (admin, reason).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Start, tick, finish through the views.
   - Finish is refused at a nonzero difference with the message.
   - The report PDF is served.
   - Undo needs a reason and admin.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of start, the working page (difference not zero), at zero, the finished page, and the report PDF page 1 (rasterized). Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: reconcile screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of start, the working page (difference not zero), at zero, the finished page, and the report PDF page 1 (rasterized). Light and dark, sent.
+- [x] **Step 6: Commit** `feat: reconcile screens`
 
 ---
 

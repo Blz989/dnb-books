@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+{% block title %}Reconciled {{ account }}{% endblock %}
+{% block page_title %}{{ account.ledger_account.name }}, {{ rec.statement_date|date:"F Y" }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if rec.status == "FINISHED" %}Reconciled{% else %}{{ rec.get_status_display }}{% endif %} to the statement dated {{ rec.statement_date|date:"Y-m-d" }}{% if rec.finished_by %} by {{ rec.finished_by.get_username }}{% endif %}</div>{% endblock %}
+{% block page_actions %}{% if rec.status == "FINISHED" %}<a class="btn primary" href="{% url 'banking:reconcile-report' account.pk rec.pk %}">Report (PDF)</a>{% endif %}{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Statement balance{% if is_liability %} (amount owed){% endif %}</div><div class="v">{{ rec.statement_balance|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Beginning balance</div><div class="v">{{ opening|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Difference</div><div class="v">{{ difference|floatformat:"2g" }}</div></div>
+  <div class="kpi{% if outstanding %} warn{% endif %}"><div class="l">Outstanding payments</div><div class="v">{{ outstanding|length }}</div><div class="note">{{ in_transit|length }} deposit{{ in_transit|length|pluralize }} in transit</div></div>
+</div>
+<h2>Cleared {% if is_liability %}payments and credits{% else %}deposits and credits{% endif %}</h2>
+{% include "banking/_reconcile_readonly.html" with rows=cleared_deposits %}
+<h2>Cleared {% if is_liability %}purchases and charges{% else %}payments and debits{% endif %}</h2>
+{% include "banking/_reconcile_readonly.html" with rows=cleared_payments %}
+{% if outstanding %}<h2>Outstanding checks and payments</h2>{% include "banking/_reconcile_readonly.html" with rows=outstanding %}{% endif %}
+{% if in_transit %}<h2>Deposits in transit</h2>{% include "banking/_reconcile_readonly.html" with rows=in_transit %}{% endif %}
+{% if can_undo and rec.status == "FINISHED" %}
+<h2>Undo this reconciliation</h2>
+<div class="card"><div class="body">
+  <p class="help">Only the most recent reconciliation of an account can be undone. The documents in it become editable again.</p>
+  <form method="post" action="{% url 'banking:reconcile-undo' account.pk rec.pk %}">{% csrf_token %}
+    <div class="form-row"><label for="undo-reason">Reason</label><input type="text" name="reason" id="undo-reason" maxlength="200" required></div>
+    <button type="submit" class="btn">Undo this reconciliation</button></form>
+</div></div>
+{% endif %}
+{% endblock %}

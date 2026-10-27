@@ -93,26 +93,38 @@ def difference(rec: Reconciliation) -> Decimal:
     return rec.statement_balance - (opening_balance(rec) + cleared_total(rec))
 
 
-def _context(rec: Reconciliation) -> dict:
+def rows_for(rec: Reconciliation) -> list[dict]:
+    """Every line on the reconciliation, oldest first, shaped for the screen and the report."""
     account = rec.bank_account
     rows = []
     for item in rec.items.select_related("journal_line__entry").order_by("journal_line__entry__date", "pk"):
         line, entry = item.journal_line, item.journal_line.entry
         rows.append({
-            "date": entry.date, "number": entry.source_id or entry.display_number,
+            "item_id": item.pk, "date": entry.date, "number": entry.source_id or entry.display_number,
             "description": entry.memo, "amount": abs(line.debit - line.credit),
             "is_deposit": (line.debit > line.credit) != account.is_liability, "cleared": item.cleared,
         })
+    return rows
+
+
+def summary(rec: Reconciliation) -> dict:
+    cleared = cleared_total(rec)
+    diff = rec.statement_balance - (opening_balance(rec) + cleared)
+    return {"opening": opening_balance(rec), "cleared_total": cleared, "difference": diff,
+            "cleared_balance": opening_balance(rec) + cleared}
+
+
+def _context(rec: Reconciliation) -> dict:
+    account = rec.bank_account
+    rows = rows_for(rec)
     cleared = [r for r in rows if r["cleared"]]
     open_ = [r for r in rows if not r["cleared"]]
-    opening = opening_balance(rec)
     return {
-        "rec": rec, "account": account, "opening": opening, "difference": difference(rec),
+        "rec": rec, "account": account, **summary(rec),
         "cleared_deposits": [r for r in cleared if r["is_deposit"]],
         "cleared_payments": [r for r in cleared if not r["is_deposit"]],
         "outstanding": [r for r in open_ if not r["is_deposit"]],
         "in_transit": [r for r in open_ if r["is_deposit"]],
-        "cleared_total": cleared_total(rec),
         "is_liability": account.is_liability,
         "now": timezone.localtime(),
     }

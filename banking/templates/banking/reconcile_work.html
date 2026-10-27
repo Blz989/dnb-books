@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Reconcile {{ account }}{% endblock %}
+{% block page_title %}Reconcile {{ account.ledger_account.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">Statement dated {{ rec.statement_date|date:"Y-m-d" }}. Tick what appears on the statement. Finish when the difference is 0.00.</div>{% endblock %}
+{% block content %}
+<div class="recon-bar" id="recon-bar" data-url-prefix="{% url 'banking:reconcile-work' account.pk rec.pk %}">
+  <div><span class="l">Statement balance{% if is_liability %} (amount owed){% endif %}</span><span class="v">{{ rec.statement_balance|floatformat:"2g" }}</span></div>
+  <div><span class="l">Beginning balance</span><span class="v">{{ opening|floatformat:"2g" }}</span></div>
+  <div><span class="l">Cleared balance</span><span class="v" id="cleared-balance">{{ cleared_balance|floatformat:"2g" }}</span></div>
+  <div><span class="l">Difference</span><span class="difference {% if balanced %}ok{% else %}warn{% endif %}" id="difference">{{ difference|floatformat:"2g" }}</span></div>
+</div>
+<form method="post" action="{% url 'banking:reconcile-ticks' account.pk rec.pk %}" id="ticks-form">{% csrf_token %}
+  <h2>{% if is_liability %}Payments and credits{% else %}Deposits and credits{% endif %}</h2>
+  {% include "banking/_reconcile_table.html" with rows=deposits empty="Nothing to clear here." %}
+  <h2>{% if is_liability %}Purchases and charges{% else %}Payments and debits{% endif %}</h2>
+  {% include "banking/_reconcile_table.html" with rows=payments empty="Nothing to clear here." %}
+  <noscript><button type="submit" class="btn">Save ticks</button></noscript>
+</form>
+<div class="recon-actions">
+  <form method="post" action="{% url 'banking:reconcile-finish' account.pk rec.pk %}" style="display:inline">{% csrf_token %}
+    <button type="submit" class="btn primary" id="finish-button" data-admin="{% if can_finish %}yes{% else %}no{% endif %}"{% if not balanced or not can_finish %} disabled{% endif %}>Finish reconciliation</button></form>
+  <form method="post" action="{% url 'banking:reconcile-cancel' account.pk rec.pk %}" style="display:inline">{% csrf_token %}
+    <button type="submit" class="btn">Cancel</button></form>
+  {% if not can_finish %}<span class="help">Only an admin can finish a reconciliation.</span>{% endif %}
+</div>
+<script src="{% static 'banking/reconcile.js' %}" defer></script>
+{% endblock %}
