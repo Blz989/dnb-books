@@ -423,7 +423,7 @@ def test_void_in_closed_month_needs_open_date(...): ...
   - "Row {n}: {column} must be a number with at most 4 decimal places."
   - "Row {n}: opening_quantity, opening_unit_cost, and opening_date go together." / "Row {n}: opening_quantity must be a whole number above zero." / "Row {n}: opening_date must look like 2026-10-31." / "Row {n}: opening_date is in a closed month."
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_valid_file_imports_items_and_opening_stock(admin_user, inv_settings): ...
@@ -437,10 +437,10 @@ def test_case_insensitive_duplicate_sku_in_file(): ...      # Review Focus 4
 def test_bom_and_mixed_case_values(): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: CSV item import with all-or-nothing validation`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: CSV item import with all-or-nothing validation`
 
 ---
 
