@@ -310,6 +310,8 @@ dependencies = [
     { name = "cryptography" },
     { name = "django" },
     { name = "django-auditlog" },
+    { name = "ofxtools" },
+    { name = "plaid-python" },
     { name = "python-dotenv" },
     { name = "waitress" },
     { name = "weasyprint" },
@@ -328,6 +330,8 @@ requires-dist = [
     { name = "cryptography" },
     { name = "django", specifier = ">=5.2,<6.0" },
     { name = "django-auditlog" },
+    { name = "ofxtools", specifier = ">=1.1.1" },
+    { name = "plaid-python", specifier = ">=46.0.0" },
     { name = "python-dotenv" },
     { name = "waitress" },
     { name = "weasyprint", specifier = ">=70,<71" },
@@ -496,6 +500,24 @@ wheels = [
 ]
 
 [[package]]
+name = "nulltype"
+version = "2.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2f/ce/92289851364b7f816a839c8064aac06c01f3a3ecf33ab04adf9d0a0ab66a/nulltype-2.3.1.zip", hash = "sha256:64aa3cb2ab5e904d1b37175b9b922bea268c13f9ce32e3d373313150ab5ef272", size = 20119, upload-time = "2018-06-03T22:01:01.45Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/0f/47dde1a3cceac9858da0bfb92d2279bf5f993ed075b72983e92efc297db3/nulltype-2.3.1-py2.py3-none-any.whl", hash = "sha256:16ae565745118e37e0558441f5821c76351d8c3a789640b5bca277cf65b2271b", size = 11054, upload-time = "2018-06-03T22:01:04.03Z" },
+]
+
+[[package]]
+name = "ofxtools"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0d/15/12ce2de32fbdeb26ef20510f9d8dba1c5a408c3061e0a4cd20d28140ecb9/ofxtools-1.1.1.tar.gz", hash = "sha256:b55803e622539e59d04209ec0a289338557973c331d86031e9868d84592912a6", size = 196023, upload-time = "2026-06-12T18:51:39.777Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/12/2033cdcf76d05cd4cdab318074428e74c2be4536377bb62832148b034609/ofxtools-1.1.1-py3-none-any.whl", hash = "sha256:4c6a80cfd08d8a6ce7e791ce3bc317e203f36359a0961b20df667cf91a9560e9", size = 236779, upload-time = "2026-06-12T18:51:38.343Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "26.3"
 source = { registry = "https://pypi.org/simple" }
@@ -579,6 +601,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/fe/a10aba5503ca13e9e009b8bd0a1a4ce5584bdce246245fd6f3a83701369c/pillow-13.0.0-pp312-pypy312_pp80-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e65dd6e75de67b2362a4fa3e16aa627595f65054dc4ec73d64680c84d592fa61", size = 6043514, upload-time = "2026-10-16T22:18:04.538Z" },
     { url = "https://files.pythonhosted.org/packages/c0/37/66b12dc476041fe523bca29c9d58fbf1ea92a4eaf73acfb9e993948f1191/pillow-13.0.0-pp312-pypy312_pp80-win_amd64.whl", hash = "sha256:567f20f1c75897d7663830da6ea8af719e03d712b1d9ee7f813319f9ece42e5a", size = 7366030, upload-time = "2026-10-16T22:18:06.638Z" },
 ]
+
+[[package]]
+name = "plaid-python"
+version = "46.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nulltype" },
+    { name = "python-dateutil" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/da/f5/aba2f7da7c6750e9faa4dc6a64172672a748a41959481e2eb7854c578d19/plaid_python-46.0.0.tar.gz", hash = "sha256:f1b06c1a653f0378caf50a4077d61de36074b2560d473a8c7cc1697a580910e7", size = 1365135, upload-time = "2026-10-19T22:03:21.332Z" }
 
 [[package]]
 name = "pluggy"
@@ -733,6 +766,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d9/68/f1b440335057bfce71b6e50a9d09445aa2ecbd08359a337976627b8409e7/tzdata-2026.5.tar.gz", hash = "sha256:8cc73c0a0bfca7dbfa59235d60b2eff82231dee33f53d206db1acd9173cfc0a7", size = 200404, upload-time = "2026-10-03T09:23:14.143Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/94/21/1e5995a1c920cce14e4bffae20c665ec10e7ed03ab25e006cd741092b718/tzdata-2026.5-py2.py3-none-any.whl", hash = "sha256:b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac", size = 347996, upload-time = "2026-10-03T09:23:12.535Z" },
+]
+
+[[package]]
+name = "urllib3"
+version = "2.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/05/b17359e1cefb4f909b5e40b1b90a496d987258916dbbf88e842c729f510e/urllib3-2.8.0.tar.gz", hash = "sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63", size = 458972, upload-time = "2026-09-15T19:29:36.253Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl", hash = "sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3", size = 135717, upload-time = "2026-09-15T19:29:34.577Z" },
 ]
 
 [[package]]

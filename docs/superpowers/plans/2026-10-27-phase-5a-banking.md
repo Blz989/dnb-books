@@ -100,16 +100,16 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - Roles: Standard gets add, change, and view on BankTransaction, Match, Rule, Transfer, CheckNumber, and view on the rest. `ADMIN_APPS` gains `banking`.
 - Fixtures: `checking` (BankAccount on `bank`, CHECKING, next_check_number 2051), `card_account` (CARD on `card`), `loan` (2500 LONG_TERM_LIABILITY "Equipment loan", LOAN), `interest_expense` (6800 EXPENSE), `field_key` (sets `DNB_FIELD_KEY`).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Encrypt and decrypt round trip; the raw DB column does not contain the token.
   - A missing key gives the message.
   - A subtype/kind mismatch is rejected.
   - Unique `(bank_account, external_id)`.
   - The `Match` exactly-one constraint.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: banking models and encrypted Plaid tokens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: banking models and encrypted Plaid tokens`
 
 ---
 

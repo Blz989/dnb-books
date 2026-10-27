@@ -11,6 +11,8 @@ dependencies = [
     "cryptography",
     "python-dotenv",
     "weasyprint>=70,<71",
+    "plaid-python>=46.0.0",
+    "ofxtools>=1.1.1",
 ]
 
 [dependency-groups]

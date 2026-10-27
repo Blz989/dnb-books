@@ -29,6 +29,13 @@ DNB_RCLONE = [os.environ.get("DNB_RCLONE", "rclone")]
 DNB_BACKUP_TIME = os.environ.get("DNB_BACKUP_TIME", "01:15")
 DNB_DRILL_TIME = os.environ.get("DNB_DRILL_TIME", "02:15")
 
+# Banking. Plaid keys come only from .env; DNB_FIELD_KEY encrypts the stored Plaid access tokens.
+PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID", "")
+PLAID_SECRET = os.environ.get("PLAID_SECRET", "")
+PLAID_ENV = os.environ.get("PLAID_ENV", "sandbox")
+DNB_FIELD_KEY = os.environ.get("DNB_FIELD_KEY", "")
+DNB_BANK_SYNC_TIMES = os.environ.get("DNB_BANK_SYNC_TIMES", "06:00,10:00,14:00,18:00")
+
 # data/ is not in git, so a fresh install needs it created.
 DNB_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 (BASE_DIR / "data").mkdir(exist_ok=True)
@@ -47,6 +54,7 @@ INSTALLED_APPS = [
     "contacts",
     "sales",
     "purchasing",
+    "banking",
     "backup",
 ]
 
