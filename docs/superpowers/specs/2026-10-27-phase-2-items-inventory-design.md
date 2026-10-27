@@ -14,7 +14,7 @@ Give DNB a working item catalog and stock system: items, stock on hand, inventor
 1. A CSV import of about 50 items with opening stock succeeds, and the Inventory Valuation report total equals the Inventory Asset account balance on the balance sheet.
 2. A quantity adjustment, a physical count, and a value adjustment each post the correct journal entry and appear in the item's stock history.
 3. Worked FIFO and weighted-average examples, negative stock with later true-up, and a backdated movement all produce the costs given in section 5.
-4. Screenshots of every new screen have been sent to the owner (standing rule in `CLAUDE.md`).
+4. The home screen, the four Phase 1 reports, and every new screen use the Ledger paper design (section 6.1) in light and dark, and screenshots of each have been sent to the owner (standing rule in `CLAUDE.md`).
 
 ## 2. Decisions from the owner
 
@@ -28,6 +28,8 @@ Give DNB a working item catalog and stock system: items, stock on hand, inventor
 | Costing method | Per item, FIFO or weighted average. New stock items default to FIFO. Locked after the item's first movement. |
 | Extra item fields | Category, vendor part number. Preferred vendor is added in Phase 4 when vendor records exist. |
 | Screens | Custom screens for everyday work; Django admin stays for setup only |
+| Visual design | Direction C, "Ledger paper" (section 6.1), chosen from three rendered mockups |
+| Phase 1 screens | Home and the four reports are restyled in Phase 2. Journal entry entry stays in Django admin until a later phase. |
 | Zoho export | Not available now. Rules that depend on Zoho's behavior are marked **Verify before Phase 5**. |
 
 ### Out of scope for Phase 2
@@ -123,7 +125,45 @@ Example E: if September were closed, the backdated inflow itself would be blocke
 
 ## 6. Screens
 
-All custom screens extend `core/base.html`, which gains a navigation bar (Home, Items, Counts, Reports, Admin) and an **Auto / Light / Dark** theme toggle (colors as CSS variables; the choice is remembered per browser).
+All custom screens extend `core/base.html`, which is rebuilt to the layout in section 6.1: a left sidebar (Home; Inventory: Items, Adjustments, Counts; Books: Journal entries, Chart of accounts, Reports; Setup: Settings, Admin) and an **Auto / Light / Dark** theme toggle (Auto follows the operating system; the choice is remembered per browser in `localStorage`, with Auto as the fallback if storage is unavailable).
+
+### 6.1 Visual design: Ledger paper
+
+**Reference:** `docs/design/items-mockup.html` (open with `?t=light` or `?t=dark`). Built screens match it in layout, colors, type, and spacing.
+
+| Element | Rule |
+|---|---|
+| Layout | Left sidebar 236 px; content padding 30 px 40 px; page title, subtitle, actions top right; summary cards row where a screen has totals; white surface cards with 1 px border and 6 px radius |
+| Type | Headings: Source Serif 4 (600). Everything else: Inter. Page title 30 px; body 14 px; table headers 12 px muted. Numbers use tabular figures and are right-aligned. Fonts are served from the app's static files (both are SIL Open Font License), not from Google, so the app works without internet. |
+| Tables | Row padding 11 px 14 px, hairline row borders, hover tint; SKU in accent color; negative quantities and values in the warning-strong color; non-stock values shown as an em dash |
+| Status | Warning banner (warn background, border, text) for below-zero stock and backup problems; error banner uses the same pattern in red; success in green |
+| Buttons | Primary: accent background, white text. Secondary: surface background with border |
+
+**Color tokens** (CSS variables on `:root`, switched by `data-theme` and `prefers-color-scheme`):
+
+| Token | Light | Dark |
+|---|---|---|
+| `--bg` | #f6f2ea | #171512 |
+| `--surface` | #fffdf8 | #201d19 |
+| `--text` | #2b2620 | #ece6da |
+| `--muted` | #6f655a | #a89f90 |
+| `--border` | #e3dccd | #36312a |
+| `--row-border` | #eee8db | #2a2621 |
+| `--thead` | #faf6ee | #1c1a16 |
+| `--hover` | #f8f3e8 | #26221d |
+| `--side-bg` | #1f3a2f | #12201a |
+| `--side-text` | #f2ede2 | #ece6da |
+| `--side-active` | #2d4f41 | #1f3a2f |
+| `--accent` | #2f6b4f | #7cc4a0 |
+| `--accent-text` | #2f6b4f | #9bd5b7 |
+| `--on-accent` | #ffffff | #10251b |
+| `--tag-bg` / `--tag-text` | #e6efe8 / #24553e | #1f3a2f / #b9e3cc |
+| `--warn-bg` / `--warn-border` / `--warn-text` | #fbeee0 / #efcfab / #8a4b14 | #2b1d10 / #5a3a1a / #f3c08a |
+| `--warn-text-strong` | #b4541a | #f59e5b |
+
+Every text and background pair above meets WCAG AA contrast (4.5:1 or better; checked when chosen). Error (red) and success (green) tokens follow the same pattern and must also meet 4.5:1 in both themes.
+
+**Restyled Phase 1 screens:** home (summary cards for backup status and items below zero, links to common tasks) and the trial balance, profit and loss, balance sheet, and general ledger pages. Their behavior, URLs, and CSV exports do not change; only templates and CSS do.
 
 | Screen | URL | Who | Behavior |
 |---|---|---|---|
@@ -172,6 +212,6 @@ Categories are created if missing. Blank `costing_method` means FIFO. `opening_*
 | Count workflow | Snapshot, partial entry, flagged items, posting |
 | Import | Valid file posts; any bad row saves nothing and lists every bad row |
 | Views | Permissions per section 7; plain-language errors; no 500 on bad input |
-| Screenshots | Every screen in section 6, light and dark, sent to the owner |
+| Screenshots | Every screen in section 6 and the restyled Phase 1 screens, light and dark, sent to the owner and compared against `docs/design/items-mockup.html` |
 
 Accounting review: the `finance:journal-entry` and `finance:reconciliation` skills are used when building `stock.py` and the valuation report.
