@@ -1,0 +1,27 @@
+{% extends "core/base.html" %}
+{% block title %}Counts{% endblock %}
+{% block page_title %}Counts{% endblock %}
+{% block page_subtitle %}<div class="sub">Physical counts of the shelves</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'items:count-start' %}">+ Start a count</a>{% endblock %}
+{% block content %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>Name</th><th>Scope</th><th>Status</th><th>Started</th><th>By</th><th class="num">Counted</th><th></th></tr></thead>
+  <tbody>
+  {% for c in counts %}
+    <tr>
+      <td>{{ c.name }}</td>
+      <td>{% if c.category %}{{ c.category.name }}{% else %}All items{% endif %}</td>
+      <td><span class="tag{% if c.status != "OPEN" %} ns{% endif %}">{{ c.get_status_display|capfirst }}</span></td>
+      <td>{{ c.started_at|date:"Y-m-d" }}</td>
+      <td>{{ c.started_by.get_username }}</td>
+      <td class="num">{{ c.line_counted }} of {{ c.line_total }}</td>
+      <td>{% if c.status == "OPEN" %}<a href="{% url 'items:count-enter' c.pk %}">Enter counts</a> · <a href="{% url 'items:count-review' c.pk %}">Review</a>
+          {% elif c.status == "POSTED" %}<a href="{% url 'items:count-review' c.pk %}">View</a>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="empty">No counts yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

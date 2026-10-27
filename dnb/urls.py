@@ -6,6 +6,7 @@ from core.views import home
 urlpatterns = [
     path("", home, name="home"),
     path("accounts/", include("django.contrib.auth.urls")),
+    path("items/", include("items.urls")),
     path("reports/", include("ledger.urls")),
     path("admin/", admin.site.urls),
 ]

@@ -1,0 +1,51 @@
+sku,name,item_type,category,unit,sale_price,purchase_cost,vendor_part_number,costing_method,opening_quantity,opening_unit_cost,opening_date
+ITEM-001,Sample paint item 1,stock,Paint,each,31.3043,19.5652,VP-001,fifo,205,19.5652,2026-10-01
+ITEM-002,Sample supplies item 2,stock,Supplies,each,62.6014,39.1259,VP-002,fifo,277,39.1259,2026-10-01
+ITEM-003,Sample electrical item 3,stock,Electrical,each,9.3264,5.8290,VP-003,,32,5.8290,2026-10-01
+ITEM-004,Sample plumbing item 4,stock,Plumbing,each,87.3605,54.6003,VP-004,fifo,22,54.6003,2026-10-01
+ITEM-005,Sample fasteners item 5,stock,Fasteners,each,8.5434,5.3396,VP-005,weighted average,38,5.3396,2026-10-01
+ITEM-006,Sample paint item 6,stock,Paint,each,23.3466,14.5916,VP-006,,220,14.5916,2026-10-01
+ITEM-007,Sample supplies item 7,stock,Supplies,each,5.9757,3.7348,VP-007,,66,3.7348,2026-10-01
+ITEM-008,Sample electrical item 8,stock,Electrical,each,90.9720,56.8575,VP-008,,324,56.8575,2026-10-01
+ITEM-009,Sample plumbing item 9,stock,Plumbing,each,56.1011,35.0632,VP-009,fifo,298,35.0632,2026-10-01
+ITEM-010,Sample fasteners item 10,stock,Fasteners,each,56.3446,35.2154,VP-010,fifo,116,35.2154,2026-10-01
+ITEM-011,Sample paint item 11,stock,Paint,each,4.7770,2.9856,VP-011,fifo,151,2.9856,2026-10-01
+ITEM-012,Sample supplies item 12,stock,Supplies,each,40.4232,25.2645,VP-012,,63,25.2645,2026-10-01
+ITEM-013,Sample electrical item 13,stock,Electrical,each,54.9450,34.3406,VP-013,,352,34.3406,2026-10-01
+ITEM-014,Sample plumbing item 14,stock,Plumbing,each,17.6118,11.0074,VP-014,,295,11.0074,2026-10-01
+ITEM-015,Sample fasteners item 15,stock,Fasteners,each,61.4512,38.4070,VP-015,weighted average,52,38.4070,2026-10-01
+ITEM-016,Sample paint item 16,stock,Paint,each,52.7282,32.9551,VP-016,fifo,291,32.9551,2026-10-01
+ITEM-017,Sample supplies item 17,stock,Supplies,each,6.0226,3.7641,VP-017,fifo,257,3.7641,2026-10-01
+ITEM-018,Sample electrical item 18,stock,Electrical,each,65.4206,40.8879,VP-018,weighted average,400,40.8879,2026-10-01
+ITEM-019,Sample plumbing item 19,stock,Plumbing,each,30.3776,18.9860,VP-019,,235,18.9860,2026-10-01
+ITEM-020,Sample fasteners item 20,stock,Fasteners,each,34.9162,21.8226,VP-020,fifo,95,21.8226,2026-10-01
+ITEM-021,Sample paint item 21,stock,Paint,each,67.1998,41.9999,VP-021,fifo,44,41.9999,2026-10-01
+ITEM-022,Sample supplies item 22,stock,Supplies,each,55.2808,34.5505,VP-022,,256,34.5505,2026-10-01
+ITEM-023,Sample electrical item 23,stock,Electrical,each,84.0531,52.5332,VP-023,,232,52.5332,2026-10-01
+ITEM-024,Sample plumbing item 24,stock,Plumbing,each,27.8699,17.4187,VP-024,fifo,63,17.4187,2026-10-01
+ITEM-025,Sample fasteners item 25,stock,Fasteners,each,49.3018,30.8136,VP-025,fifo,390,30.8136,2026-10-01
+ITEM-026,Sample paint item 26,stock,Paint,each,33.0478,20.6549,VP-026,weighted average,218,20.6549,2026-10-01
+ITEM-027,Sample supplies item 27,stock,Supplies,each,4.0714,2.5446,VP-027,,42,2.5446,2026-10-01
+ITEM-028,Sample electrical item 28,stock,Electrical,each,73.4741,45.9213,VP-028,,163,45.9213,2026-10-01
+ITEM-029,Sample plumbing item 29,stock,Plumbing,each,32.8629,20.5393,VP-029,weighted average,307,20.5393,2026-10-01
+ITEM-030,Sample fasteners item 30,stock,Fasteners,each,47.8419,29.9012,VP-030,weighted average,38,29.9012,2026-10-01
+ITEM-031,Sample paint item 31,stock,Paint,each,80.6882,50.4301,VP-031,weighted average,245,50.4301,2026-10-01
+ITEM-032,Sample supplies item 32,stock,Supplies,each,67.0130,41.8831,VP-032,fifo,34,41.8831,2026-10-01
+ITEM-033,Sample electrical item 33,stock,Electrical,each,70.2773,43.9233,VP-033,weighted average,334,43.9233,2026-10-01
+ITEM-034,Sample plumbing item 34,stock,Plumbing,each,55.6179,34.7612,VP-034,,231,34.7612,2026-10-01
+ITEM-035,Sample fasteners item 35,stock,Fasteners,each,27.5501,17.2188,VP-035,weighted average,345,17.2188,2026-10-01
+ITEM-036,Sample paint item 36,stock,Paint,each,33.5214,20.9509,VP-036,weighted average,184,20.9509,2026-10-01
+ITEM-037,Sample supplies item 37,stock,Supplies,each,16.3989,10.2493,VP-037,fifo,255,10.2493,2026-10-01
+ITEM-038,Sample electrical item 38,stock,Electrical,each,5.9608,3.7255,VP-038,weighted average,69,3.7255,2026-10-01
+ITEM-039,Sample plumbing item 39,stock,Plumbing,each,70.9666,44.3541,VP-039,weighted average,203,44.3541,2026-10-01
+ITEM-040,Sample fasteners item 40,stock,Fasteners,each,88.0410,55.0256,VP-040,weighted average,44,55.0256,2026-10-01
+ITEM-041,Sample paint item 41,stock,Paint,each,16.2379,10.1487,VP-041,weighted average,,,
+ITEM-042,Sample supplies item 42,stock,Supplies,each,52.8904,33.0565,VP-042,fifo,,,
+ITEM-043,Sample electrical item 43,stock,Electrical,each,78.7086,49.1929,VP-043,,,,
+ITEM-044,Sample plumbing item 44,stock,Plumbing,each,26.9594,16.8496,VP-044,weighted average,,,
+ITEM-045,Sample fasteners item 45,stock,Fasteners,each,94.7051,59.1907,VP-045,,,,
+ITEM-046,Service item 46,non-stock,,hour,40.00,0,,,,,
+ITEM-047,Service item 47,non-stock,,hour,40.00,0,,,,,
+ITEM-048,Service item 48,non-stock,,hour,40.00,0,,,,,
+ITEM-049,Service item 49,non-stock,,hour,40.00,0,,,,,
+ITEM-050,Service item 50,non-stock,,hour,40.00,0,,,,,

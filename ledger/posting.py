@@ -12,7 +12,7 @@ from core.roles import require_admin
 from .errors import (
     EntryStateError, InactiveAccountError, InvalidLineError, UnbalancedEntryError,
 )
-from .models import Account, EntryStatus, JournalEntry, JournalLine
+from .models import Account, AccountSubtype, EntryStatus, JournalEntry, JournalLine
 from .periods import assert_open
 
 ZERO = Decimal("0")
@@ -73,6 +73,20 @@ def validate_lines(lines: Sequence[LineSpec]) -> None:
         )
 
 
+def check_inventory_lines(lines: Sequence[LineSpec], source_type: str) -> None:
+    """Inventory-subtype accounts change only through stock movements (source_type items.*)."""
+    if source_type.startswith("items."):
+        return
+    inventory = set(
+        Account.objects.filter(
+            pk__in=[l.account.pk for l in lines], subtype=AccountSubtype.INVENTORY
+        ).values_list("pk", flat=True)
+    )
+    for n, line in enumerate(lines, 1):
+        if line.account.pk in inventory:
+            raise InvalidLineError(f"Line {n}: inventory accounts can only change through stock movements.")
+
+
 def _mark_posted(entry: JournalEntry, user) -> JournalEntry:
     entry.status = EntryStatus.POSTED
     entry.posted_by = user
@@ -94,6 +108,7 @@ def post_entry(
 ) -> JournalEntry:
     with transaction.atomic():
         validate_lines(lines)
+        check_inventory_lines(lines, source_type)
         assert_open(date)
         entry = JournalEntry.objects.create(
             date=date, memo=memo, reference=reference, source_type=source_type, source_id=source_id,
@@ -118,13 +133,16 @@ def post_draft(entry: JournalEntry, user) -> JournalEntry:
             for l in current.lines.select_related("account")
         ]
         validate_lines(specs)
+        check_inventory_lines(specs, current.source_type)
         assert_open(current.date)
         _mark_posted(current, user)
     entry.refresh_from_db()
     return entry
 
 
-def void_entry(entry: JournalEntry, *, user, reason: str, date: date_type | None = None) -> JournalEntry:
+def void_entry(
+    entry: JournalEntry, *, user, reason: str, date: date_type | None = None, allow_items_source: bool = False
+) -> JournalEntry:
     """Void by posting a reversing entry; the original stays on record as VOID."""
     require_admin(user)
     reason = (reason or "").strip()
@@ -134,6 +152,8 @@ def void_entry(entry: JournalEntry, *, user, reason: str, date: date_type | None
             raise EntryStateError("Only posted entries can be voided.")
         if not reason:
             raise ValueError("A reason is required to void an entry.")
+        if current.source_type.startswith("items.") and not allow_items_source:
+            raise EntryStateError("This entry was created by a stock movement. Void the movement instead.")
         reversal = post_entry(
             date=date or current.date,
             user=user,

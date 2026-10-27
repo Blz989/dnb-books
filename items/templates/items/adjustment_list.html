@@ -1,0 +1,33 @@
+{% extends "core/base.html" %}
+{% block title %}Adjustments{% endblock %}
+{% block page_title %}Adjustments{% endblock %}
+{% block page_subtitle %}<div class="sub">Quantity and value adjustments, newest first</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'items:adjust' %}">+ New adjustment</a>{% endblock %}
+{% block content %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>Date</th><th>SKU</th><th>Kind</th><th class="num">Quantity</th><th class="num">Value</th><th>Reason</th><th>Entry</th><th>User</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for m in page.object_list %}
+    <tr{% if m.voided %} style="text-decoration: line-through"{% endif %}>
+      <td>{{ m.date|date:"Y-m-d" }}</td>
+      <td><a class="sku" href="{% url 'items:detail' m.item.sku %}">{{ m.item.sku }}</a></td>
+      <td>{{ m.get_kind_display }}{% if m.voided %} <span class="tag ns">Voided</span>{% endif %}</td>
+      <td class="num{% if m.quantity < 0 %} neg{% endif %}">{{ m.quantity }}</td>
+      <td class="num{% if m.total_cost < 0 %} neg{% endif %}">{{ m.total_cost|floatformat:"2g" }}</td>
+      <td>{{ m.reason }}</td>
+      <td>{% if m.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' m.journal_entry.pk %}">{{ m.journal_entry.display_number }}</a>{% else %}<span class="dash">—</span>{% endif %}</td>
+      <td>{{ m.created_by.get_username }}</td>
+      {% if is_admin %}<td>{% if not m.voided %}<a href="{% url 'items:void-movement' m.pk %}">Void</a>{% endif %}</td>{% endif %}
+    </tr>
+  {% empty %}<tr><td colspan="9" class="empty">No adjustments yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="foot">
+  <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+  <span>{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+    {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}</span>
+</div>
+</div>
+{% endblock %}

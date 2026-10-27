@@ -1,0 +1,19 @@
+{% extends "core/base.html" %}
+{% block title %}Import items{% endblock %}
+{% block page_title %}Import items{% endblock %}
+{% block page_subtitle %}<div class="sub">Upload a CSV file. Nothing is saved until every row is valid and you confirm.</div>{% endblock %}
+{% block content %}
+{% include "items/_errors.html" %}
+<div class="card"><div class="body">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  <div class="form-row"><label for="id_file">CSV file (UTF-8, up to 2 MB)</label><input type="file" name="file" id="id_file" accept=".csv,text/csv"></div>
+  <button type="submit" class="btn primary">Preview import</button>
+  <a class="btn" href="{% url 'items:list' %}">Cancel</a>
+</form>
+</div></div>
+<h2>Columns</h2>
+<div class="card"><div class="body">
+  <p style="margin-top:0"><code>{{ headers|join:", " }}</code></p>
+  <p class="dash">item_type is stock or non-stock. costing_method is fifo or weighted average (blank means FIFO). The three opening_ columns go together and apply to stock items only. Categories are created if missing.</p>
+</div></div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Negative stock{% endblock %}
+{% block page_title %}Negative stock{% endblock %}
+{% block page_subtitle %}<div class="sub">Items below zero. Their cost is estimated until stock is received or counted.</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="?format=csv">Download CSV</a>{% endblock %}
+{% block content %}
+{% if rows %}<div class="banner warning">{{ rows|length }} item{{ rows|length|pluralize }} below zero.</div>{% endif %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>SKU</th><th>Name</th><th class="num">On hand</th><th class="num">Estimated value</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td><a class="sku" href="/items/{{ r.item.sku }}/">{{ r.item.sku }}</a></td><td>{{ r.item.name }}</td>
+        <td class="num neg">{{ r.quantity }}</td><td class="num neg">{{ r.value|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No items are below zero.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

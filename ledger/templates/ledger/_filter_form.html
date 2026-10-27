@@ -1,19 +1,9 @@
 <form method="get" class="filters">
   {{ form.non_field_errors }}
   {% for field in form %}
-    <label>{{ field.label }} {{ field }}</label>
-    {% for error in field.errors %}<span class="error">{{ error }}</span>{% endfor %}
+    <label>{{ field.label }} {{ field }}
+    {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>
   {% endfor %}
-  <button type="submit">Run</button>
-  {% if report %}<button type="submit" name="format" value="csv">Download CSV</button>{% endif %}
+  <button type="submit" class="btn primary">Run</button>
+  {% if report %}<button type="submit" name="format" value="csv" class="btn">Download CSV</button>{% endif %}
 </form>
-<style>
-  .filters { display: flex; gap: 1rem; flex-wrap: wrap; align-items: end; margin-bottom: 1rem; }
-  .filters label { display: flex; flex-direction: column; font-size: .85rem; }
-  .error { color: #b00020; }
-  table.report { border-collapse: collapse; width: 100%; background: #fff; }
-  table.report th, table.report td { padding: .35rem .6rem; border-bottom: 1px solid #ddd; text-align: left; }
-  table.report .num { text-align: right; font-variant-numeric: tabular-nums; }
-  table.report tr.total td { font-weight: 600; border-top: 2px solid #333; }
-  table.report tr.section th { background: #eef1f6; }
-</style>

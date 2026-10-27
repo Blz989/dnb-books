@@ -10,8 +10,14 @@ STANDARD_PERMISSIONS = {
     "ledger.journalentry": ("add", "change", "view"),
     "ledger.journalline": ("add", "change", "view"),
     "ledger.accountingperiod": ("view",),
+    "items.item": ("add", "change", "view"),
+    "items.category": ("add", "change", "view"),
+    "items.stockcount": ("add", "change", "view"),
+    "items.stockcountline": ("add", "change", "view"),
+    "items.stockmovement": ("view",),
+    "items.inventorysettings": ("view",),
 }
-ADMIN_APPS = ("ledger", "backup")
+ADMIN_APPS = ("ledger", "backup", "items")
 
 
 class Command(BaseCommand):

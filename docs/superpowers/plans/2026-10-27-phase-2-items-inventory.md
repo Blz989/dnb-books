@@ -83,7 +83,7 @@ tests/
   - `node scripts/screenshots.mjs <base_url> <out_dir> <path> [<path> ...]`: logs in as `demo`, saves `<out_dir>/<slug>-light.png` and `-dark.png` (full page, 1360×860 viewport) per path.
 - Fonts: Inter (variable woff2) and Source Serif 4 (600 weight woff2), latin subsets, copied from the npm packages `@fontsource-variable/inter` and `@fontsource/source-serif-4`, with each package's OFL license file next to them. `@font-face` in `app.css`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_base_has_theme_toggle_and_tokens(client, standard_user):
@@ -115,11 +115,11 @@ def test_seed_demo_refuses_non_empty_ledger(posted_entry):
 
 All Phase 1 view tests must still pass unchanged.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** base layout, CSS, theme script, fonts, restyled home (summary cards: backup status, items below zero placeholder; quick links) and the four report templates (same context variables; tables use `table.data`, numbers `td.num`), `seed_demo`, `screenshots.mjs`, README "Taking screenshots" section.
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Screenshots** of `/`, the four reports, and the login page, light and dark. Compare the shell (sidebar, header, toggle, cards) against `docs/design/items-mockup.html` rendered at the same size; send with `SendUserFile`.
-- [ ] **Step 6: Commit** `feat: Ledger paper design system and restyled home and reports`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** base layout, CSS, theme script, fonts, restyled home (summary cards: backup status, items below zero placeholder; quick links) and the four report templates (same context variables; tables use `table.data`, numbers `td.num`), `seed_demo`, `screenshots.mjs`, README "Taking screenshots" section.
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Screenshots** of `/`, the four reports, and the login page, light and dark. Compare the shell (sidebar, header, toggle, cards) against `docs/design/items-mockup.html` rendered at the same size; send with `SendUserFile`.
+- [x] **Step 6: Commit** `feat: Ledger paper design system and restyled home and reports`
 
 ---
 
@@ -148,7 +148,7 @@ All Phase 1 view tests must still pass unchanged.
 - Admin: register `Category` and `InventorySettings` only (setup). Items are managed on custom screens.
 - `conftest.py`: fixtures `inventory_account` (1300, INVENTORY), `cogs_account` (5000), `shrinkage_account` (6500, EXPENSE "Inventory Shrinkage"), `writedown_account` (6510, EXPENSE "Inventory Write-down"), `opening_equity` (3900, EQUITY "Opening Balance Equity"), `inv_settings` (all six set, income = `revenue`), `make_item(sku, method=FIFO, purchase_cost="1.00")` factory; `items_purge` fixture mirroring `ledger_purge` for items tables (drop items triggers, delete items rows, reinstall), to be listed before `ledger_purge`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_sku_case_insensitive_unique(make_item):
@@ -173,10 +173,10 @@ def test_settings_load_is_singleton(db):
     assert InventorySettings.load().pk == InventorySettings.load().pk
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement models, errors, migrations, admin, roles, fixtures**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: items models with immutable stock movements`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement models, errors, migrations, admin, roles, fixtures**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: items models with immutable stock movements`
 
 ---
 
@@ -192,7 +192,7 @@ def test_settings_load_is_singleton(db):
   - `void_entry(entry, *, user, reason, date=None, allow_items_source: bool = False)`: when the entry's `source_type` starts with `items.` and `allow_items_source` is False, raise `EntryStateError("This entry was created by a stock movement. Void the movement instead.")`.
   - The Django admin "Post selected drafts" action surfaces the new message like other `PostingError`s (no admin code change expected; confirm by test).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_manual_entry_to_inventory_rejected(admin_user, inventory_account, cash):
@@ -208,10 +208,10 @@ def test_void_entry_refuses_items_entries(admin_user, items_entry): ...
 def test_admin_post_action_shows_inventory_message(client, admin_user, inventory_draft): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS** (Phase 1 tests unchanged)
-- [ ] **Step 5: Commit** `feat: inventory accounts change only through stock movements`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS** (Phase 1 tests unchanged)
+- [x] **Step 5: Commit** `feat: inventory accounts change only through stock movements`
 
 ---
 
@@ -236,7 +236,7 @@ def test_admin_post_action_shows_inventory_message(client, admin_user, inventory
   - **Value adjustment:** requires `quantity > 0` at that point, else `CostingError("The value adjustment on {date} has no stock to apply to.")` (date as `Mon D, YYYY`, e.g. `Oct 25, 2026`). FIFO spreads `value_change` across remaining layers by quantity share (each share rounded to the cent; the newest layer absorbs the remainder). Weighted average adds it to `value` and recomputes `average`.
   - A value adjustment that would make total value negative raises `CostingError("The value adjustment on {date} would make stock value negative.")`.
 
-- [ ] **Step 1: Write failing tests** (spec 5.6 examples with the sign convention)
+- [x] **Step 1: Write failing tests** (spec 5.6 examples with the sign convention)
 
 ```python
 def test_example_a_fifo():
@@ -273,10 +273,10 @@ def test_value_equals_inflows_plus_outflows_plus_adjustments(...): ...
 # invariant: r.value == sum(inflow values) + sum(costed outflow totals) + sum(value changes); r.quantity == sum(quantities)
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `items/costing.py`**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: FIFO and weighted average costing engine`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `items/costing.py`**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: FIFO and weighted average costing engine`
 
 ---
 
@@ -305,7 +305,7 @@ def test_value_equals_inflows_plus_outflows_plus_adjustments(...): ...
   - `replay_item`: replays non-voided movements; for each outflow, `difference = costed.total_cost - effective_total` (effective = `total_cost` + sum of its revisions). Nonzero → `CostRevision(delta=difference)` dated the outflow's date if that month is open, else `trigger_date`; one journal entry per revision (`items.cost_revision`), offset = the outflow's `offset_account`. Rebuilds `FifoLayer` rows from `ReplayResult.layers`. A `CostingError` from replay propagates, so the surrounding transaction rolls back.
   - Concurrency: everything runs inside `transaction.atomic()`; SQLite IMMEDIATE transactions serialize writers (Phase 1 setting).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_opening_posts_inventory_vs_opening_equity(inv_settings, admin_user, make_item): ...
@@ -339,10 +339,10 @@ def test_value_adjustment_admin_only(standard_user, ...): ...
 def test_random_operations_keep_invariants(...): ...           # opening, adjustments ±, backdates, value adjustments
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `items/stock.py`.** Before committing, review the posting rules against the `finance:journal-entry` skill and record findings in the commit body.
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: stock movements with posting, negative stock, and cost replay`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `items/stock.py`.** Before committing, review the posting rules against the `finance:journal-entry` skill and record findings in the commit body.
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: stock movements with posting, negative stock, and cost replay`
 
 ---
 
@@ -357,7 +357,7 @@ def test_random_operations_keep_invariants(...): ...           # opening, adjust
 - Behavior: in one transaction, compute effective value (total + revisions); post a reversing entry (`source_type="items.void"`, memo `"Void of {kind label} {sku}: {reason}"`) for that amount unless 0.00; set `voided`, `voided_on`, `void_amount` (signed, the negation of effective value), `void_entry`; then `replay_item(item, trigger_date=void date)`.
 - `stock_value`, `on_hand`, and replay exclude voided movements.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_void_inflow_recosts_later_outflow(...):
@@ -369,10 +369,10 @@ def test_void_requires_reason_and_admin(...): ...
 def test_void_in_closed_month_needs_open_date(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: void stock movements with cost replay`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: void stock movements with cost replay`
 
 ---
 
@@ -391,11 +391,11 @@ def test_void_in_closed_month_needs_open_date(...): ...
   - `cancel_count(count, user) -> None`.
 - `moved_since_start`: any non-voided movement for the item with `created_at > count.started_at` that is not this count's own.
 
-- [ ] **Step 1: Write failing tests** (snapshot taken at start; partial entry across two calls; uncounted lines ignored; flagged items require confirm; posting creates COUNT movements with shrinkage entries; posting twice raises "This count is already posted.")
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: physical count workflow`
+- [x] **Step 1: Write failing tests** (snapshot taken at start; partial entry across two calls; uncounted lines ignored; flagged items require confirm; posting creates COUNT movements with shrinkage entries; posting twice raises "This count is already posted.")
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: physical count workflow`
 
 ---
 
@@ -423,7 +423,7 @@ def test_void_in_closed_month_needs_open_date(...): ...
   - "Row {n}: {column} must be a number with at most 4 decimal places."
   - "Row {n}: opening_quantity, opening_unit_cost, and opening_date go together." / "Row {n}: opening_quantity must be a whole number above zero." / "Row {n}: opening_date must look like 2026-10-31." / "Row {n}: opening_date is in a closed month."
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_valid_file_imports_items_and_opening_stock(admin_user, inv_settings): ...
@@ -437,10 +437,10 @@ def test_case_insensitive_duplicate_sku_in_file(): ...      # Review Focus 4
 def test_bom_and_mixed_case_values(): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: CSV item import with all-or-nothing validation`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: CSV item import with all-or-nothing validation`
 
 ---
 
@@ -459,12 +459,12 @@ def test_bom_and_mixed_case_values(): ...
   - URLs: `reports:inventory-valuation` `/reports/inventory-valuation/?as_of=`, `reports:stock-movements` `/reports/stock-movements/?start=&end=&item=<sku>`, `reports:negative-stock` `/reports/negative-stock/`; `&format=csv` like Phase 1 (plain numbers, 2 dp, no separators).
   - Valuation page shows Stock total, Inventory accounts total, and Difference as three `.kpi` cards; a nonzero difference shows an error banner "Stock value and the inventory accounts don't match. Difference: {d}."
 
-- [ ] **Step 1: Write failing tests** (valuation equals ledger after a mixed scenario; as-of before a void includes the movement, after excludes it; as-of before a revision date excludes the revision; CSV output; bad date shows "Enter a date like 2026-01-31.")
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review the valuation-to-ledger tie-out against the `finance:reconciliation` skill; record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the three reports (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: inventory valuation, stock movement, and negative stock reports`
+- [x] **Step 1: Write failing tests** (valuation equals ledger after a mixed scenario; as-of before a void includes the movement, after excludes it; as-of before a revision date excludes the revision; CSV output; bad date shows "Enter a date like 2026-01-31.")
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review the valuation-to-ledger tie-out against the `finance:reconciliation` skill; record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the three reports (light and dark), sent.
+- [x] **Step 6: Commit** `feat: inventory valuation, stock movement, and negative stock reports`
 
 ---
 
@@ -482,12 +482,12 @@ def test_bom_and_mixed_case_values(): ...
 - `ItemForm`: account fields default from settings; `item_type` and `costing_method` disabled after first movement; method change attempt → "The costing method can't change after an item has stock history."
 - Deactivate with stock → "{sku} still has {on_hand} on hand. Adjust it to zero before deactivating."
 
-- [ ] **Step 1: Write failing tests** (search matches vendor part #; pagination; case-insensitive SKU URL; non-stock em dashes; method lock message; deactivate message; standard user can create and edit; history lists revisions)
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (extend `seed_demo` with items, categories, history)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of item list (default, searched, filtered to a category), item detail (FIFO item with history, item below zero, non-stock item), new item form, edit form with locked method; light and dark; compare item list against `docs/design/items-mockup.html`; send.
-- [ ] **Step 6: Commit** `feat: item list, detail, and edit screens`
+- [x] **Step 1: Write failing tests** (search matches vendor part #; pagination; case-insensitive SKU URL; non-stock em dashes; method lock message; deactivate message; standard user can create and edit; history lists revisions)
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (extend `seed_demo` with items, categories, history)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of item list (default, searched, filtered to a category), item detail (FIFO item with history, item below zero, non-stock item), new item form, edit form with locked method; light and dark; compare item list against `docs/design/items-mockup.html`; send.
+- [x] **Step 6: Commit** `feat: item list, detail, and edit screens`
 
 ---
 
@@ -506,12 +506,12 @@ def test_bom_and_mixed_case_values(): ...
 - Void: date and reason form; errors shown inline.
 - All `StockError`, `PeriodClosedError`, and `SettingsMissingError` messages render in an error banner; the settings message links to `/items/settings/`.
 
-- [ ] **Step 1: Write failing tests** (adjust posts and redirects with a success message; negative shows confirm page and nothing is saved until "Save anyway"; same token twice posts once; standard user gets 403 on value adjust and void; settings-missing banner links to settings; non-whole quantity shows "Line {n}: quantity must be a whole number.")
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the adjustment form, negative-stock confirmation, success message, value adjustment, void form with an error, adjustments list; light and dark; send.
-- [ ] **Step 6: Commit** `feat: adjustment, value adjustment, and void screens`
+- [x] **Step 1: Write failing tests** (adjust posts and redirects with a success message; negative shows confirm page and nothing is saved until "Save anyway"; same token twice posts once; standard user gets 403 on value adjust and void; settings-missing banner links to settings; non-whole quantity shows "Line {n}: quantity must be a whole number.")
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the adjustment form, negative-stock confirmation, success message, value adjustment, void form with an error, adjustments list; light and dark; send.
+- [x] **Step 6: Commit** `feat: adjustment, value adjustment, and void screens`
 
 ---
 
@@ -526,12 +526,12 @@ def test_bom_and_mixed_case_values(): ...
 - Produces URLs: `items:counts` `/items/counts/`, `items:count-start` `/items/counts/new/`, `items:count-enter` `/items/counts/<int:pk>/` (paged by 50 lines, filter by SKU/name, saves on each page submit), `items:count-review` `/items/counts/<int:pk>/review/` (differences table, flagged rows marked "Moved since count started", a "I've checked the flagged items" checkbox required when any are flagged, date field, Post button), `items:count-cancel` `/items/counts/<int:pk>/cancel/` (POST).
 - Enter screen does **not** show expected quantities (blind count); review does.
 
-- [ ] **Step 1: Write failing tests** (start creates lines; entering on page 2 keeps page 1 values; review shows differences; posting without the checkbox when flagged shows the `CountNeedsConfirmation` SKUs; posted count is read-only)
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (extend `seed_demo` with one open count)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of count list, start, enter, review with a flagged item, posted count; light and dark; send.
-- [ ] **Step 6: Commit** `feat: physical count screens`
+- [x] **Step 1: Write failing tests** (start creates lines; entering on page 2 keeps page 1 values; review shows differences; posting without the checkbox when flagged shows the `CountNeedsConfirmation` SKUs; posted count is read-only)
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (extend `seed_demo` with one open count)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of count list, start, enter, review with a flagged item, posted count; light and dark; send.
+- [x] **Step 6: Commit** `feat: physical count screens`
 
 ---
 
@@ -548,12 +548,12 @@ def test_bom_and_mixed_case_values(): ...
 - Home: Items card (stock value, below-zero count linking to the negative stock report), Inventory links; warning banner "{n} items are below zero. Their cost is estimated until stock is received or counted." when any; `negative_stock_count` context processor now real.
 - Settings not configured: home shows an info banner "Inventory isn't set up yet. Choose the inventory accounts in Settings." for admins.
 
-- [ ] **Step 1: Write failing tests** (standard user 403 on import and settings; preview with errors shows every row error and no confirm button; confirm imports; settings form rejects an account of the wrong subtype; home banner text with 3 below zero; sidebar pill shows "3 below zero")
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (finish `seed_demo`: settings configured)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of home (with and without the below-zero banner), import upload, preview with errors, preview ready, settings; light and dark; send.
-- [ ] **Step 6: Commit** `feat: item import and inventory settings screens, home wiring`
+- [x] **Step 1: Write failing tests** (standard user 403 on import and settings; preview with errors shows every row error and no confirm button; confirm imports; settings form rejects an account of the wrong subtype; home banner text with 3 below zero; sidebar pill shows "3 below zero")
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (finish `seed_demo`: settings configured)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of home (with and without the below-zero banner), import upload, preview with errors, preview ready, settings; light and dark; send.
+- [x] **Step 6: Commit** `feat: item import and inventory settings screens, home wiring`
 
 ---
 
@@ -563,8 +563,8 @@ def test_bom_and_mixed_case_values(): ...
 - Create: `tests/test_phase2_acceptance.py`, `tests/fixtures/items_50.csv`
 - Modify: `README.md` (Status line: Phase 2 built; "What it does" unchanged)
 
-- [ ] **Step 1: Write the acceptance test** (spec section 1, through the test client as an admin): configure settings, import `items_50.csv` (50 items, 40 with opening stock), confirm valuation report Difference 0.00 and total equals the balance sheet Inventory Asset line; post a quantity adjustment, a count with one difference, and a value adjustment; each appears on its item's history with a journal entry link; `check_invariants() == []`.
-- [ ] **Step 2: Run full suite** `uv run pytest -q` → all pass, no warnings.
-- [ ] **Step 3: Final screenshots:** full tour (home, items list, item detail, adjustment, count review, valuation report) in light and dark from a fresh `seed_demo`; send.
-- [ ] **Step 4: Commit** `test: phase 2 acceptance`
+- [x] **Step 1: Write the acceptance test** (spec section 1, through the test client as an admin): configure settings, import `items_50.csv` (50 items, 40 with opening stock), confirm valuation report Difference 0.00 and total equals the balance sheet Inventory Asset line; post a quantity adjustment, a count with one difference, and a value adjustment; each appears on its item's history with a journal entry link; `check_invariants() == []`.
+- [x] **Step 2: Run full suite** `uv run pytest -q` → all pass, no warnings.
+- [x] **Step 3: Final screenshots:** full tour (home, items list, item detail, adjustment, count review, valuation report) in light and dark from a fresh `seed_demo`; send.
+- [x] **Step 4: Commit** `test: phase 2 acceptance`
 - [ ] **Step 5: Open the PR** `Phase 2: Items and inventory` into `main` per `CLAUDE.md`, listing tasks, test output, deviations, and every screenshot set sent.
