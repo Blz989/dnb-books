@@ -7,20 +7,23 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
 
+from core.roles import require_admin
 from contacts.models import Terms, Vendor, due_date as terms_due_date
 from items.errors import SettingsMissingError
 from items.models import InventorySettings, Item, MovementKind
-from items.stock import StockLine, record_movements
+from items.stock import StockLine, record_movements, void_movement
 from ledger.models import Account, AccountSubtype
 from ledger.periods import assert_open
-from ledger.posting import LineSpec, post_entry
-from sales.models import DocType, OrderStatus
+from ledger.posting import LineSpec, post_entry, void_entry
+from sales.models import DocStatus, DocType, OrderStatus
 from sales.numbering import next_number
 
 from .. import dropship
+from ..balances import bill_applied
 from ..errors import PurchasingError
 from ..models import (
-    Bill, BillExpenseLine, BillItemLine, BillLineKind, PurchaseOrder, PurchaseOrderLine, PurchasingSettings,
+    Bill, BillExpenseLine, BillItemLine, BillLineKind, BillRevision, PurchaseOrder, PurchaseOrderLine,
+    PurchasingSettings,
 )
 from .orders import po_remaining, refresh_po_status
 
@@ -247,3 +250,146 @@ def bill_from_po(
         vendor=po.vendor, date=date, vendor_invoice_number=vendor_invoice_number, item_lines=specs,
         expense_lines=expense_lines, user=user, purchase_order=po, terms=terms, notes=notes,
         allow_duplicate=allow_duplicate, allow_negative=allow_negative)
+
+
+def _snapshot(bill: Bill) -> dict:
+    return {
+        "vendor_id": bill.vendor_id, "vendor_invoice_number": bill.vendor_invoice_number,
+        "date": bill.date.isoformat(), "terms": bill.terms, "due_date": bill.due_date.isoformat(),
+        "notes": bill.notes,
+        "item_lines": [
+            {
+                "item_id": l.item_id, "sku": l.item.sku, "description": l.description, "quantity": l.quantity,
+                "price": str(l.price), "amount": str(l.amount), "kind": l.kind, "po_line_id": l.po_line_id,
+            }
+            for l in bill.item_lines.select_related("item")
+        ],
+        "expense_lines": [
+            {
+                "account_id": l.account_id, "account": l.account.number, "description": l.description,
+                "amount": str(l.amount),
+            }
+            for l in bill.expense_lines.select_related("account")
+        ],
+    }
+
+
+def _active_applications(bill: Bill):
+    return [*bill.payment_applications.filter(removed=False), *bill.credit_applications.filter(removed=False)]
+
+
+def _old_drop_ship_so_lines(bill: Bill) -> set[int]:
+    return {
+        l.po_line.so_line_id for l in bill.item_lines.select_related("po_line")
+        if l.kind == BillLineKind.DROP_SHIP and l.po_line is not None
+    }
+
+
+def _reverse_posting(entry, movements, *, user, when: date_type, reason: str, allow_negative: bool) -> None:
+    """Reverse a bill's entry and stock receipts as of `when`. These are system voids: a Standard user's edit
+    does them on their behalf, and no view can ask for system=True."""
+    if entry is not None:
+        void_entry(entry, user=user, reason=reason, date=when, system=True)
+    for movement in movements:
+        void_movement(movement, user=user, reason=reason, date=when, system=True, allow_negative=allow_negative)
+
+
+def edit_bill(
+    bill: Bill, *, user, date: date_type, vendor_invoice_number: str, item_lines: Sequence[BillItemSpec],
+    expense_lines: Sequence[BillExpenseSpec], terms: Terms | None = None, notes: str | None = None,
+    vendor: Vendor | None = None, reason: str = "", allow_duplicate: bool = False, allow_negative: bool = False,
+) -> Bill:
+    with transaction.atomic():
+        current = Bill.objects.select_related("vendor", "purchase_order", "journal_entry").get(pk=bill.pk)
+        if current.status == DocStatus.VOID:
+            raise PurchasingError(f"{current.number} is void and can't be edited.")
+        new_vendor = vendor or current.vendor
+        changed_vendor = new_vendor.pk != current.vendor_id
+        applications = _active_applications(current)
+        if changed_vendor and applications:
+            raise PurchasingError("The vendor can't change after payments or credits are applied.")
+        assert_open(current.date)
+        first_applied = min(
+            [a.applied_on for a in current.payment_applications.all()]
+            + [a.applied_on for a in current.credit_applications.all()], default=None)
+        if first_applied is not None and date > first_applied:
+            raise PurchasingError(
+                f"The bill date can't be after {first_applied.isoformat()}, when a payment or credit was applied.")
+        validate_bill(
+            vendor=new_vendor, date=date, item_lines=item_lines, expense_lines=expense_lines,
+            purchase_order=current.purchase_order, vendor_invoice_number=vendor_invoice_number,
+            exclude_bill=current, allow_duplicate=allow_duplicate, check_vendor=changed_vendor)
+        new_total = (
+            sum((line_amount(s) for s in item_lines), Decimal("0.00"))
+            + sum((s.amount for s in expense_lines), Decimal("0.00")))
+        applied = bill_applied(current)
+        if new_total < applied:
+            raise PurchasingError(f"This bill has {applied:,.2f} applied. The new total can't be less than that.")
+
+        BillRevision.objects.create(
+            bill=current, revision=current.revision, snapshot=_snapshot(current), edited_by=user, reason=reason)
+        old_date, old_entry = current.date, current.journal_entry
+        old_movements = [l.stock_movement for l in current.item_lines.all() if l.stock_movement_id]
+        old_so_lines = _old_drop_ship_so_lines(current)
+        current.item_lines.all().delete()
+        current.expense_lines.all().delete()
+
+        terms = terms or current.terms
+        current.vendor = new_vendor
+        current.vendor_invoice_number = vendor_invoice_number.strip()
+        current.date = date
+        current.terms = terms
+        current.due_date = terms_due_date(terms, date)
+        if notes is not None:
+            current.notes = notes
+        current.revision += 1
+        current.journal_entry = None
+        current.save()
+        # The new receipts go in before the old ones come out, so stock only counts as "going negative" when the
+        # edit really leaves less on hand than has been sold.
+        post_lines(current, item_lines, expense_lines, user=user, allow_negative=allow_negative)
+        _reverse_posting(
+            old_entry, old_movements, user=user, when=old_date, reason=f"Edited to revision {current.revision}",
+            allow_negative=allow_negative)
+        dropship.rebuild(old_so_lines | _drop_ship_so_lines(item_lines))
+        if current.purchase_order_id:
+            refresh_po_status(current.purchase_order)
+    bill.refresh_from_db()
+    return bill
+
+
+def void_bill(
+    bill: Bill, *, user, reason: str, date: date_type | None = None, allow_negative: bool = False,
+) -> Bill:
+    require_admin(user)
+    reason = (reason or "").strip()
+    if not reason:
+        raise PurchasingError("Enter a reason.")
+    with transaction.atomic():
+        current = Bill.objects.select_related("journal_entry", "purchase_order").get(pk=bill.pk)
+        if current.status == DocStatus.VOID:
+            raise PurchasingError(f"{current.number} is already void.")
+        if _active_applications(current):
+            raise PurchasingError(f"{current.number} has payments or credits applied. Remove them first.")
+        removed = [a.removed_on for a in [*current.payment_applications.all(), *current.credit_applications.all()]
+                   if a.removed_on]
+        when = date or max([current.date, *removed])
+        if when < current.date:
+            raise PurchasingError("The void date can't be before the bill date.")
+        if removed and when < max(removed):
+            raise PurchasingError(
+                f"The void date can't be before {max(removed).isoformat()}, when a payment or credit was removed.")
+        assert_open(when)
+        movements = [l.stock_movement for l in current.item_lines.all() if l.stock_movement_id]
+        so_lines = _old_drop_ship_so_lines(current)
+        _reverse_posting(
+            current.journal_entry, movements, user=user, when=when, reason=reason, allow_negative=allow_negative)
+        current.status = DocStatus.VOID
+        current.voided_on = when
+        current.void_reason = reason
+        current.save()
+        dropship.rebuild(so_lines)
+        if current.purchase_order_id:
+            refresh_po_status(current.purchase_order)
+    bill.refresh_from_db()
+    return bill

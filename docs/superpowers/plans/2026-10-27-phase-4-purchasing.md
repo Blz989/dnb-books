@@ -245,17 +245,17 @@ def test_invoice_void_releases_allocation(...):
     - PO remaining is calculated with `exclude_bill=bill`.
   - `void_bill(bill, *, user, reason, date=None, allow_negative=False) -> Bill`: blocked by active applications (spec message). Then the stock voids, `refresh_po_status`, and `dropship.rebuild`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Snapshot and reposting.
   - Editing the price of a stock line recosts a later sale (an invoice made after the bill shows the changed COGS through a Phase 2 revision).
   - Voiding a bill whose stock was sold raises `NegativeStockWarning`, then succeeds with `allow_negative`.
   - An edit below the applied amount is refused.
   - A void with applications is refused.
   - A Standard user can edit but not void.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: edit and void bills`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: edit and void bills`
 
 ---
 
