@@ -108,6 +108,8 @@ table.data tr.total td { font-weight: 600; border-top: 2px solid var(--text); }
 .sku { font-size: 13px; color: var(--accent-text); font-weight: 500; text-decoration: none; }
 .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); white-space: nowrap; }
 .tag.ns { background: transparent; border: 1px dashed var(--border); color: var(--muted); }
+.tag.overdue { background: var(--error-bg); color: var(--error-text); }
+.tag.void { background: var(--error-bg); color: var(--error-text); }
 .neg { color: var(--warn-text-strong); font-weight: 600; }
 .dash { color: var(--muted); }
 .foot { display: flex; justify-content: space-between; padding: 10px 14px; color: var(--muted); font-size: 13px; }
@@ -125,3 +127,15 @@ table.data tr.total td { font-weight: 600; border-top: 2px solid var(--text); }
 #adjust-lines th:nth-child(4) { width: 150px; }
 #adjust-lines th:nth-child(6) { width: 24%; }
 #adjust-lines input[type=text], #adjust-lines select { width: 100%; min-width: 0; }
+#doc-lines { table-layout: fixed; }
+#doc-lines th:nth-child(1) { width: 40px; }
+#doc-lines th:nth-child(2) { width: 17%; }
+#doc-lines th:nth-child(3) { width: 80px; }
+#doc-lines th:nth-child(4) { width: 110px; }
+#doc-lines th:nth-child(6) { width: 150px; }
+#doc-lines th:nth-child(7) { width: 16%; }
+#doc-lines input[type=text], #doc-lines select { width: 100%; min-width: 0; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 20px; }
+.form-grid .form-row { max-width: none; }
+.on-hand { color: var(--muted); font-size: 12px; }
+[hidden] { display: none !important; }

@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Customer balances{% endblock %}
+{% block page_title %}Customer balances{% endblock %}
+{% block content %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>Customer</th><th class="num">Balance</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td><a href="/customers/{{ r.customer.pk }}/">{{ r.customer.name }}</a></td><td class="num{% if r.balance < 0 %} neg{% endif %}">{{ r.balance|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="2" class="empty">No customer owes anything on this date.</td></tr>
+  {% endfor %}
+    <tr class="total"><td>Total</td><td class="num">{{ total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

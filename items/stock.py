@@ -265,9 +265,14 @@ def record_value_adjustment(
 
 def void_movement(
     movement: StockMovement, *, user, reason: str, date: date_type | None = None, allow_negative: bool = False,
+    system: bool = False,
 ) -> StockMovement:
-    """Reverse a movement's full effective value, mark it voided, and recost the item's later outflows."""
-    require_admin(user)
+    """Reverse a movement's full effective value, mark it voided, and recost the item's later outflows.
+
+    system=True is for services that void on a user's behalf (editing an invoice). No view passes it.
+    """
+    if not system:
+        require_admin(user)
     reason = (reason or "").strip()
     if not reason:
         raise ItemStateError("A reason is required to void a movement.")

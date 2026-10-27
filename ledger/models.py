@@ -180,6 +180,8 @@ class AccountingPeriod(models.Model):
     )
     closed_at = models.DateTimeField(null=True, blank=True)
     reopen_reason = models.TextField(blank=True)
+    close_override_reason = models.TextField(blank=True)
+    close_override_problems = models.TextField(blank=True)
 
     class Meta:
         ordering = ["year", "month"]

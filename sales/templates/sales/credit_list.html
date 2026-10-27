@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block title %}Credit notes{% endblock %}
+{% block page_title %}Credit notes{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ page.paginator.count }} credit note{{ page.paginator.count|pluralize }}</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'sales:credit-new' %}">+ New credit note</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <form method="get" class="filters">
+    <label class="grow">Search<input type="search" name="q" value="{{ q }}" placeholder="Number or customer"></label>
+    <label>Customer<select name="customer"><option value="">All customers</option>{% for c in customers %}<option value="{{ c.pk }}"{% if customer == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+    <button type="submit" class="btn primary">Search</button>
+  </form>
+  <table class="data">
+    <thead><tr><th>Credit note</th><th>Customer</th><th>Date</th><th>Reason</th><th class="num">Total</th><th class="num">Unapplied</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr{% if r.note.status == "VOID" %} style="text-decoration: line-through"{% endif %}>
+        <td><a class="sku" href="{% url 'sales:credit-detail' r.note.number %}">{{ r.note.number }}</a>{% if r.note.status == "VOID" %} <span class="tag void">Void</span>{% endif %}</td>
+        <td>{{ r.note.customer.name }}</td><td>{{ r.note.date|date:"Y-m-d" }}</td><td>{{ r.note.reason|default:"—" }}</td>
+        <td class="num">{{ r.total|floatformat:"2g" }}</td><td class="num">{{ r.unapplied|floatformat:"2g" }}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">No credit notes yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>{% if page.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+      {% if page.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

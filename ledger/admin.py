@@ -8,10 +8,10 @@ from django.utils.html import format_html
 
 from core.roles import is_admin
 
-from .errors import PostingError
-from .forms import JournalLineForm, ReopenForm, VoidForm
+from .errors import PeriodCloseBlockedError, PostingError
+from .forms import CloseAnywayForm, JournalLineForm, ReopenForm, VoidForm
 from .models import Account, AccountingPeriod, EntryStatus, JournalEntry, JournalLine
-from .periods import close_period, reopen_period
+from .periods import close_period, close_problems, reopen_period
 from .posting import post_draft, void_entry
 
 
@@ -172,9 +172,14 @@ class AccountingPeriodAdmin(admin.ModelAdmin):
     list_display = ("__str__", "is_closed", "closed_by", "closed_at", "reopen_reason", "reopen_link")
     list_filter = ("is_closed", "year")
     actions = ["close_periods"]
-    fields = ("year", "month", "is_closed", "closed_by", "closed_at", "reopen_reason")
+    fields = (
+        "year", "month", "is_closed", "closed_by", "closed_at", "reopen_reason",
+        "close_override_reason", "close_override_problems",
+    )
     # Periods only open and close through ledger/periods.py so every change is recorded.
-    readonly_fields = ("is_closed", "closed_by", "closed_at", "reopen_reason")
+    readonly_fields = (
+        "is_closed", "closed_by", "closed_at", "reopen_reason", "close_override_reason", "close_override_problems",
+    )
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -198,6 +203,11 @@ class AccountingPeriodAdmin(admin.ModelAdmin):
             try:
                 close_period(period.year, period.month, request.user)
                 closed += 1
+            except PeriodCloseBlockedError as exc:
+                link = reverse("admin:ledger_accountingperiod_close", args=[period.pk])
+                self.message_user(
+                    request, format_html('{} <a href="{}">Close anyway</a>', f"{period}: {exc}", link), messages.ERROR
+                )
             except PostingError as exc:
                 self.message_user(request, str(exc), messages.ERROR)
         if closed:
@@ -209,6 +219,11 @@ class AccountingPeriodAdmin(admin.ModelAdmin):
                 "<path:object_id>/reopen/",
                 self.admin_site.admin_view(self.reopen_view),
                 name="ledger_accountingperiod_reopen",
+            ),
+            path(
+                "<path:object_id>/close/",
+                self.admin_site.admin_view(self.close_view),
+                name="ledger_accountingperiod_close",
             ),
         ]
         return custom + super().get_urls()
@@ -232,3 +247,25 @@ class AccountingPeriodAdmin(admin.ModelAdmin):
             "opts": self.model._meta,
         }
         return render(request, "ledger/reopen_period.html", context)
+
+    def close_view(self, request, object_id):
+        period = self.get_object(request, unquote(object_id))
+        if period is None:
+            raise Http404
+        if not is_admin(request.user):
+            raise PermissionDenied("Only an admin can do this.")
+        problems = close_problems(period.year, period.month)
+        form = CloseAnywayForm(request.POST or None)
+        if request.method == "POST" and form.is_valid():
+            close_period(period.year, period.month, request.user, form.cleaned_data["reason"])
+            self.message_user(request, f"{period} was closed.")
+            return HttpResponseRedirect(reverse("admin:ledger_accountingperiod_changelist"))
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Close {period} anyway",
+            "period": period,
+            "problems": problems,
+            "form": form,
+            "opts": self.model._meta,
+        }
+        return render(request, "admin/ledger/accountingperiod/close.html", context)

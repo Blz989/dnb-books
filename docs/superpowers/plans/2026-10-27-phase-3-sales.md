@@ -93,7 +93,7 @@ tests/  test_close_override.py, test_customers.py, test_sales_models.py, test_nu
   - Admin: the "Close selected periods" action, for each blocked period, shows the problems plus a link "Close anyway" to `admin:ledger_accountingperiod_close` (`<id>/close/`). That page shows the problems and a required `reason` field ("Enter a reason to close anyway.").
   - `ledger.posting.void_entry(..., system: bool = False)`: `system=True` skips `require_admin` (still requires a reason). `items.stock.void_movement(..., system: bool = False)`, same. Neither flag is passed by any view.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_override_closes_and_records(admin_user, blocked_check):   # fixture registers a check returning ["Off by 1.00."]
@@ -111,11 +111,11 @@ def test_system_void_entry_skips_admin(standard_user, posted_entry): ...     # v
 def test_system_void_movement_skips_admin(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Screenshots** of the blocked close message and the "Close anyway" page (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: admin can close a month anyway with a recorded reason`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Screenshots** of the blocked close message and the "Close anyway" page (light and dark), sent.
+- [x] **Step 6: Commit** `feat: admin can close a month anyway with a recorded reason`
 
 ---
 
@@ -135,11 +135,11 @@ def test_system_void_movement_skips_admin(...): ...
 - `setup_roles`: Standard gets add, change, and view on `contacts.customer`. Admin gets all permissions for `contacts` and `sales` (add both to `ADMIN_APPS`).
 - `conftest.py`: a `customer` fixture ("Acme Builders", NET_30, a billing and a ship-to address).
 
-- [ ] **Step 1: Failing tests:** `due_date(NET_30, date(2026, 10, 27)) == date(2026, 11, 26)`; due on receipt is the same day; a duplicate name (different case) is rejected with the message.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: customers with payment terms`
+- [x] **Step 1: Failing tests:** `due_date(NET_30, date(2026, 10, 27)) == date(2026, 11, 26)`; due on receipt is the same day; a duplicate name (different case) is rejected with the message.
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: customers with payment terms`
 
 ---
 
@@ -181,7 +181,7 @@ def test_system_void_movement_skips_admin(...): ...
   - `customer_balance(customer, as_of=None)`.
   - An invoice counts as of a date when `date <= as_of` and it is not voided on or before `as_of`. Payments and credit notes, the same.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```python
 def test_numbers_are_sequential_and_padded(db):
@@ -199,10 +199,10 @@ def test_refund_needs_exactly_one_source(db): ...                # IntegrityErro
 
 `conftest.py` gains `sales_settings` (A/R 1200, Undeposited Funds 1250 OTHER_CURRENT_ASSET, Sales returns 4900 INCOME) and a `bank` (1000 BANK) fixture.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: sales models, numbering, and balances`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: sales models, numbering, and balances`
 
 ---
 
@@ -228,11 +228,11 @@ def test_refund_needs_exactly_one_source(db): ...                # IntegrityErro
   - Editing a closed order: "{number} is closed. Reopen it to make changes."
   - No posting.
 
-- [ ] **Step 1: Failing tests:** create; update rules and messages; auto-close and manual close or reopen; `remaining` ignores void invoices.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: sales orders`
+- [x] **Step 1: Failing tests:** create; update rules and messages; auto-close and manual close or reopen; `remaining` ignores void invoices.
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: sales orders`
 
 ---
 
@@ -261,7 +261,7 @@ def test_refund_needs_exactly_one_source(db): ...                # IntegrityErro
   - The customer must be active: "{name} is inactive."
   - Invoice date in a closed month: Phase 1 `PeriodClosedError`.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```python
 def test_invoice_posts_revenue_and_cogs(...):
@@ -277,10 +277,10 @@ def test_zero_total_invoice_posts_nothing(...): ...
 def test_due_date_from_terms(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review the posting against the `finance:journal-entry` skill and record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: invoices with stock and drop-ship lines`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review the posting against the `finance:journal-entry` skill and record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: invoices with stock and drop-ship lines`
 
 ---
 
@@ -305,7 +305,7 @@ def test_due_date_from_terms(...): ...
   - "{number} is void and can't be edited."
   - Both dates checked with `assert_open`.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```python
 def test_edit_keeps_number_and_snapshot(...): ...           # revision 2; snapshot has old lines
@@ -318,10 +318,10 @@ def test_void_blocked_with_applications_then_allowed(...): ...
 def test_void_reopens_closed_order(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: edit and void invoices`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: edit and void invoices`
 
 ---
 
@@ -352,7 +352,7 @@ def test_void_reopens_closed_order(...): ...
   - "{invoice} belongs to a different customer."
   - The spec 5.4 void messages, verbatim.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A check goes to Undeposited Funds; an ACH needs a bank.
   - Overpayment leaves credit, applied later.
   - Applying more than an invoice's balance is refused.
@@ -360,10 +360,10 @@ def test_void_reopens_closed_order(...): ...
   - A credit note posts and applies.
   - A refund from a payment's unapplied amount; a refund above unapplied is refused.
   - Every void rule, including a payment void reopening invoices.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: payments, credit notes, refunds`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: payments, credit notes, refunds`
 
 ---
 
@@ -384,11 +384,11 @@ def test_void_reopens_closed_order(...): ...
   - "{number} was paid by {method} and went straight to the bank."
   - Deposit date before a payment's date: "The deposit date can't be before {number}'s date."
 
-- [ ] **Step 1: Failing tests** (grouping and total; void, then re-deposit; payment void blocked while deposited; each message)
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: deposits`
+- [x] **Step 1: Failing tests** (grouping and total; void, then re-deposit; payment void blocked while deposited; each message)
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: deposits`
 
 ---
 
@@ -406,14 +406,14 @@ def test_void_reopens_closed_order(...): ...
   - `close_check(year, month) -> list[str]` runs both at month end, prefixing each problem with "{Month YYYY}: ".
 - Both read the ledger with Phase 1 `account_totals`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Both checks are empty after a mixed scenario.
   - Breaking A/R with a manual entry to the A/R account makes `ar_check` report it, and blocks `close_period` (then the admin override works).
   - A `hypothesis.extra.django.TestCase` property test: random sequences of invoice, edit, payment, application, removal, credit, refund, deposit, and void keep both checks empty at the end and at every as-of date touched.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review the tie-outs against the `finance:reconciliation` skill and record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: AR and undeposited funds checks at month close`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review the tie-outs against the `finance:reconciliation` skill and record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: AR and undeposited funds checks at month close`
 
 ---
 
@@ -430,17 +430,17 @@ def test_void_reopens_closed_order(...): ...
   - `open_invoices(as_of=None, customer=None)`, `customer_balances(as_of=None)`, `open_sales_orders()` (lines with remaining > 0), `undeposited_funds() -> (payments, total, ledger_balance, difference)`, `drop_ship_awaiting_bill()` (non-void invoice drop-ship lines with `drop_ship_billed=False`).
   - URL names: `reports:ar-aging`, `reports:open-invoices`, `reports:customer-balances`, `reports:open-sales-orders`, `reports:undeposited-funds`, `reports:drop-ship-awaiting-bill`. `?format=csv` like the other reports. The AR aging and Undeposited pages show the "Difference" card, and a nonzero difference shows an error banner.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Bucket edges: due today is current; 1 day past due is 1–30; 30 is 1–30; 31 is 31–60; 91 is over 90.
   - As-of before and after a removed application.
   - AR aging total equals A/R.
   - CSV output.
   - A bad date shows "Enter a date like 2026-01-31."
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of all six reports (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: sales reports`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of all six reports (light and dark), sent.
+- [x] **Step 6: Commit** `feat: sales reports`
 
 ---
 
@@ -458,18 +458,18 @@ def test_void_reopens_closed_order(...): ...
   - URL `sales:invoice-pdf` `/sales/invoices/<number>/pdf/` → `application/pdf`, `Content-Disposition: inline; filename="<number>.pdf"`, login required.
 - The template matches `docs/design/invoice-mockup.html`: Letter size, 0.6 in margins, the same structure and colors. There is no Google Fonts link. Drop-ship lines carry the note "Shipped directly from the manufacturer". A void invoice gets a diagonal "VOID" watermark. The table header repeats on each page.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The HTML contains the number, customer, line SKUs, "Balance due", and the notes.
   - A drop-ship line has the note.
   - The PDF bytes start with `b"%PDF"` and are more than 2,000 bytes.
   - A 60-line invoice renders, and the HTML has a `<thead>`.
   - A void invoice has "VOID" in the HTML.
   - The view returns `application/pdf`.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots:** write demo invoice PDFs (one page, a void one, and the 60-line one) with `invoice_pdf`, rasterize each page with `pdftoppm -png -r 110` (poppler-utils, present in cloud sessions; dev only), compare against `docs/design/invoice-mockup.html`, and send the PNGs plus one PDF.
-- [ ] **Step 6: Commit** `feat: invoice PDF with WeasyPrint`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots:** write demo invoice PDFs (one page, a void one, and the 60-line one) with `invoice_pdf`, rasterize each page with `pdftoppm -png -r 110` (poppler-utils, present in cloud sessions; dev only), compare against `docs/design/invoice-mockup.html`, and send the PNGs plus one PDF.
+- [x] **Step 6: Commit** `feat: invoice PDF with WeasyPrint`
 
 ---
 
@@ -490,12 +490,12 @@ def test_void_reopens_closed_order(...): ...
   - Numbering table: prefix and next number per type, through `set_sequence`.
 - Deactivate a customer with a balance: spec message.
 
-- [ ] **Step 1: Failing tests** (customer CRUD; duplicate name; deactivate rule; settings admin only (403 for Standard); logo validation; numbering conflict message)
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (start `sales/demo.py`: customers and settings; `seed_demo` calls it)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the customer list, customer detail (with open invoices and credits once later tasks add them; empty states now), customer form, and sales settings including a logo error. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: customer and sales settings screens`
+- [x] **Step 1: Failing tests** (customer CRUD; duplicate name; deactivate rule; settings admin only (403 for Standard); logo validation; numbering conflict message)
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (start `sales/demo.py`: customers and settings; `seed_demo` calls it)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the customer list, customer detail (with open invoices and credits once later tasks add them; empty states now), customer form, and sales settings including a logo error. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: customer and sales settings screens`
 
 ---
 
@@ -513,7 +513,7 @@ def test_void_reopens_closed_order(...): ...
 - "Invoice a shipment" pre-fills each line's remaining quantity and shows the on-hand count next to stock lines.
 - The invoice detail page shows lines, totals, balance, applications (with "Remove" for allowed users), revisions (each opening `invoice_revision`, read-only), journal entry links, and buttons: Edit, Download PDF, Void (admin).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Create an order and invoice a shipment through the views.
   - Over-invoicing shows the message.
   - The negative confirm flow.
@@ -521,11 +521,11 @@ def test_void_reopens_closed_order(...): ...
   - Edit creates revision 2 and the revision page shows the old lines.
   - Void is admin only.
   - An unknown number returns a 404 page in the app's style.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (extend demo: two orders, three invoices, one drop-ship line, one edited invoice)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the order list, order form, order detail (partly invoiced), invoice-a-shipment (with an on-hand warning), negative confirm, invoice list, invoice detail (with revisions), revision view, and the void form. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: sales order and invoice screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (extend demo: two orders, three invoices, one drop-ship line, one edited invoice)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the order list, order form, order detail (partly invoiced), invoice-a-shipment (with an on-hand warning), negative confirm, invoice list, invoice detail (with revisions), revision view, and the void form. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: sales order and invoice screens`
 
 ---
 
@@ -544,17 +544,17 @@ def test_void_reopens_closed_order(...): ...
 - **Refund:** reached from a payment or credit with unapplied value. Admin only.
 - All forms use the one-time token.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Payment applied across two invoices.
   - An overpayment shows as credit on the customer page.
   - A deposit removes payments from the undeposited list.
   - A refund over the available amount shows the message.
   - Standard users get 403 on refunds and voids.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (extend demo: payments by check, cash, and ACH; one deposit; one credit note; one refund)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of receive payment (with applications), payment detail, the deposit form and detail, credit note form and detail, the refund form with an error, and the customer detail with credits. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: payment, credit, refund, and deposit screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (extend demo: payments by check, cash, and ACH; one deposit; one credit note; one refund)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of receive payment (with applications), payment detail, the deposit form and detail, credit note form and detail, the refund form with an error, and the customer detail with credits. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: payment, credit, refund, and deposit screens`
 
 ---
 
@@ -564,13 +564,13 @@ def test_void_reopens_closed_order(...): ...
 - Modify: `core/views.py`, `core/templates/core/home.html`, `README.md` (Status, What it does: Sales row)
 - Create: `tests/test_phase3_acceptance.py`
 
-- [ ] **Step 1: Home cards.**
+- [x] **Step 1: Home cards.**
   - **Open AR** (total, linking to AR aging).
   - **Overdue** (total, linking to open invoices filtered to overdue).
   - **Undeposited** (total, linking to the deposit form).
   - **Drop shipments awaiting bill** (count, linking to the report).
   - Test: the values for a seeded scenario.
-- [ ] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with checks after each step):
+- [x] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with checks after each step):
   1. Create an SO with a stock line and a drop-ship line.
   2. Invoice twice.
   3. Edit the first invoice's quantity.
@@ -580,9 +580,9 @@ def test_void_reopens_closed_order(...): ...
   7. Refund an overpayment.
 
   After every step, `ar_check() == [] and undeposited_check() == []`. Finally the PDF view returns a PDF.
-- [ ] **Step 3: Full suite** `uv run pytest -q` passes with no warnings.
-- [ ] **Step 4: Final screenshots:** a tour (home with sales cards, an order, an invoice, the invoice PDF, receive payment, a deposit, AR aging), light and dark, sent.
-- [ ] **Step 5: Commit** `test: phase 3 acceptance`
+- [x] **Step 3: Full suite** `uv run pytest -q` passes with no warnings.
+- [x] **Step 4: Final screenshots:** a tour (home with sales cards, an order, an invoice, the invoice PDF, receive payment, a deposit, AR aging), light and dark, sent.
+- [x] **Step 5: Commit** `test: phase 3 acceptance`
 - [ ] **Step 6: Open the PR** `Phase 3: Sales` per `CLAUDE.md`. List the manual checks for the owner:
   - Run `docker compose up -d --build` (new apt library and Python dependency).
   - Fill in Sales settings and upload the logo.

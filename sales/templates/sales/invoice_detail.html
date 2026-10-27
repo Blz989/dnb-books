@@ -1,0 +1,74 @@
+{% extends "core/base.html" %}
+{% block title %}{{ invoice.number }}{% endblock %}
+{% block page_title %}{{ invoice.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><a href="/customers/{{ invoice.customer.pk }}/">{{ invoice.customer.name }}</a> · {{ invoice.date|date:"Y-m-d" }} · due {{ invoice.due_date|date:"Y-m-d" }} · {{ invoice.get_terms_display }}
+  {% if is_void %}<span class="tag void">Void</span>{% endif %}{% if invoice.revision > 1 %} <span class="tag ns">Revision {{ invoice.revision }}</span>{% endif %}
+  {% if invoice.sales_order %}· <a href="{% url 'sales:order-detail' invoice.sales_order.number %}">{{ invoice.sales_order.number }}</a>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  {% if not is_void %}<a class="btn" href="{% url 'sales:invoice-edit' invoice.number %}">Edit</a>{% endif %}
+  <a class="btn" href="{% url 'sales:invoice-pdf' invoice.number %}">Download PDF</a>
+  {% if not is_void %}<a class="btn" href="/sales/payments/new/?customer={{ invoice.customer.pk }}&amp;invoice={{ invoice.number }}">Receive payment</a>{% endif %}
+  {% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:invoice-void' invoice.number %}">Void</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% if is_void %}<div class="banner error">Voided on {{ invoice.voided_on|date:"Y-m-d" }}: {{ invoice.void_reason }}</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Total</div><div class="v">{{ total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Payments and credits</div><div class="v">{{ applied|floatformat:"2g" }}</div></div>
+  <div class="kpi{% if balance > 0 and not is_void %} warn{% endif %}"><div class="l">Balance</div><div class="v">{{ balance|floatformat:"2g" }}</div></div>
+</div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Item</th><th>Description</th><th>Ship from</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for l in lines %}
+    <tr><td><a class="sku" href="/items/{{ l.item.sku }}/">{{ l.item.sku }}</a></td><td>{{ l.description|default:l.item.name }}</td>
+      <td>{{ l.get_fulfillment_display }}{% if l.drop_ship_vendor %} <span class="dash">({{ l.drop_ship_vendor }}){% if l.drop_ship_billed %}, billed{% endif %}</span>{% endif %}</td>
+      <td class="num">{{ l.quantity }}</td><td class="num">{{ l.price|floatformat:"2g" }}</td><td class="num">{{ l.amount|floatformat:"2g" }}</td></tr>
+  {% endfor %}
+    <tr class="total"><td></td><td>Total</td><td></td><td></td><td></td><td class="num">{{ total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Ship to</dt><dd>{{ invoice.ship_to|linebreaksbr|default:"—" }}</dd>
+    <dt>Notes</dt><dd>{{ invoice.notes|linebreaksbr|default:"—" }}</dd>
+    <dt>Journal entries</dt><dd>{% for label, e in entries %}<a href="{% url 'admin:ledger_journalentry_change' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="dash">None. The total is zero.</span>{% endfor %}</dd>
+  </dl>
+</div></div>
+
+<h2>Payments and credits applied</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Document</th><th>Applied on</th><th class="num">Amount</th><th></th></tr></thead>
+  <tbody>
+  {% for a in payment_apps %}
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/payments/{{ a.payment.number }}/">{{ a.payment.number }}</a> <span class="dash">Payment</span></td>
+      <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
+      <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'sales:application-remove' invoice.number 'payment' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
+  {% endfor %}
+  {% for a in credit_apps %}
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/credits/{{ a.credit_note.number }}/">{{ a.credit_note.number }}</a> <span class="dash">Credit note</span></td>
+      <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
+      <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'sales:application-remove' invoice.number 'credit' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
+  {% endfor %}
+  {% if not payment_apps and not credit_apps %}<tr><td colspan="4" class="empty">Nothing applied yet.</td></tr>{% endif %}
+  </tbody>
+</table>
+</div>
+
+<h2>Revisions</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Revision</th><th>Saved over on</th><th>By</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for r in revisions %}
+    <tr><td><a class="sku" href="{% url 'sales:invoice-revision' invoice.number r.revision %}">Revision {{ r.revision }}</a></td>
+      <td>{{ r.edited_at|date:"Y-m-d H:i" }}</td><td>{{ r.edited_by.get_username }}</td><td>{{ r.reason|default:"—" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">This invoice hasn't been edited.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

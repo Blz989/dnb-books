@@ -1,0 +1,27 @@
+{% extends "core/base.html" %}
+{% block title %}Deposits{% endblock %}
+{% block page_title %}Deposits{% endblock %}
+{% block page_subtitle %}<div class="sub">Checks and cash taken to the bank</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'sales:deposit-new' %}">+ New deposit</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Deposit</th><th>Date</th><th>Bank account</th><th class="num">Payments</th><th class="num">Total</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr{% if r.deposit.status == "VOID" %} style="text-decoration: line-through"{% endif %}>
+        <td><a class="sku" href="{% url 'sales:deposit-detail' r.deposit.number %}">{{ r.deposit.number }}</a></td>
+        <td>{{ r.deposit.date|date:"Y-m-d" }}</td><td>{{ r.deposit.bank_account }}</td>
+        <td class="num">{{ r.count }}</td><td class="num">{{ r.total|floatformat:"2g" }}</td>
+        <td>{% if r.deposit.status == "VOID" %}<span class="tag void">Void</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">No deposits yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

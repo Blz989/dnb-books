@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "core",
     "ledger",
     "items",
+    "contacts",
+    "sales",
     "backup",
 ]
 
@@ -114,3 +116,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Uploaded files (the invoice logo). Not served publicly; an authenticated view hands them out.
+MEDIA_ROOT = DNB_DB_PATH.parent / "media"
+MEDIA_URL = "/media/"

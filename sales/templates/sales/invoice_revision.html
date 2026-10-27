@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block title %}{{ invoice.number }} revision {{ rev.revision }}{% endblock %}
+{% block page_title %}{{ invoice.number }}, revision {{ rev.revision }}{% endblock %}
+{% block page_subtitle %}<div class="sub">As it was before the edit by {{ rev.edited_by.get_username }} on {{ rev.edited_at|date:"Y-m-d H:i" }}. Read only.</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="{% url 'sales:invoice-detail' invoice.number %}">Back to {{ invoice.number }}</a>{% endblock %}
+{% block content %}
+<div class="banner info">This is an old version. The current invoice is revision {{ invoice.revision }}.</div>
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Customer</dt><dd>{{ customer.name|default:"—" }}</dd>
+    <dt>Date</dt><dd>{{ snap.date }}</dd>
+    <dt>Terms</dt><dd>{{ snap.terms }}</dd>
+    <dt>Due</dt><dd>{{ snap.due_date }}</dd>
+    <dt>Ship to</dt><dd>{{ snap.ship_to|linebreaksbr|default:"—" }}</dd>
+    <dt>Notes</dt><dd>{{ snap.notes|linebreaksbr|default:"—" }}</dd>
+    {% if rev.reason %}<dt>Reason for the change</dt><dd>{{ rev.reason }}</dd>{% endif %}
+  </dl>
+</div></div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Item</th><th>Description</th><th>Ship from</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for l in snap.lines %}
+    <tr><td><span class="sku">{{ l.sku }}</span></td><td>{{ l.description }}</td>
+      <td>{{ l.fulfillment }}{% if l.drop_ship_vendor %} ({{ l.drop_ship_vendor }}){% endif %}</td>
+      <td class="num">{{ l.quantity }}</td><td class="num">{{ l.price }}</td><td class="num">{{ l.amount }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

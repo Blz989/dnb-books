@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+{% block title %}Open invoices{% endblock %}
+{% block page_title %}Open invoices{% endblock %}
+{% block content %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Due</th><th class="num">Balance</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td><a class="sku" href="/sales/invoices/{{ r.invoice.number }}/">{{ r.invoice.number }}</a></td>
+      <td>{{ r.invoice.customer.name }}</td><td>{{ r.invoice.date|date:"Y-m-d" }}</td><td>{{ r.invoice.due_date|date:"Y-m-d" }}</td>
+      <td class="num">{{ r.balance|floatformat:"2g" }}</td>
+      <td>{% if r.days_overdue > 0 %}<span class="tag">{{ r.days_overdue }} day{{ r.days_overdue|pluralize }} overdue</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">No open invoices.</td></tr>
+  {% endfor %}
+    <tr class="total"><td></td><td>Total</td><td></td><td></td><td class="num">{{ total|floatformat:"2g" }}</td><td></td></tr>
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+<datalist id="sku-list">{% for i in sku_options %}<option value="{{ i.sku }}">{{ i.name }}</option>{% endfor %}</datalist>
+<table class="data" id="doc-lines">
+  <thead><tr><th>#</th><th>Item SKU</th><th class="num">Qty</th><th class="num">Price</th><th>Description</th><th>Ship from</th><th>Drop-ship vendor</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr{% if r.index >= shown %} hidden data-extra{% endif %}>
+      <td>{{ forloop.counter }}<input type="hidden" name="lines-{{ r.index }}-ref" value="{{ r.ref }}"></td>
+      <td><input type="text" list="sku-list" name="lines-{{ r.index }}-sku" value="{{ r.sku }}" autocapitalize="characters" maxlength="50"></td>
+      <td class="num"><input type="text" inputmode="numeric" name="lines-{{ r.index }}-quantity" value="{{ r.quantity }}" style="text-align:right"></td>
+      <td class="num"><input type="text" inputmode="decimal" name="lines-{{ r.index }}-price" value="{{ r.price }}" placeholder="Item price" style="text-align:right"></td>
+      <td><input type="text" name="lines-{{ r.index }}-description" value="{{ r.description }}" maxlength="500" placeholder="Item name"></td>
+      <td><select name="lines-{{ r.index }}-fulfillment"><option value="STOCK"{% if r.fulfillment == "STOCK" %} selected{% endif %}>Ship from stock</option><option value="DROP_SHIP"{% if r.fulfillment == "DROP_SHIP" %} selected{% endif %}>Drop ship</option></select></td>
+      <td><input type="text" name="lines-{{ r.index }}-vendor" value="{{ r.vendor }}" maxlength="200"></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="foot"><button type="button" class="btn" id="add-line">+ Add line</button><span></span></div>

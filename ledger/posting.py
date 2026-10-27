@@ -141,10 +141,15 @@ def post_draft(entry: JournalEntry, user) -> JournalEntry:
 
 
 def void_entry(
-    entry: JournalEntry, *, user, reason: str, date: date_type | None = None, allow_items_source: bool = False
+    entry: JournalEntry, *, user, reason: str, date: date_type | None = None, allow_items_source: bool = False,
+    system: bool = False,
 ) -> JournalEntry:
-    """Void by posting a reversing entry; the original stays on record as VOID."""
-    require_admin(user)
+    """Void by posting a reversing entry; the original stays on record as VOID.
+
+    system=True is for services that void on a user's behalf (editing an invoice). No view passes it.
+    """
+    if not system:
+        require_admin(user)
     reason = (reason or "").strip()
     with transaction.atomic():
         current = JournalEntry.objects.get(pk=entry.pk)

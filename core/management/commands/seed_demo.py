@@ -17,11 +17,13 @@ D = Decimal
 ACCOUNTS = [
     ("1000", "Checking", AccountType.ASSET, AccountSubtype.BANK),
     ("1200", "Accounts Receivable", AccountType.ASSET, AccountSubtype.ACCOUNTS_RECEIVABLE),
+    ("1250", "Undeposited Funds", AccountType.ASSET, AccountSubtype.OTHER_CURRENT_ASSET),
     ("1300", "Inventory Asset", AccountType.ASSET, AccountSubtype.INVENTORY),
     ("2000", "Accounts Payable", AccountType.LIABILITY, AccountSubtype.ACCOUNTS_PAYABLE),
     ("3000", "Owner's Equity", AccountType.EQUITY, AccountSubtype.EQUITY),
     ("3900", "Opening Balance Equity", AccountType.EQUITY, AccountSubtype.EQUITY),
     ("4000", "Sales", AccountType.INCOME, AccountSubtype.INCOME),
+    ("4900", "Sales returns and allowances", AccountType.INCOME, AccountSubtype.INCOME),
     ("5000", "Cost of Goods Sold", AccountType.EXPENSE, AccountSubtype.COST_OF_GOODS_SOLD),
     ("6000", "Rent", AccountType.EXPENSE, AccountSubtype.EXPENSE),
     ("6100", "Utilities", AccountType.EXPENSE, AccountSubtype.EXPENSE),
@@ -55,10 +57,13 @@ class Command(BaseCommand):
 
         post(first - timedelta(days=60), "1000", "3000", "40000.00", "Owner investment")
         post(first - timedelta(days=20), "1000", "4000", "9200.00", "Sales deposits")
-        post(first - timedelta(days=15), "1200", "4000", "3150.00", "Invoices")
         post(first - timedelta(days=10), "6000", "1000", "2400.00", "Rent")
         post(first - timedelta(days=5), "6100", "1000", "310.45", "Utilities")
         from items.demo import seed_counts, seed_items
 
-        seed_counts(user, seed_items(user))
+        from sales.demo import seed_sales
+
+        items = seed_items(user)
+        seed_counts(user, items)
+        seed_sales(user, items)
         self.stdout.write("Demo data ready. Log in as demo / demo-pass-123.")

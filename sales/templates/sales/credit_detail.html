@@ -1,0 +1,44 @@
+{% extends "core/base.html" %}
+{% block title %}{{ note.number }}{% endblock %}
+{% block page_title %}{{ note.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><a href="/customers/{{ note.customer.pk }}/">{{ note.customer.name }}</a> · {{ note.date|date:"Y-m-d" }}{% if note.reason %} · {{ note.reason }}{% endif %}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  {% if not is_void and unapplied > 0 %}<a class="btn primary" href="{% url 'sales:credit-apply' note.number %}">Apply</a>{% endif %}
+  {% if is_admin and not is_void and unapplied > 0 %}<a class="btn" href="{% url 'sales:refund-new' %}?credit={{ note.number }}">Refund</a>{% endif %}
+  {% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:credit-void' note.number %}">Void</a>{% endif %}
+{% endblock %}
+{% block content %}
+{% if is_void %}<div class="banner error">Voided on {{ note.voided_on|date:"Y-m-d" }}: {{ note.void_reason }}</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Total</div><div class="v">{{ total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Unapplied</div><div class="v">{{ unapplied|floatformat:"2g" }}</div></div>
+</div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Description</th><th>Account</th><th class="num">Amount</th></tr></thead>
+  <tbody>{% for l in lines %}<tr><td>{{ l.description|default:"—" }}</td><td>{{ l.account }}</td><td class="num">{{ l.amount|floatformat:"2g" }}</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+<h2>Applied to</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Invoice</th><th>Applied on</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for a in applications %}
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/invoices/{{ a.invoice.number }}/">{{ a.invoice.number }}</a></td>
+      <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="3" class="empty">Not applied to any invoice.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if refunds %}
+<h2>Refunds</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Refund</th><th>Date</th><th>Method</th><th class="num">Amount</th></tr></thead>
+  <tbody>{% for r in refunds %}<tr><td><a class="sku" href="{% url 'sales:refund-detail' r.number %}">{{ r.number }}</a>{% if r.status == "VOID" %} <span class="tag void">Void</span>{% endif %}</td><td>{{ r.date|date:"Y-m-d" }}</td><td>{{ r.get_method_display }}</td><td class="num">{{ r.amount|floatformat:"2g" }}</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

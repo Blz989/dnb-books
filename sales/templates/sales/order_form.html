@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}{% if order %}Edit {{ order.number }}{% else %}New sales order{% endif %}{% endblock %}
+{% block page_title %}{% if order %}Edit {{ order.number }}{% else %}New sales order{% endif %}{% endblock %}
+{% block page_subtitle %}<div class="sub">A sales order records what was promised. Invoice it in shipments.</div>{% endblock %}
+{% block content %}
+{% include "sales/_errors.html" %}
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <div class="card"><div class="body form-grid">
+    {% for field in form %}
+    <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+      {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    {% endfor %}
+  </div>
+  {% include "sales/_lines_table.html" %}
+  </div>
+  <button type="submit" class="btn primary">Save order</button>
+  <a class="btn" href="{% if order %}{% url 'sales:order-detail' order.number %}{% else %}{% url 'sales:order-list' %}{% endif %}">Cancel</a>
+</form>
+<script src="{% static 'core/lines.js' %}" defer></script>
+{% endblock %}
