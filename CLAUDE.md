@@ -16,7 +16,8 @@ Read both before starting. The plan's Global Constraints, Review Focus, and per-
 3. One commit per task at minimum, using the commit message given in the task.
 4. Tick the plan's checkboxes (`- [ ]` to `- [x]`) as steps complete, and commit that with the task.
 5. During Task 7, use the `finance:journal-entry` and `finance:financial-statements` skills to review posting and report logic. Record findings in that task's commit body.
-6. When all 11 tasks pass, open a PR into `main` titled `Phase 1: Ledger core`. The PR body lists each task with its status, the final `uv run pytest -q` output, any deviations from the plan and why, and the manual checks from Task 11 Step 3 that could not be run in a cloud container (these are for the owner to do on the office PC).
+6. Keep `README.md` current: Tasks 1 and 10 fill in its "Getting started" section, and the "Status" line should say Phase 1 is built once the PR is ready. Do not remove the overview, roadmap, or cutover criteria.
+7. When all 11 tasks pass, open a PR into `main` titled `Phase 1: Ledger core`. The PR body lists each task with its status, the final `uv run pytest -q` output, any deviations from the plan and why, and the manual checks from Task 11 Step 3 that could not be run in a cloud container (these are for the owner to do on the office PC).
 
 ## Commands
 
