@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "auditlog",
     "core",
     "ledger",
+    "backup",
 ]
 
 MIDDLEWARE = [

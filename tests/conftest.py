@@ -133,3 +133,20 @@ def sample_ledger(admin_user, cash, ar, equity, revenue, expense):
     draft = JournalEntry.objects.create(date=date(2026, 1, 20), memo="Draft", created_by=admin_user)
     JournalLine.objects.create(entry=draft, account=cash, debit=D("9999.00"))
     JournalLine.objects.create(entry=draft, account=revenue, credit=D("9999.00"))
+
+
+@pytest.fixture
+def file_db_with_entries(transactional_db, ledger_purge, settings, admin_user, cash, revenue):
+    """The file-backed test database with a few committed, posted entries and a backup key."""
+    from pathlib import Path
+
+    from cryptography.fernet import Fernet
+    from django.db import connection
+
+    from ledger.posting import LineSpec, post_entry
+
+    settings.DNB_DB_PATH = Path(connection.settings_dict["NAME"])
+    settings.DNB_BACKUP_KEY = Fernet.generate_key().decode()
+    for amount in ("100.00", "250.50", "19.99"):
+        post_entry(date=date(2026, 1, 5), user=admin_user, lines=[
+            LineSpec(cash, debit=Decimal(amount)), LineSpec(revenue, credit=Decimal(amount))])

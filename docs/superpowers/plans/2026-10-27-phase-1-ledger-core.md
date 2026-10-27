@@ -483,7 +483,7 @@ CSV amounts are plain numbers with 2 decimals, no thousands separators. HTML sho
   - `run_backup(now: datetime | None = None) -> BackupRun`: records RUNNING, snapshots to a temp dir, computes fingerprint, encrypts into `DNB_BACKUP_DIR`, applies retention, records SUCCESS. Any exception → FAILED with a plain message (for example "Backup folder D:\Drive\dnb-backups does not exist.") and is not re-raised. Missing `DNB_BACKUP_KEY` → FAILED "No backup key set. Run generate_backup_key."
   - Commands: `backup_now` (exit code 1 if FAILED, prints message), `generate_backup_key` (prints a new Fernet key and the instruction: "Add this to .env as DNB_BACKUP_KEY and store a copy in your password manager. Backups cannot be restored without it.").
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_encrypt_roundtrip(tmp_path): ...
@@ -506,10 +506,10 @@ def test_retention(tmp_path):
 
 `file_db_with_entries` fixture: `transactional_db` plus a few posted entries; `settings.DNB_DB_PATH` points at the file-backed test DB name from Task 1.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `backup/service.py`, model, commands; wire `update.*` to call `backup_now` first (already scripted in Task 1)**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: encrypted nightly backup with retention`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `backup/service.py`, model, commands; wire `update.*` to call `backup_now` first (already scripted in Task 1)**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: encrypted nightly backup with retention`
 
 ---
 
