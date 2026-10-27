@@ -19,3 +19,10 @@ def test_setup_roles_idempotent(db):
     call_command("setup_roles")
     call_command("setup_roles")
     assert Group.objects.filter(name__in=["Admin", "Standard"]).count() == 2
+
+
+def test_standard_role_permissions_on_ledger(db):
+    call_command("setup_roles")
+    perms = set(Group.objects.get(name="Standard").permissions.values_list("codename", flat=True))
+    assert {"add_journalentry", "view_accountingperiod"} <= perms
+    assert "add_accountingperiod" not in perms and "delete_journalentry" not in perms

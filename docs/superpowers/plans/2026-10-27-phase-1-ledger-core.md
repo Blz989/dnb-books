@@ -177,7 +177,7 @@ Note: `setup_roles` runs after Task 3 models exist; write the permission assignm
   - `BEFORE UPDATE ON ledger_journalentry WHEN OLD.status = 'VOID' OR (OLD.status = 'POSTED' AND (NEW.status NOT IN ('POSTED','VOID') OR NEW.date IS NOT OLD.date OR NEW.reference IS NOT OLD.reference OR NEW.memo IS NOT OLD.memo OR NEW.source_type IS NOT OLD.source_type OR NEW.source_id IS NOT OLD.source_id OR NEW.reverses_id IS NOT OLD.reverses_id))` → abort.
   - `BEFORE INSERT`, `BEFORE UPDATE`, `BEFORE DELETE ON ledger_journalline` when the parent entry's status is not `'DRAFT'` → abort.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_subtype_must_match_type(db):
@@ -211,10 +211,10 @@ def test_in_ledger_excludes_drafts(draft_entry, posted_entry):
 
 Fixtures in `conftest.py`: `cash` (1000, ASSET/BANK), `revenue` (4000, INCOME/INCOME), `expense` (6000, EXPENSE/EXPENSE), `ar`, `ap`, `equity` as needed; `draft_entry`; `posted_entry` built as a DRAFT with two lines, then promoted with `JournalEntry.objects.filter(pk=...).update(status=EntryStatus.POSTED)` (the trigger allows DRAFT→POSTED); switch it to `post_entry` in Task 5.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement models, errors, generate 0001, hand-write 0002 triggers, register with auditlog**
-- [ ] **Step 4: Run, expect PASS**; also re-run `tests/test_roles.py` (setup_roles now finds ledger models)
-- [ ] **Step 5: Commit** `feat: ledger models with model and trigger immutability`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement models, errors, generate 0001, hand-write 0002 triggers, register with auditlog**
+- [x] **Step 4: Run, expect PASS**; also re-run `tests/test_roles.py` (setup_roles now finds ledger models)
+- [x] **Step 5: Commit** `feat: ledger models with model and trigger immutability`
 
 ---
 
