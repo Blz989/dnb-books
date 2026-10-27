@@ -1,0 +1,79 @@
+<!doctype html>
+<!-- Approved check reference for DNB Books (Phase 5a). Green = simulated pre-printed stock, black = printed by the app. Not app code. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@600&display=swap" rel="stylesheet">
+<style>
+@page { size: letter; margin: 0; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, sans-serif; color: #111; background: #fff; }
+.sheet { position: relative; width: 8.5in; height: 11in; }
+/* simulated pre-printed stock (NOT printed by the app) */
+.stock { position: absolute; inset: 0; }
+.stock .check { position: absolute; left: 0; top: 0; width: 8.5in; height: 3.5in; background: repeating-linear-gradient(135deg, #eef3f0 0 6px, #e6eee9 6px 12px); border-bottom: 1px dashed #9aa; }
+.stock .bank { position: absolute; left: .45in; top: .3in; font-size: 9pt; color: #57706a; line-height: 1.35; }
+.stock .co { position: absolute; left: 3.3in; top: .3in; font-size: 9pt; color: #57706a; }
+.stock .no { position: absolute; right: .45in; top: .3in; font-size: 11pt; color: #57706a; }
+.stock .lbl { position: absolute; font-size: 7.5pt; color: #6b8a83; text-transform: uppercase; letter-spacing: .05em; }
+.stock .line { position: absolute; border-bottom: 1px solid #7f9a93; }
+.stock .micr { position: absolute; left: 1.2in; top: 3.08in; font-family: monospace; font-size: 12pt; color: #6b8a83; letter-spacing: .12em; }
+.stock .sig { position: absolute; left: 5.2in; top: 2.55in; width: 2.8in; border-bottom: 1px solid #7f9a93; font-size: 7.5pt; color: #6b8a83; padding-top: 22pt; text-align: right; }
+.stock .stub { position: absolute; left: 0; width: 8.5in; height: 3.75in; border-bottom: 1px dashed #9aa; }
+/* what DNB Books prints */
+.f { position: absolute; font-size: 10.5pt; }
+.amt { font-weight: 600; font-variant-numeric: tabular-nums; }
+.stubtext { position: absolute; left: .45in; width: 7.6in; font-size: 9pt; }
+.stubtext h4 { margin: 0 0 6pt; font-family: "Source Serif 4"; font-size: 11pt; display: flex; justify-content: space-between; }
+.stubtext table { width: 100%; border-collapse: collapse; }
+.stubtext th { text-align: left; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .05em; color: #555; border-bottom: 1px solid #999; padding: 3pt 4pt; }
+.stubtext td { padding: 3pt 4pt; border-bottom: 1px solid #ddd; }
+.r { text-align: right; font-variant-numeric: tabular-nums; }
+.legend { position: absolute; right: .3in; bottom: .25in; font-size: 7.5pt; color: #8a6d3b; background: #fff8e6; border: 1px solid #f0d9a8; padding: 4pt 6pt; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="stock">
+    <div class="check">
+      <div class="bank">EXAMPLE BANK<br>Springfield, IL</div>
+      <div class="co">DNB SUPPLY CO. · 1450 Commerce Drive</div>
+      <div class="no">2051</div>
+      <div class="lbl" style="left:5.7in;top:.95in">Date</div><div class="line" style="left:6.1in;top:1.05in;width:1.9in"></div>
+      <div class="lbl" style="left:.45in;top:1.38in">Pay to the order of</div><div class="line" style="left:1.75in;top:1.48in;width:4.6in"></div>
+      <div class="lbl" style="left:6.55in;top:1.38in">$</div><div class="line" style="left:6.7in;top:1.48in;width:1.35in"></div>
+      <div class="line" style="left:.45in;top:1.9in;width:6.6in"></div><div class="lbl" style="left:7.15in;top:1.8in">Dollars</div>
+      <div class="lbl" style="left:.45in;top:2.85in">Memo</div><div class="line" style="left:.9in;top:2.95in;width:3.4in"></div>
+      <div class="sig">Authorized signature</div>
+      <div class="micr">⑆000000000⑆ 0000000000⑈ 2051</div>
+    </div>
+    <div class="stub" style="top:3.5in"></div>
+    <div class="stub" style="top:7.25in;border-bottom:0"></div>
+  </div>
+
+  <!-- printed fields -->
+  <div class="f" style="left:6.15in;top:.86in">Nov 3, 2026</div>
+  <div class="f" style="left:1.8in;top:1.29in;font-weight:600">Acme Supply Co.</div>
+  <div class="f amt" style="left:6.78in;top:1.29in">**1,075.00</div>
+  <div class="f" style="left:.5in;top:1.71in">One thousand seventy-five and 00/100*****************************</div>
+  <div class="f" style="left:.95in;top:2.76in;font-size:9pt">Inv 88123, 88140</div>
+  <div class="f" style="left:.95in;top:2.1in;font-size:9.5pt;line-height:1.3">Acme Supply Co.<br>PO Box 400<br>Decatur, IL 62521</div>
+
+  <div class="stubtext" style="top:3.75in">
+    <h4><span>Acme Supply Co.</span><span>Check 2051 · Nov 3, 2026 · $1,075.00</span></h4>
+    <table><thead><tr><th>Bill</th><th>Your invoice #</th><th>Bill date</th><th class="r">Bill amount</th><th class="r">Paid</th></tr></thead>
+    <tbody><tr><td>BILL-00310</td><td>88123</td><td>Oct 27, 2026</td><td class="r">1,075.00</td><td class="r">1,000.00</td></tr>
+    <tr><td>BILL-00318</td><td>88140</td><td>Oct 30, 2026</td><td class="r">75.00</td><td class="r">75.00</td></tr></tbody></table>
+  </div>
+  <div class="stubtext" style="top:7.5in">
+    <h4><span>Acme Supply Co.</span><span>Check 2051 · Nov 3, 2026 · $1,075.00</span></h4>
+    <table><thead><tr><th>Bill</th><th>Your invoice #</th><th>Bill date</th><th class="r">Bill amount</th><th class="r">Paid</th></tr></thead>
+    <tbody><tr><td>BILL-00310</td><td>88123</td><td>Oct 27, 2026</td><td class="r">1,075.00</td><td class="r">1,000.00</td></tr>
+    <tr><td>BILL-00318</td><td>88140</td><td>Oct 30, 2026</td><td class="r">75.00</td><td class="r">75.00</td></tr></tbody></table>
+    <div style="margin-top:6pt;color:#555">Paid from 1000 Business Checking</div>
+  </div>
+  <div class="legend">Green tint, lines, bank name and MICR = your pre-printed stock (not printed). Black text = what DNB Books prints.</div>
+</div>
+</body>
+</html>
