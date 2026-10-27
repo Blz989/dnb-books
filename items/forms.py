@@ -109,3 +109,32 @@ class ItemForm(forms.ModelForm):
         if commit:
             item.save()
         return item
+
+
+DATE_ERROR = "Enter a date like 2026-01-31."
+REASONS = ["Damaged", "Lost", "Sample", "Correction", "Other"]
+
+
+class ValueAdjustForm(forms.Form):
+    date = forms.DateField(
+        label="Date", input_formats=["%Y-%m-%d"], widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        error_messages={"invalid": DATE_ERROR, "required": DATE_ERROR})
+    mode = forms.ChoiceField(label="Amount is", choices=[("total", "New total value"), ("change", "Change by (+ or -)")])
+    amount = forms.DecimalField(label="Amount", decimal_places=2, max_digits=14, error_messages={
+        "invalid": "Enter an amount.", "required": "Enter an amount.", "max_decimal_places": "Enter an amount with at most 2 decimal places.",
+        "max_digits": "Enter a smaller amount.", "max_whole_digits": "Enter a smaller amount."})
+    reason = forms.CharField(label="Reason", max_length=200, error_messages={"required": "Enter a reason."})
+    token = forms.CharField(widget=forms.HiddenInput, required=False)
+
+
+class VoidMovementForm(forms.Form):
+    date = forms.DateField(
+        label="Void date", input_formats=["%Y-%m-%d"], widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        error_messages={"invalid": DATE_ERROR, "required": DATE_ERROR})
+    reason = forms.CharField(label="Reason", max_length=200, error_messages={"required": "Enter a reason."})
+
+
+class AdjustDateForm(forms.Form):
+    date = forms.DateField(
+        label="Date", input_formats=["%Y-%m-%d"], widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        error_messages={"invalid": DATE_ERROR, "required": DATE_ERROR})

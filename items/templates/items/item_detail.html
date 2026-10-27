@@ -40,7 +40,7 @@
 <h2>Stock history</h2>
 <div class="card">
 <table class="data">
-  <thead><tr><th>Date</th><th>Kind</th><th class="num">Quantity</th><th class="num">Unit cost</th><th class="num">Value</th><th class="num">Balance</th><th>Entry</th><th>User</th><th>Reason</th></tr></thead>
+  <thead><tr><th>Date</th><th>Kind</th><th class="num">Quantity</th><th class="num">Unit cost</th><th class="num">Value</th><th class="num">Balance</th><th>Entry</th><th>User</th><th>Reason</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
   <tbody>
   {% for h in history %}
     {% with m=h.movement %}
@@ -54,6 +54,7 @@
       <td>{% if m.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' m.journal_entry.pk %}">{{ m.journal_entry.display_number }}</a>{% else %}<span class="dash">—</span>{% endif %}</td>
       <td>{{ m.created_by.get_username }}</td>
       <td>{{ m.reason }}</td>
+      {% if is_admin %}<td>{% if not m.voided %}<a href="{% url 'items:void-movement' m.pk %}">Void</a>{% endif %}</td>{% endif %}
     </tr>
     {% for r in h.revisions %}
     <tr>
@@ -61,11 +62,11 @@
       <td colspan="3" style="padding-left: 32px" class="dash">↳ Cost correction</td>
       <td class="num{% if r.delta < 0 %} neg{% endif %}">{{ r.delta|floatformat:"2g" }}</td><td></td>
       <td>{% if r.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' r.journal_entry.pk %}">{{ r.journal_entry.display_number }}</a>{% endif %}</td>
-      <td></td><td></td>
+      <td></td><td></td>{% if is_admin %}<td></td>{% endif %}
     </tr>
     {% endfor %}
     {% endwith %}
-  {% empty %}<tr><td colspan="9" class="empty">No stock history yet.</td></tr>
+  {% empty %}<tr><td colspan="10" class="empty">No stock history yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>

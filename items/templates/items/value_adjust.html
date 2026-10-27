@@ -1,0 +1,24 @@
+{% extends "core/base.html" %}
+{% block title %}Value adjustment {{ item.sku }}{% endblock %}
+{% block page_title %}Value adjustment{% endblock %}
+{% block page_subtitle %}<div class="sub"><span class="sku">{{ item.sku }}</span> {{ item.name }}</div>{% endblock %}
+{% block content %}
+{% include "items/_errors.html" %}
+<div class="kpis">
+  <div class="kpi"><div class="l">On hand</div><div class="v">{{ on_hand }}</div></div>
+  <div class="kpi"><div class="l">Current value</div><div class="v">{{ value|floatformat:"2g" }}</div></div>
+</div>
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  {{ form.token }}
+  {% for field in form.visible_fields %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn primary">Save value adjustment</button>
+  <a class="btn" href="{% url 'items:detail' item.sku %}">Cancel</a>
+</form>
+</div></div>
+{% endblock %}

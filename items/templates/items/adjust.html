@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Quantity adjustment{% endblock %}
+{% block page_title %}Quantity adjustment{% endblock %}
+{% block page_subtitle %}<div class="sub">Add or remove stock. Use + to add and - to remove.</div>{% endblock %}
+{% block content %}
+{% include "items/_errors.html" %}
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <div class="card"><div class="body">
+    <div class="form-row" style="max-width:14rem"><label for="id_date">Date</label>{{ date_form.date }}
+      {% for e in date_form.date.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  </div>
+  <table class="data" id="adjust-lines">
+    <thead><tr><th>#</th><th>Item SKU</th><th class="num">Quantity (±)</th><th>Reason</th><th>Note</th><th>Account</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr{% if r.index >= shown %} hidden data-extra{% endif %}>
+        <td>{{ forloop.counter }}</td>
+        <td><input type="text" name="lines-{{ r.index }}-sku" value="{{ r.sku }}" autocapitalize="characters" maxlength="50"></td>
+        <td class="num"><input type="text" inputmode="numeric" name="lines-{{ r.index }}-quantity" value="{{ r.quantity }}" style="text-align:right"></td>
+        <td><select name="lines-{{ r.index }}-reason">{% for reason in reasons %}<option{% if r.reason == reason %} selected{% endif %}>{{ reason }}</option>{% endfor %}</select></td>
+        <td><input type="text" name="lines-{{ r.index }}-note" value="{{ r.note }}" maxlength="150"></td>
+        <td><select name="lines-{{ r.index }}-account"><option value="">{% if default_account %}{{ default_account.name }}{% else %}Default{% endif %}</option>
+          {% for a in accounts %}<option value="{{ a.pk }}"{% if r.account == a.pk|stringformat:"s" %} selected{% endif %}>{{ a }}</option>{% endfor %}</select></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot"><button type="button" class="btn" id="add-line">+ Add line</button><span></span></div>
+  </div>
+  <button type="submit" class="btn primary">Save adjustment</button>
+  <a class="btn" href="{% url 'items:adjustments' %}">Cancel</a>
+</form>
+<script src="{% static 'core/adjust.js' %}" defer></script>
+{% endblock %}

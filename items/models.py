@@ -261,5 +261,12 @@ class InventorySettings(models.Model):
         super().save(*args, **kwargs)
 
 
+class SubmittedToken(models.Model):
+    """One-time form tokens: a second submit of the same form (double click, browser resubmit) is refused."""
+
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 for _model in (Category, Item, StockCount, StockCountLine, InventorySettings):
     auditlog.register(_model)

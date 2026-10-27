@@ -1,0 +1,19 @@
+{% extends "core/base.html" %}
+{% block title %}Confirm adjustment{% endblock %}
+{% block page_title %}Confirm adjustment{% endblock %}
+{% block content %}
+<div class="banner warning"><div>{% for m in warnings %}<div>{{ m }}</div>{% endfor %}</div></div>
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="date" value="{{ date_form.date.value }}">
+  {% for r in rows %}{% if r.sku or r.quantity %}
+  <input type="hidden" name="lines-{{ r.index }}-sku" value="{{ r.sku }}">
+  <input type="hidden" name="lines-{{ r.index }}-quantity" value="{{ r.quantity }}">
+  <input type="hidden" name="lines-{{ r.index }}-reason" value="{{ r.reason }}">
+  <input type="hidden" name="lines-{{ r.index }}-note" value="{{ r.note }}">
+  <input type="hidden" name="lines-{{ r.index }}-account" value="{{ r.account }}">
+  {% endif %}{% endfor %}
+  <button type="submit" name="allow_negative" value="1" class="btn primary">Save anyway</button>
+  <button type="submit" name="back" value="1" class="btn">Go back</button>
+</form>
+{% endblock %}

@@ -506,12 +506,12 @@ def test_bom_and_mixed_case_values(): ...
 - Void: date and reason form; errors shown inline.
 - All `StockError`, `PeriodClosedError`, and `SettingsMissingError` messages render in an error banner; the settings message links to `/items/settings/`.
 
-- [ ] **Step 1: Write failing tests** (adjust posts and redirects with a success message; negative shows confirm page and nothing is saved until "Save anyway"; same token twice posts once; standard user gets 403 on value adjust and void; settings-missing banner links to settings; non-whole quantity shows "Line {n}: quantity must be a whole number.")
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the adjustment form, negative-stock confirmation, success message, value adjustment, void form with an error, adjustments list; light and dark; send.
-- [ ] **Step 6: Commit** `feat: adjustment, value adjustment, and void screens`
+- [x] **Step 1: Write failing tests** (adjust posts and redirects with a success message; negative shows confirm page and nothing is saved until "Save anyway"; same token twice posts once; standard user gets 403 on value adjust and void; settings-missing banner links to settings; non-whole quantity shows "Line {n}: quantity must be a whole number.")
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the adjustment form, negative-stock confirmation, success message, value adjustment, void form with an error, adjustments list; light and dark; send.
+- [x] **Step 6: Commit** `feat: adjustment, value adjustment, and void screens`
 
 ---
 

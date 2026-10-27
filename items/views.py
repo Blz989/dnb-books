@@ -1,9 +1,12 @@
 from datetime import date
 from decimal import Decimal
 
+import uuid
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -14,9 +17,17 @@ from ledger.forms import AsOfForm
 from ledger.views import _data, _today, _wants_csv
 
 from . import csv_export, reports
-from .forms import ItemForm, MovementsForm
-from .models import Category, Item, ItemType, StockMovement
-from .stock import current_unit_cost, effective_total, on_hand
+from core.roles import require_admin
+from ledger.errors import PostingError
+from ledger.models import Account, AccountType
+
+from .errors import NegativeStockWarning, SettingsMissingError, StockError
+from .forms import REASONS, AdjustDateForm, ItemForm, MovementsForm, ValueAdjustForm, VoidMovementForm
+from .models import Category, InventorySettings, Item, ItemType, MovementKind, StockMovement, SubmittedToken
+from .stock import (
+    StockLine, current_unit_cost, effective_total, on_hand, record_movements, record_value_adjustment, stock_value,
+    void_movement,
+)
 
 PAGE_SIZE = 50
 
@@ -168,3 +179,193 @@ def negative_stock(request):
     if _wants_csv(request):
         return csv_export.negative_stock_csv(rows)
     return render(request, "items/negative_stock.html", {"rows": rows, "nav_active": "reports"})
+
+
+# ---- adjustments ----
+
+MAX_LINES = 20
+ALREADY_SAVED = "This adjustment was already saved."
+
+
+def _claim_token(token: str) -> bool:
+    """Record a form token inside the caller's transaction. False when it was already used."""
+    if not token:
+        return True
+    try:
+        with transaction.atomic():
+            SubmittedToken.objects.create(token=token)
+    except IntegrityError:
+        return False
+    return True
+
+
+def _token_used(token: str) -> bool:
+    return bool(token) and SubmittedToken.objects.filter(token=token).exists()
+
+
+def _error_messages(exc) -> dict:
+    return {"errors": [str(exc)], "settings_link": isinstance(exc, SettingsMissingError)}
+
+
+def _adjust_accounts():
+    return Account.objects.filter(type=AccountType.EXPENSE, is_active=True).order_by("number")
+
+
+def _read_rows(post):
+    return [
+        {"index": i, "sku": post.get(f"lines-{i}-sku", "").strip(), "quantity": post.get(f"lines-{i}-quantity", "").strip(),
+         "reason": post.get(f"lines-{i}-reason", "Damaged"), "note": post.get(f"lines-{i}-note", "").strip(),
+         "account": post.get(f"lines-{i}-account", "")}
+        for i in range(MAX_LINES)
+    ]
+
+
+def _build_lines(rows):
+    lines, errors = [], []
+    n = 0
+    for row in rows:
+        if not row["sku"] and not row["quantity"]:
+            continue
+        n += 1
+        item = Item.objects.filter(sku__iexact=row["sku"]).first() if row["sku"] else None
+        if not row["sku"]:
+            errors.append(f"Line {n}: choose an item.")
+        elif item is None:
+            errors.append(f"Line {n}: no item has SKU {row['sku']}.")
+        try:
+            quantity = int(row["quantity"])
+        except ValueError:
+            errors.append(f"Line {n}: quantity must be a whole number.")
+            continue
+        if row["reason"] not in REASONS:
+            errors.append(f"Line {n}: choose a reason.")
+            continue
+        account = None
+        if row["account"]:
+            account = _adjust_accounts().filter(pk=row["account"]).first() if row["account"].isdigit() else None
+            if account is None:
+                errors.append(f"Line {n}: choose an expense account from the list.")
+                continue
+        if item is None:
+            continue
+        reason = f"{row['reason']}: {row['note']}" if row["note"] else row["reason"]
+        lines.append(StockLine(item, quantity, reason=reason, account=account))
+    if not lines and not errors:
+        errors.append("Add at least one line.")
+    return lines, errors
+
+
+def _adjust_context(request, rows, token, date_form, **extra):
+    shown = max([r["index"] for r in rows if r["sku"] or r["quantity"]] + [3]) + 1
+    settings_row = InventorySettings.load()
+    return {
+        "rows": rows, "token": token, "date_form": date_form, "accounts": _adjust_accounts(), "reasons": REASONS,
+        "default_account": settings_row.shrinkage_account, "shown": shown, "nav_active": "adjustments", **extra,
+    }
+
+
+@login_required
+def adjust(request):
+    if request.method != "POST":
+        rows = _read_rows({})
+        prefill = _item_or_none(request.GET.get("item", ""))
+        if prefill:
+            rows[0]["sku"] = prefill.sku
+        form = AdjustDateForm(initial={"date": _today().isoformat()})
+        return render(request, "items/adjust.html", _adjust_context(request, rows, str(uuid.uuid4()), form))
+
+    token = request.POST.get("token", "")
+    rows = _read_rows(request.POST)
+    if _token_used(token):
+        messages.info(request, ALREADY_SAVED)
+        return redirect(reverse("items:adjustments"))
+    date_form = AdjustDateForm(request.POST)
+    if request.POST.get("back"):
+        return render(request, "items/adjust.html", _adjust_context(request, rows, token, date_form))
+    lines, errors = _build_lines(rows)
+    if not date_form.is_valid():
+        errors = [e for e in date_form.errors["date"]] + errors
+    if errors:
+        return render(request, "items/adjust.html", _adjust_context(request, rows, token, date_form, errors=errors))
+    try:
+        with transaction.atomic():
+            if not _claim_token(token):
+                messages.info(request, ALREADY_SAVED)
+                return redirect(reverse("items:adjustments"))
+            record_movements(
+                kind=MovementKind.ADJUSTMENT, date=date_form.cleaned_data["date"], lines=lines, user=request.user,
+                allow_negative=request.POST.get("allow_negative") == "1")
+    except NegativeStockWarning as warning:
+        return render(request, "items/adjust_confirm.html", _adjust_context(
+            request, rows, token, date_form, warnings=warning.messages))
+    except (StockError, PostingError) as exc:
+        return render(request, "items/adjust.html", _adjust_context(request, rows, token, date_form, **_error_messages(exc)))
+    messages.success(request, f"Saved {len(lines)} adjustment{'s' if len(lines) != 1 else ''}.")
+    if len(lines) == 1:
+        return redirect(reverse("items:detail", args=[lines[0].item.sku]))
+    return redirect(reverse("items:adjustments"))
+
+
+def _item_or_none(sku: str):
+    return Item.objects.filter(sku__iexact=sku.strip()).first() if sku.strip() else None
+
+
+@login_required
+def adjustment_list(request):
+    movements = StockMovement.objects.filter(
+        kind__in=[MovementKind.ADJUSTMENT, MovementKind.VALUE_ADJUSTMENT]
+    ).select_related("item", "journal_entry", "created_by").order_by("-date", "-id")
+    page = Paginator(movements, PAGE_SIZE).get_page(request.GET.get("page"))
+    return render(request, "items/adjustment_list.html", {"page": page, "nav_active": "adjustments"})
+
+
+@login_required
+def value_adjust(request, sku):
+    require_admin(request.user)
+    item = _item_or_404(sku)
+    if not item.is_stock:
+        raise Http404("Not a stock item.")
+    held = on_hand(item)
+    value = stock_value(item)
+    context = {"item": item, "on_hand": held, "value": value, "nav_active": "items"}
+    if request.method != "POST":
+        form = ValueAdjustForm(initial={"date": _today().isoformat(), "mode": "change", "token": str(uuid.uuid4())})
+        return render(request, "items/value_adjust.html", {**context, "form": form})
+    form = ValueAdjustForm(request.POST)
+    token = request.POST.get("token", "")
+    if _token_used(token):
+        messages.info(request, ALREADY_SAVED)
+        return redirect(reverse("items:detail", args=[item.sku]))
+    if not form.is_valid():
+        return render(request, "items/value_adjust.html", {**context, "form": form})
+    data = form.cleaned_data
+    amount = data["amount"] - value if data["mode"] == "total" else data["amount"]
+    try:
+        with transaction.atomic():
+            if not _claim_token(token):
+                messages.info(request, ALREADY_SAVED)
+                return redirect(reverse("items:detail", args=[item.sku]))
+            record_value_adjustment(item=item, date=data["date"], amount=amount, reason=data["reason"], user=request.user)
+    except (StockError, PostingError) as exc:
+        return render(request, "items/value_adjust.html", {**context, "form": form, **_error_messages(exc)})
+    messages.success(request, f"Value adjustment saved for {item.sku}.")
+    return redirect(reverse("items:detail", args=[item.sku]))
+
+
+@login_required
+def void_movement_view(request, pk):
+    require_admin(request.user)
+    movement = get_object_or_404(StockMovement.objects.select_related("item"), pk=pk)
+    context = {"movement": movement, "item": movement.item, "nav_active": "items"}
+    if request.method != "POST":
+        form = VoidMovementForm(initial={"date": _today().isoformat()})
+        return render(request, "items/void_movement.html", {**context, "form": form})
+    form = VoidMovementForm(request.POST)
+    if not form.is_valid():
+        return render(request, "items/void_movement.html", {**context, "form": form})
+    try:
+        void_movement(movement, user=request.user, reason=form.cleaned_data["reason"], date=form.cleaned_data["date"])
+    except (StockError, PostingError) as exc:
+        return render(request, "items/void_movement.html", {**context, "form": form, **_error_messages(exc)})
+    messages.success(request, f"Voided the {movement.get_kind_display().lower()} for {movement.item.sku}.")
+    return redirect(reverse("items:detail", args=[movement.item.sku]))
