@@ -261,7 +261,7 @@ def test_refund_needs_exactly_one_source(db): ...                # IntegrityErro
   - The customer must be active: "{name} is inactive."
   - Invoice date in a closed month: Phase 1 `PeriodClosedError`.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```python
 def test_invoice_posts_revenue_and_cogs(...):
@@ -277,10 +277,10 @@ def test_zero_total_invoice_posts_nothing(...): ...
 def test_due_date_from_terms(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review the posting against the `finance:journal-entry` skill and record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: invoices with stock and drop-ship lines`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review the posting against the `finance:journal-entry` skill and record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: invoices with stock and drop-ship lines`
 
 ---
 

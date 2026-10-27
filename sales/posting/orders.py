@@ -11,7 +11,7 @@ from django.utils import timezone
 from contacts.models import Customer
 from items.models import Item
 
-from ..errors import OrderError
+from ..errors import OrderError, SalesError
 from ..models import (
     DocStatus, DocType, Fulfillment, Invoice, InvoiceLine, OrderStatus, SalesOrder, SalesOrderLine,
 )
@@ -29,21 +29,23 @@ class OrderLineSpec:
     line_id: int | None = None
 
 
-def validate_lines(lines: Sequence) -> None:
+def validate_lines(lines: Sequence, error: type[SalesError] = OrderError) -> None:
     """Shared by orders and invoices. Line numbers are 1-based."""
     for n, line in enumerate(lines, 1):
         if not line.item.is_active:
-            raise OrderError(f"Line {n}: {line.item.sku} is not an active item.")
+            # The Phase 2 wording, for a stock item that would leave the shelf.
+            kind = "stock item" if line.item.is_stock and line.fulfillment == Fulfillment.STOCK else "item"
+            raise error(f"Line {n}: {line.item.sku} is not an active {kind}.")
         if line.quantity is None or line.quantity <= 0:
-            raise OrderError(f"Line {n}: enter a quantity above zero.")
+            raise error(f"Line {n}: enter a quantity above zero.")
         if not isinstance(line.price, Decimal):
             raise TypeError("Prices must be Decimal, never float or int.")
         if line.price < 0:
-            raise OrderError(f"Line {n}: price can't be negative.")
+            raise error(f"Line {n}: price can't be negative.")
         if line.price.as_tuple().exponent < -4:
-            raise OrderError(f"Line {n}: price can have at most 4 decimal places.")
+            raise error(f"Line {n}: price can have at most 4 decimal places.")
         if line.fulfillment == Fulfillment.DROP_SHIP and not (line.drop_ship_vendor or "").strip():
-            raise OrderError(f"Line {n}: enter the drop-ship vendor.")
+            raise error(f"Line {n}: enter the drop-ship vendor.")
 
 
 def _line_values(spec: OrderLineSpec, position: int) -> dict:
