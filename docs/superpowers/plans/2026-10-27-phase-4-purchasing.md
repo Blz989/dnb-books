@@ -336,14 +336,14 @@ def test_invoice_void_releases_allocation(...):
   - `ap_check(as_of: date | None = None) -> list[str]`. A/P ledger balance = credits − debits on the settings A/P account. The message is "Vendor balances say {x}, the A/P account says {y}."
   - `close_check(year, month) -> list[str]`, prefixed "{Month YYYY}: " and registered in `ready()`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Empty after a mixed scenario.
   - A manual entry to A/P is reported and blocks the close; the admin override works.
   - A `hypothesis.extra.django.TestCase` property test: random sequences of PO, bill (stock, drop-ship, expense), edit, payment, application, removal, credit, and void keep `ap_check`, `items.stock.check_invariants`, `sales.checks.ar_check`, and `undeposited_check` empty, at the end and at every date touched.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review against the `finance:reconciliation` skill and record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: A/P check at month close`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review against the `finance:reconciliation` skill and record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: A/P check at month close`
 
 ---
 

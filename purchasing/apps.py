@@ -20,3 +20,9 @@ class PurchasingConfig(AppConfig):
         from .dropship import on_invoice_changed
 
         hooks.register_invoice_changed(on_invoice_changed)
+
+        from ledger.periods import register_close_check
+
+        from .checks import close_check
+
+        register_close_check(close_check)
