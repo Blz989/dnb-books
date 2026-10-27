@@ -4,20 +4,23 @@ Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. 
 
 ## Source of truth
 
-- **Spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md` (whole system, approved).
-- **Current plan:** `docs/superpowers/plans/2026-10-27-phase-1-ledger-core.md` (Phase 1, approved).
+- **System spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md` (whole system, approved).
+- **Current phase spec:** `docs/superpowers/specs/2026-10-27-phase-2-items-inventory-design.md` (Phase 2, approved).
+- **Current plan:** `docs/superpowers/plans/2026-10-27-phase-2-items-inventory.md` (Phase 2, approved).
+- **Visual reference:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`). All screens match it.
+- **Done:** Phase 1, `docs/superpowers/plans/2026-10-27-phase-1-ledger-core.md` (merged).
 
-Read both before starting. The plan's Global Constraints, Review Focus, and per-task Interfaces blocks are binding. If the plan and spec conflict, or a plan step cannot work as written, stop and ask the owner rather than improvising a different design. Small mechanical fixes to the plan (a wrong import path, a typo in a test) are fine; note them in the PR.
+Read the specs and the current plan before starting. The plan's Global Constraints, Review Focus, and per-task Interfaces blocks are binding. If the plan and spec conflict, or a plan step cannot work as written, stop and ask the owner rather than improvising a different design. Small mechanical fixes to the plan (a wrong import path, a typo in a test) are fine; note them in the PR.
 
-## How to execute Phase 1
+## How to execute the current plan
 
-1. Work on a new branch named `claude/phase-1-ledger-core`, created from whichever branch holds this file (`main` if the handoff commit has been merged, otherwise `claude/phase-1-handoff`).
-2. Use the `superpowers:subagent-driven-development` skill to execute the plan task by task (fallback: `superpowers:executing-plans`). Follow TDD as each task's steps describe: failing test, confirm it fails, implement, confirm it passes, commit.
+1. Work on a new branch from `main` named after the phase (Phase 2: `claude/phase-2-items-inventory`).
+2. Use the `superpowers:subagent-driven-development` skill to execute the plan task by task, unless the owner chooses inline execution (`superpowers:executing-plans`). Follow TDD as each task's steps describe: failing test, confirm it fails, implement, confirm it passes, commit.
 3. One commit per task at minimum, using the commit message given in the task.
 4. Tick the plan's checkboxes (`- [ ]` to `- [x]`) as steps complete, and commit that with the task.
-5. During Task 7, use the `finance:journal-entry` and `finance:financial-statements` skills to review posting and report logic. Record findings in that task's commit body.
-6. Keep `README.md` current: Tasks 1 and 10 fill in its "Getting started" section, and the "Status" line should say Phase 1 is built once the PR is ready. Do not remove the overview, roadmap, or cutover criteria.
-7. When all 11 tasks pass, open a PR into `main` titled `Phase 1: Ledger core`. The PR body lists each task with its status, the final `uv run pytest -q` output, any deviations from the plan and why, and the manual checks from Task 11 Step 3 that could not be run in a cloud container (these are for the owner to do on the office PC).
+5. Use the finance skills where the plan names them (`finance:journal-entry`, `finance:financial-statements`, `finance:reconciliation`). Record findings in that task's commit body.
+6. Keep `README.md` current, including the "Status" line once the PR is ready. Do not remove the overview, roadmap, or cutover criteria.
+7. When all tasks pass, open a PR into `main` titled `Phase N: <name>`. The PR body lists each task with its status, the final `uv run pytest -q` output, any deviations from the plan and why, every screenshot set sent, and any manual checks the owner must do on the office PC.
 
 ## Standing rule: send screenshots of anything the owner will see
 
@@ -54,7 +57,7 @@ uv run python manage.py serve    # start the app (waitress) on 0.0.0.0:8000
 ## Conventions
 
 - Python 3.12+, Django 5.2 LTS. Keep dependencies to the list in the plan's Tech Stack; ask before adding any other.
-- One Django app per module (`core`, `ledger`, `backup` in Phase 1). Keep files focused; split a file when it grows past one clear responsibility.
+- One Django app per module (`core`, `ledger`, `backup`, `items`). Keep files focused; split a file when it grows past one clear responsibility.
 - Tests live in `tests/`, pytest style, one file per task area as the plan names them.
 - American English (-ize spellings) in code, UI text, and docs.
 - UI text is plain and short. No marketing tone.
