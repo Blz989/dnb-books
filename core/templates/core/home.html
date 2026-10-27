@@ -1,6 +1,7 @@
 {% extends "core/base.html" %}
 {% block content %}
 <h1>DNB Books</h1>
+<div class="banner {{ backup.level }}">{{ backup.message }}</div>
 <h2>Reports</h2>
 <ul>
   <li><a href="{% url 'reports:trial-balance' %}">Trial balance</a></li>

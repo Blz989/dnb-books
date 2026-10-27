@@ -4,11 +4,12 @@ import re
 import sqlite3
 import tempfile
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 from django.utils import timezone
 
@@ -135,3 +136,71 @@ def run_backup(now: datetime | None = None) -> BackupRun:
     run.finished_at = timezone.now()
     run.save()
     return run
+
+
+@dataclass
+class DrillResult:
+    ok: bool
+    backup_file: str
+    expected: str
+    actual: str
+    message: str
+
+
+def restore_drill() -> DrillResult:
+    """Decrypt the newest good backup into a scratch folder and compare its ledger to what was recorded."""
+    run = BackupRun.objects.filter(status=BackupRun.Status.SUCCESS).order_by("-started_at", "-id").first()
+    if run is None:
+        return DrillResult(False, "", "", "", "No successful backup to check yet. Run backup_now first.")
+    source = Path(settings.DNB_BACKUP_DIR) / run.filename
+
+    def fail(message, actual=""):
+        return DrillResult(False, run.filename, run.ledger_fingerprint, actual, f"Restore drill failed: {message}")
+
+    if not source.exists():
+        return fail(f"{run.filename} is missing from {settings.DNB_BACKUP_DIR}.")
+    with tempfile.TemporaryDirectory() as tmp:
+        restored = Path(tmp) / "restored.sqlite3"
+        try:
+            decrypt_file(source, restored, settings.DNB_BACKUP_KEY)
+        except (InvalidToken, ValueError):
+            return fail("couldn't decrypt the backup. The key in .env may not be the one it was made with.")
+        try:
+            conn = sqlite3.connect(f"{restored.as_uri()}?mode=ro", uri=True)
+            try:
+                actual = ledger_fingerprint(conn)
+            finally:
+                conn.close()
+        except sqlite3.DatabaseError as exc:
+            return fail(f"the restored file isn't a readable database ({exc}).")
+    if actual != run.ledger_fingerprint:
+        return fail(f"the ledger in {run.filename} does not match what was backed up.", actual)
+    return DrillResult(
+        True, run.filename, run.ledger_fingerprint, actual,
+        f"Restore drill passed: {run.filename} restores and its ledger matches.",
+    )
+
+
+@dataclass
+class BackupStatus:
+    level: str  # "ok" | "warning" | "error"
+    message: str
+
+
+STALE_AFTER = timedelta(hours=26)
+
+
+def _friendly(ts: datetime) -> str:
+    ts = timezone.localtime(ts)
+    return f"{ts:%b} {ts.day}, {ts.year} at {ts.hour % 12 or 12}:{ts:%M} {ts:%p}"  # no %-d: works on Windows
+
+
+def backup_status(now: datetime) -> BackupStatus:
+    finished = BackupRun.objects.exclude(status=BackupRun.Status.RUNNING).order_by("-started_at", "-id")
+    latest = finished.first()
+    if latest is not None and latest.status == BackupRun.Status.FAILED:
+        return BackupStatus("error", f"Last backup failed: {latest.error}")
+    success = finished.filter(status=BackupRun.Status.SUCCESS).first()
+    if success is None or now - (success.finished_at or success.started_at) > STALE_AFTER:
+        return BackupStatus("warning", "No successful backup in the last 26 hours.")
+    return BackupStatus("ok", f"Last backup {_friendly(success.finished_at or success.started_at)}.")

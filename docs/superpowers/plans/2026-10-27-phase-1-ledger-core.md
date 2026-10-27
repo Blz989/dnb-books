@@ -529,7 +529,7 @@ def test_retention(tmp_path):
   - Home page renders the status as a colored banner, visible to every logged-in user.
   - README section "Nightly backup" (under "Getting started"): Windows Task Scheduler and Linux cron instructions running `backup_now` at 1:15 AM, and `restore_drill` on the 1st of each month.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_drill_passes_on_fresh_backup(file_db_with_entries, tmp_path, settings): ...
@@ -542,10 +542,10 @@ def test_home_shows_banner(client, standard_user, failed_run):
     assert b"Last backup failed" in client.get("/").content
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: restore drill, restore command, backup status on home screen`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: restore drill, restore command, backup status on home screen`
 
 ---
 
