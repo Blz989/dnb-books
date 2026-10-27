@@ -513,7 +513,7 @@ def test_void_reopens_closed_order(...): ...
 - "Invoice a shipment" pre-fills each line's remaining quantity and shows the on-hand count next to stock lines.
 - The invoice detail page shows lines, totals, balance, applications (with "Remove" for allowed users), revisions (each opening `invoice_revision`, read-only), journal entry links, and buttons: Edit, Download PDF, Void (admin).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Create an order and invoice a shipment through the views.
   - Over-invoicing shows the message.
   - The negative confirm flow.
@@ -521,11 +521,11 @@ def test_void_reopens_closed_order(...): ...
   - Edit creates revision 2 and the revision page shows the old lines.
   - Void is admin only.
   - An unknown number returns a 404 page in the app's style.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (extend demo: two orders, three invoices, one drop-ship line, one edited invoice)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the order list, order form, order detail (partly invoiced), invoice-a-shipment (with an on-hand warning), negative confirm, invoice list, invoice detail (with revisions), revision view, and the void form. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: sales order and invoice screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (extend demo: two orders, three invoices, one drop-ship line, one edited invoice)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the order list, order form, order detail (partly invoiced), invoice-a-shipment (with an on-hand warning), negative confirm, invoice list, invoice detail (with revisions), revision view, and the void form. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: sales order and invoice screens`
 
 ---
 

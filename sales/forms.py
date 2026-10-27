@@ -1,6 +1,7 @@
 from django import forms
 
-from ledger.forms import date_field  # noqa: F401  (re-exported for the sales screens)
+from contacts.models import Customer, Terms
+from ledger.forms import date_field
 from ledger.models import Account, AccountSubtype
 
 from .models import SalesSettings
@@ -71,3 +72,42 @@ class SalesSettingsForm(forms.ModelForm):
             raise forms.ValidationError(LOGO_MESSAGE)
         self.logo_data, self.logo_extension = data, extension
         return upload
+
+
+class OrderHeaderForm(forms.Form):
+    customer = forms.ModelChoiceField(
+        Customer.objects.none(),
+        error_messages={"required": "Choose a customer.", "invalid_choice": "Choose a customer."})
+    date = date_field("Date")
+    ship_to = forms.CharField(
+        label="Ship to", required=False, widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Leave blank to use the customer's default ship-to address.")
+    notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+
+    def __init__(self, *args, all_customers: bool = False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["customer"].queryset = Customer.objects.all() if all_customers else Customer.objects.filter(is_active=True)
+
+
+class InvoiceHeaderForm(OrderHeaderForm):
+    terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Customer's default")] + list(Terms.choices))
+    reason = forms.CharField(label="Reason for the change", required=False, max_length=200)
+    field_order = ["customer", "date", "terms", "ship_to", "notes", "reason"]
+
+    def __init__(self, *args, editing: bool = False, **kwargs):
+        super().__init__(*args, all_customers=editing, **kwargs)
+        self.fields["ship_to"].help_text = "" if editing else self.fields["ship_to"].help_text
+        if not editing:
+            del self.fields["reason"]
+
+
+class ShipmentHeaderForm(forms.Form):
+    date = date_field("Invoice date")
+    terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Customer's default")] + list(Terms.choices))
+    ship_to = forms.CharField(label="Ship to", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+
+
+class VoidDocForm(forms.Form):
+    date = date_field("Void date")
+    reason = forms.CharField(label="Reason", max_length=200, error_messages={"required": "Enter a reason."})

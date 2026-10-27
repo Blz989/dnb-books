@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block title %}Sales orders{% endblock %}
+{% block page_title %}Sales orders{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ page.paginator.count }} order{{ page.paginator.count|pluralize }}</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'sales:order-new' %}">+ New sales order</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <form method="get" class="filters">
+    <label class="grow">Search<input type="search" name="q" value="{{ q }}" placeholder="Order number or customer"></label>
+    <label>Status<select name="status"><option value="">All</option><option value="OPEN"{% if status == "OPEN" %} selected{% endif %}>Open</option><option value="CLOSED"{% if status == "CLOSED" %} selected{% endif %}>Closed</option></select></label>
+    <label>Customer<select name="customer"><option value="">All customers</option>{% for c in customers %}<option value="{{ c.pk }}"{% if customer == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+    <button type="submit" class="btn primary">Search</button>
+  </form>
+  <table class="data">
+    <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th><th class="num">Units left to invoice</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td><a class="sku" href="{% url 'sales:order-detail' r.order.number %}">{{ r.order.number }}</a></td>
+        <td>{{ r.order.customer.name }}</td><td>{{ r.order.date|date:"Y-m-d" }}</td>
+        <td><span class="tag{% if r.order.status == 'CLOSED' %} ns{% endif %}">{{ r.order.get_status_display }}</span></td>
+        <td class="num">{% if r.order.status == "OPEN" %}{{ r.left }}{% else %}<span class="dash">—</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">No sales orders yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>{% if page.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+      {% if page.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

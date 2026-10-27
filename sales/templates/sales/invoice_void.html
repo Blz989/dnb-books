@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+{% block title %}Void {{ invoice.number }}{% endblock %}
+{% block page_title %}Void {{ invoice.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ invoice.customer.name }} · {{ invoice.date|date:"Y-m-d" }}</div>{% endblock %}
+{% block content %}
+{% include "sales/_errors.html" %}
+<div class="banner info">Voiding posts reversing entries, puts the stock back, and keeps the invoice and its number on record. The void date must be in an open month.</div>
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  {% for field in form %}
+  <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  {% endfor %}
+  <button type="submit" class="btn primary">Void invoice</button>
+  <a class="btn" href="{% url 'sales:invoice-detail' invoice.number %}">Cancel</a>
+</form>
+</div></div>
+{% endblock %}

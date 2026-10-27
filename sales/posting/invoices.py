@@ -152,7 +152,7 @@ def create_invoice(
 
 def invoice_from_order(
     order: SalesOrder, *, date: date_type, quantities: dict[int, int], user, allow_negative: bool = False,
-    ship_to: str | None = None, notes: str | None = None,
+    ship_to: str | None = None, notes: str | None = None, terms: Terms | None = None,
 ) -> Invoice:
     by_id = {l.pk: l for l in order.lines.select_related("item")}
     unknown = set(quantities) - set(by_id)
@@ -167,7 +167,7 @@ def invoice_from_order(
     ]
     return create_invoice(
         customer=order.customer, date=date, lines=specs, user=user, sales_order=order, ship_to=ship_to, notes=notes,
-        allow_negative=allow_negative,
+        terms=terms, allow_negative=allow_negative,
     )
 
 
