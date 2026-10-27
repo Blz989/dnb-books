@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs on one computer in the office, and everyone else uses it from a web browser on the office network.
 
-> **Status:** Design approved. Phase 1 (ledger core) is ready to build. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Phase 1 (ledger core) is built and tested. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
