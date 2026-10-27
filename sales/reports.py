@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
+from django.utils import timezone
+
 from contacts.models import Customer
 from ledger.balances import money
 
@@ -98,7 +100,7 @@ class OpenInvoiceRow:
 def open_invoices(
     as_of: date | None = None, customer: Customer | None = None, overdue_only: bool = False,
 ) -> list[OpenInvoiceRow]:
-    today = as_of or date.today()
+    today = as_of or timezone.localdate()
     invoices = Invoice.objects.select_related("customer").order_by("due_date", "date", "id")
     if customer is not None:
         invoices = invoices.filter(customer=customer)

@@ -1,0 +1,42 @@
+{% extends "core/base.html" %}
+{% block title %}Sales settings{% endblock %}
+{% block page_title %}Sales settings{% endblock %}
+{% block page_subtitle %}<div class="sub">Accounts, company details for invoices, and document numbering</div>{% endblock %}
+{% block content %}
+{% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<div class="card"><div class="body">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  <input type="hidden" name="action" value="settings">
+  {% for field in form %}{% if field.name != "remove_logo" or has_logo %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {% if field.name == "logo" and has_logo %}<img src="{% url 'sales:logo' %}" alt="Current logo" style="max-height:56px;max-width:200px;align-self:flex-start">{% endif %}
+    {{ field }}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endif %}{% endfor %}
+  <button type="submit" class="btn primary">Save settings</button>
+</form>
+</div></div>
+
+<h2>Numbering</h2>
+<div class="card"><div class="body">
+<p class="help">Set the prefix and the next number for each document. Use this to carry on from Zoho's last numbers. A next number can't be at or below a number already used.</p>
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="action" value="numbering">
+  <table class="data">
+    <thead><tr><th>Document</th><th>Prefix</th><th>Next number</th></tr></thead>
+    <tbody>
+    {% for r in numbering %}
+      <tr><td>{{ r.label }}</td>
+        <td><input type="text" name="prefix_{{ r.type }}" value="{{ r.prefix }}" maxlength="20" style="width:8rem"></td>
+        <td><input type="text" inputmode="numeric" name="next_{{ r.type }}" value="{{ r.next_number }}" style="width:8rem">
+          {% if r.error %}<span class="field-error">{{ r.error }}</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p><button type="submit" class="btn primary">Save numbering</button></p>
+</form>
+</div></div>
+{% endblock %}

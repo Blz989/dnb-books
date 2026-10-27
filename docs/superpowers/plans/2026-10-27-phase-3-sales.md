@@ -490,12 +490,12 @@ def test_void_reopens_closed_order(...): ...
   - Numbering table: prefix and next number per type, through `set_sequence`.
 - Deactivate a customer with a balance: spec message.
 
-- [ ] **Step 1: Failing tests** (customer CRUD; duplicate name; deactivate rule; settings admin only (403 for Standard); logo validation; numbering conflict message)
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (start `sales/demo.py`: customers and settings; `seed_demo` calls it)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the customer list, customer detail (with open invoices and credits once later tasks add them; empty states now), customer form, and sales settings including a logo error. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: customer and sales settings screens`
+- [x] **Step 1: Failing tests** (customer CRUD; duplicate name; deactivate rule; settings admin only (403 for Standard); logo validation; numbering conflict message)
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (start `sales/demo.py`: customers and settings; `seed_demo` calls it)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the customer list, customer detail (with open invoices and credits once later tasks add them; empty states now), customer form, and sales settings including a logo error. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: customer and sales settings screens`
 
 ---
 

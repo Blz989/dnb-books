@@ -1,0 +1,77 @@
+{% extends "core/base.html" %}
+{% block title %}{{ customer.name }}{% endblock %}
+{% block page_title %}{{ customer.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub"><span class="tag">{{ customer.get_terms_display }}</span>{% if not customer.is_active %} <span class="tag ns">Inactive</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  <a class="btn" href="{% url 'contacts:edit' customer.pk %}">Edit</a>
+  <a class="btn" href="/sales/orders/new/?customer={{ customer.pk }}">New sales order</a>
+  <a class="btn" href="/sales/invoices/new/?customer={{ customer.pk }}">New invoice</a>
+  <a class="btn primary" href="/sales/payments/new/?customer={{ customer.pk }}">Receive payment</a>
+  {% if customer.is_active %}
+  <form method="post" action="{% url 'contacts:deactivate' customer.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Deactivate</button></form>
+  {% endif %}
+{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi{% if balance > 0 %} warn{% endif %}"><div class="l">Balance</div><div class="v">{{ balance|floatformat:"2g" }}</div><div class="note">{% if balance < 0 %}The customer has credit{% elif balance > 0 %}Owed to you{% else %}Settled{% endif %}</div></div>
+  <div class="kpi"><div class="l">Open invoices</div><div class="v">{{ open_rows|length }}</div></div>
+  <div class="kpi"><div class="l">Unapplied credits</div><div class="v">{{ credits|length }}</div></div>
+</div>
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Contact</dt><dd>{{ customer.contact_name|default:"—" }}</dd>
+    <dt>Email</dt><dd>{{ customer.email|default:"—" }}</dd>
+    <dt>Phone</dt><dd>{{ customer.phone|default:"—" }}</dd>
+    <dt>Resale certificate</dt><dd>{{ customer.resale_certificate|default:"—" }}</dd>
+    <dt>Billing address</dt><dd>{{ customer.billing_address|linebreaksbr|default:"—" }}</dd>
+    <dt>Default ship-to</dt><dd>{{ customer.ship_to_address|linebreaksbr|default:"—" }}</dd>
+    {% if customer.notes %}<dt>Notes</dt><dd>{{ customer.notes|linebreaksbr }}</dd>{% endif %}
+  </dl>
+</div></div>
+
+<h2>Open invoices</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Invoice</th><th>Date</th><th>Due</th><th class="num">Balance</th><th></th></tr></thead>
+  <tbody>
+  {% for r in open_rows %}
+    <tr><td><a class="sku" href="/sales/invoices/{{ r.invoice.number }}/">{{ r.invoice.number }}</a></td>
+      <td>{{ r.invoice.date|date:"Y-m-d" }}</td><td>{{ r.invoice.due_date|date:"Y-m-d" }}</td>
+      <td class="num">{{ r.balance|floatformat:"2g" }}</td>
+      <td>{% if r.days_overdue > 0 %}<span class="tag overdue">{{ r.days_overdue }} day{{ r.days_overdue|pluralize }} overdue</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nothing is owed.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Unapplied credits</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Document</th><th>Date</th><th class="num">Unapplied</th><th></th></tr></thead>
+  <tbody>
+  {% for c in credits %}
+    <tr><td><a class="sku" href="/sales/{{ c.path }}/{{ c.doc.number }}/">{{ c.doc.number }}</a> <span class="dash">{{ c.kind }}</span></td>
+      <td>{{ c.doc.date|date:"Y-m-d" }}</td><td class="num">{{ c.unapplied|floatformat:"2g" }}</td>
+      <td><a href="/sales/{{ c.path }}/{{ c.doc.number }}/apply/">Apply</a>{% if is_admin %} · <a href="/sales/refunds/new/?{% if c.kind == 'Payment' %}payment{% else %}credit{% endif %}={{ c.doc.number }}">Refund</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No unapplied payments or credits.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>History</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Date</th><th>Document</th><th></th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for h in history %}
+    <tr{% if h.void %} style="text-decoration: line-through"{% endif %}><td>{{ h.date|date:"Y-m-d" }}</td>
+      <td><a class="sku" href="{{ h.url }}">{{ h.number }}</a></td><td>{{ h.kind }}{% if h.void %} <span class="tag ns">Void</span>{% endif %}</td>
+      <td class="num">{{ h.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No activity yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -22,6 +22,13 @@
     <a class="brand" href="{% url 'home' %}"><i></i>DNB Books</a>
     <nav>
       <a href="{% url 'home' %}"{% if nav_active == "home" %} class="on"{% endif %}>Home</a>
+      <div class="sec">Sales</div>
+      <a href="/customers/"{% if nav_active == "customers" %} class="on"{% endif %}>Customers</a>
+      <a href="/sales/orders/"{% if nav_active == "orders" %} class="on"{% endif %}>Sales orders</a>
+      <a href="/sales/invoices/"{% if nav_active == "invoices" %} class="on"{% endif %}>Invoices</a>
+      <a href="/sales/payments/"{% if nav_active == "payments" %} class="on"{% endif %}>Payments</a>
+      <a href="/sales/deposits/"{% if nav_active == "deposits" %} class="on"{% endif %}>Deposits</a>
+      <a href="/sales/credits/"{% if nav_active == "credits" %} class="on"{% endif %}>Credit notes</a>
       <div class="sec">Inventory</div>
       <a href="/items/"{% if nav_active == "items" %} class="on"{% endif %}>Items{% if negative_stock_count %} <span class="pill">{{ negative_stock_count }} below zero</span>{% endif %}</a>
       <a href="/items/adjustments/"{% if nav_active == "adjustments" %} class="on"{% endif %}>Adjustments</a>
@@ -31,7 +38,8 @@
       <a href="{% url 'admin:ledger_account_changelist' %}"{% if nav_active == "accounts" %} class="on"{% endif %}>Chart of accounts</a>
       <a href="{% url 'reports:trial-balance' %}"{% if nav_active == "reports" %} class="on"{% endif %}>Reports</a>
       <div class="sec">Setup</div>
-      <a href="/items/settings/"{% if nav_active == "settings" %} class="on"{% endif %}>Settings</a>
+      <a href="/items/settings/"{% if nav_active == "settings" %} class="on"{% endif %}>Inventory settings</a>
+      {% if is_admin %}<a href="/sales/settings/"{% if nav_active == "sales-settings" %} class="on"{% endif %}>Sales settings</a>{% endif %}
       <a href="{% url 'admin:index' %}">Admin</a>
     </nav>
     <div class="side-user">{{ user.get_username }} &middot;
