@@ -5,11 +5,15 @@ from django.db import models
 from contacts.models import Terms, Vendor
 from items.models import Item
 from ledger.models import Account, JournalEntry
-from sales.models import DocStatus, InvoiceLine, OrderStatus, SalesOrder, SalesOrderLine
+from sales.models import DocStatus, DocType, InvoiceLine, OrderStatus, SalesOrder, SalesOrderLine
 
 from .errors import PurchasingSettingsMissing
 
 USER = settings.AUTH_USER_MODEL
+
+
+# Purchasing settings numbers these; the Sales settings page numbers the sales types.
+PURCHASING_DOC_TYPES = (DocType.PO, DocType.BILL, DocType.VP, DocType.VC)
 
 
 class BillLineKind(models.TextChoices):

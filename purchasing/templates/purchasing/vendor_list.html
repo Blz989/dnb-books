@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% block title %}Vendors{% endblock %}
+{% block page_title %}Vendors{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ page.paginator.count }} vendor{{ page.paginator.count|pluralize }}</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'vendors:new' %}">+ New vendor</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <form method="get" class="filters">
+    <label class="grow">Search<input type="search" name="q" value="{{ q }}" placeholder="Search name, contact, or email"></label>
+    <label><span><input type="checkbox" name="inactive" value="1"{% if show_inactive %} checked{% endif %}> Show inactive</span></label>
+    <button type="submit" class="btn primary">Search</button>
+  </form>
+  <table class="data">
+    <thead><tr><th>Vendor</th><th>Contact</th><th>Terms</th><th>1099</th><th class="num">Balance</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a class="sku" href="{% url 'vendors:detail' r.vendor.pk %}">{{ r.vendor.name }}</a>{% if not r.vendor.is_active %} <span class="tag ns">Inactive</span>{% endif %}</td>
+        <td>{{ r.vendor.contact_name|default:"—" }}</td>
+        <td>{{ r.vendor.get_terms_display }}</td>
+        <td>{% if r.vendor.is_1099 %}<span class="tag">1099</span> {{ r.vendor.masked_tax_id|default:"No tax ID" }}{% else %}—{% endif %}</td>
+        <td class="num{% if r.balance < 0 %} neg{% endif %}">{{ r.balance|floatformat:"2g" }}</td>
+        <td>{% if r.overdue %}<span class="tag overdue">Overdue</span>{% endif %}</td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="empty">{% if q %}No vendors match.{% else %}No vendors yet. Add the first one.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>
+      {% if page.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %}
+      ·
+      {% if page.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}
+    </span>
+  </div>
+</div>
+{% endblock %}

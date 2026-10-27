@@ -391,17 +391,17 @@ def test_invoice_void_releases_allocation(...):
 - Deactivating a vendor with a balance: spec message.
 - Settings (admin): the A/P account (ACCOUNTS_PAYABLE subtype), the numbering table (Phase 3 `set_sequence` for PO, BILL, VP, VC), and 1099 thresholds (add or edit a year; amount > 0).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Vendor CRUD.
   - Masking for Standard users on list and detail.
   - The deactivate rule.
   - Settings admin only.
   - Threshold editing.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: 4 vendors, one 1099 vendor, settings)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the vendor list, vendor detail, vendor form, and purchasing settings (light and dark), sent.
-- [ ] **Step 6: Commit** `feat: vendor and purchasing settings screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: 4 vendors, one 1099 vendor, settings)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the vendor list, vendor detail, vendor form, and purchasing settings (light and dark), sent.
+- [x] **Step 6: Commit** `feat: vendor and purchasing settings screens`
 
 ---
 

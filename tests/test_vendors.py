@@ -39,3 +39,8 @@ def test_standard_user_can_manage_vendors(standard_user):
     assert standard_user.has_perm("contacts.add_vendor")
     assert standard_user.has_perm("contacts.change_vendor")
     assert standard_user.has_perm("contacts.view_vendor")
+
+
+def test_extra_spaces_do_not_make_a_different_vendor(vendor):
+    with pytest.raises(ValidationError, match="A vendor named acme supply already exists."):
+        Vendor.objects.create(name="  acme   supply ")

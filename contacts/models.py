@@ -108,7 +108,7 @@ class Vendor(models.Model):
     def clean(self):
         from django.core.exceptions import ValidationError
 
-        self.name = (self.name or "").strip()
+        self.name = " ".join((self.name or "").split())
         if self.name and Vendor.objects.filter(name__iexact=self.name).exclude(pk=self.pk).exists():
             raise ValidationError({"name": f"A vendor named {self.name} already exists."})
         account = self.default_expense_account
