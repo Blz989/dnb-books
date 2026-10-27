@@ -305,7 +305,7 @@ def test_due_date_from_terms(...): ...
   - "{number} is void and can't be edited."
   - Both dates checked with `assert_open`.
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```python
 def test_edit_keeps_number_and_snapshot(...): ...           # revision 2; snapshot has old lines
@@ -318,10 +318,10 @@ def test_void_blocked_with_applications_then_allowed(...): ...
 def test_void_reopens_closed_order(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: edit and void invoices`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: edit and void invoices`
 
 ---
 

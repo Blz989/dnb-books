@@ -11,14 +11,16 @@ from django.db import transaction
 from contacts.models import Customer, Terms, due_date as terms_due_date
 from items.errors import NegativeStockWarning
 from items.models import Item, MovementKind
-from items.stock import StockLine, record_movements
+from items.stock import StockLine, record_movements, void_movement
+from core.roles import require_admin
 from ledger.periods import assert_open
-from ledger.posting import LineSpec, post_entry
+from ledger.posting import LineSpec, post_entry, void_entry
 
 from ..errors import InvoiceError
 from ..models import (
-    DocStatus, DocType, Fulfillment, Invoice, InvoiceLine, OrderStatus, SalesOrder, SalesOrderLine, SalesSettings,
+    DocStatus, DocType, Fulfillment, Invoice, InvoiceLine, InvoiceRevision, OrderStatus, SalesOrder, SalesOrderLine, SalesSettings,
 )
+from ..balances import invoice_applied
 from ..numbering import next_number
 from .orders import refresh_status, remaining, validate_lines
 
@@ -167,3 +169,106 @@ def invoice_from_order(
         customer=order.customer, date=date, lines=specs, user=user, sales_order=order, ship_to=ship_to, notes=notes,
         allow_negative=allow_negative,
     )
+
+
+def _snapshot(invoice: Invoice) -> dict:
+    return {
+        "customer_id": invoice.customer_id, "date": invoice.date.isoformat(), "terms": invoice.terms,
+        "due_date": invoice.due_date.isoformat(), "ship_to": invoice.ship_to, "notes": invoice.notes,
+        "lines": [
+            {
+                "item_id": l.item_id, "sku": l.item.sku, "description": l.description, "quantity": l.quantity,
+                "price": str(l.price), "amount": str(l.amount), "fulfillment": l.fulfillment,
+                "drop_ship_vendor": l.drop_ship_vendor, "so_line_id": l.so_line_id,
+            }
+            for l in invoice.lines.select_related("item")
+        ],
+    }
+
+
+def _reverse_posting(invoice: Invoice, *, user, when: date_type, reason: str) -> None:
+    """Reverse the invoice's revenue entry and stock movements as of `when`. These are system voids: a Standard
+    user's edit does them on their behalf, and no view can ask for system=True."""
+    if invoice.journal_entry_id:
+        void_entry(invoice.journal_entry, user=user, reason=reason, date=when, system=True)
+    for line in invoice.lines.select_related("stock_movement"):
+        if line.stock_movement_id:
+            void_movement(line.stock_movement, user=user, reason=reason, date=when, system=True)
+
+
+def edit_invoice(
+    invoice: Invoice, *, user, date: date_type, lines: Sequence[InvoiceLineSpec], terms: Terms | None,
+    ship_to: str, notes: str, customer: Customer | None = None, reason: str = "", allow_negative: bool = False,
+) -> Invoice:
+    with transaction.atomic():
+        current = Invoice.objects.select_related("customer", "sales_order", "journal_entry").get(pk=invoice.pk)
+        if current.status == DocStatus.VOID:
+            raise InvoiceError(f"{current.number} is void and can't be edited.")
+        new_customer = customer or current.customer
+        changed_customer = new_customer.pk != current.customer_id
+        if changed_customer and (
+            current.payment_applications.filter(removed=False).exists()
+            or current.credit_applications.filter(removed=False).exists()
+        ):
+            raise InvoiceError("The customer can't change after payments or credits are applied.")
+        assert_open(current.date)
+        validate_invoice(
+            customer=new_customer, date=date, lines=lines, sales_order=current.sales_order,
+            exclude_invoice=current, check_customer=changed_customer,
+        )
+        new_total = sum((line_amount(spec) for spec in lines), Decimal("0.00"))
+        applied = invoice_applied(current)
+        if new_total < applied:
+            raise InvoiceError(
+                f"This invoice has {applied:,.2f} applied. The new total can't be less than that.")
+
+        InvoiceRevision.objects.create(
+            invoice=current, revision=current.revision, snapshot=_snapshot(current), edited_by=user, reason=reason)
+        _reverse_posting(
+            current, user=user, when=current.date, reason=f"Edited to revision {current.revision + 1}")
+        current.lines.all().delete()
+
+        terms = terms or current.terms
+        current.customer = new_customer
+        current.date = date
+        current.terms = terms
+        current.due_date = terms_due_date(terms, date)
+        current.ship_to = ship_to
+        current.notes = notes
+        current.revision += 1
+        current.journal_entry = None
+        current.save()
+        post_lines(current, lines, user=user, allow_negative=allow_negative)
+        if current.sales_order_id:
+            refresh_status(current.sales_order)
+    invoice.refresh_from_db()
+    return invoice
+
+
+def void_invoice(invoice: Invoice, *, user, reason: str, date: date_type | None = None) -> Invoice:
+    require_admin(user)
+    reason = (reason or "").strip()
+    if not reason:
+        raise InvoiceError("Enter a reason.")
+    with transaction.atomic():
+        current = Invoice.objects.select_related("journal_entry").get(pk=invoice.pk)
+        if current.status == DocStatus.VOID:
+            raise InvoiceError(f"{current.number} is already void.")
+        if (
+            current.payment_applications.filter(removed=False).exists()
+            or current.credit_applications.filter(removed=False).exists()
+        ):
+            raise InvoiceError(f"{current.number} has payments or credits applied. Remove them first.")
+        when = date or current.date
+        if when < current.date:
+            raise InvoiceError("The void date can't be before the invoice date.")
+        assert_open(when)
+        _reverse_posting(current, user=user, when=when, reason=reason)
+        current.status = DocStatus.VOID
+        current.voided_on = when
+        current.void_reason = reason
+        current.save()
+        if current.sales_order_id:
+            refresh_status(current.sales_order)
+    invoice.refresh_from_db()
+    return invoice
