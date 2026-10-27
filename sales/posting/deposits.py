@@ -45,6 +45,11 @@ def make_deposit(*, payments: Sequence[Payment], bank_account: Account, date: da
                 raise DepositError(f"{payment.number} is already in deposit {payment.deposit.number}.")
             if date < payment.date:
                 raise DepositError(f"The deposit date can't be before {payment.number}'s date.")
+            # A re-deposit dated before the earlier deposit's void would put the payment in two deposits at once.
+            for earlier in payment.all_deposits.filter(status=DocStatus.VOID, voided_on__gt=date):
+                raise DepositError(
+                    f"The deposit date can't be before {earlier.voided_on.isoformat()}, "
+                    f"when {payment.number} was taken out of {earlier.number}.")
         total = sum((p.amount for p in current), Decimal("0.00"))
         number = next_number(DocType.DEP)
         entry = post_entry(

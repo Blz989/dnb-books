@@ -103,3 +103,16 @@ def test_void_deposit_needs_reason_and_is_final(checks, bank, admin_user):
     void_deposit(dep, user=admin_user, reason="x")
     with pytest.raises(DepositError, match="DEP-00001 is already void."):
         void_deposit(dep, user=admin_user, reason="y")
+
+
+def test_redeposit_cannot_predate_the_void(checks, bank, admin_user):
+    # Otherwise the payment would sit in two deposits between the two dates (Phase 3 review finding).
+    from sales.checks import undeposited_check
+
+    dep = make_deposit(payments=[checks[0]], bank_account=bank, date=d(10, 6), user=admin_user)
+    void_deposit(dep, user=admin_user, reason="Wrong bank", date=d(10, 20))
+    with pytest.raises(DepositError, match="The deposit date can't be before 2026-10-20, when PMT-00001 was taken out of DEP-00001."):
+        make_deposit(payments=[checks[0]], bank_account=bank, date=d(10, 10), user=admin_user)
+    make_deposit(payments=[checks[0]], bank_account=bank, date=d(10, 20), user=admin_user)
+    for day in (6, 10, 19, 20, 21):
+        assert undeposited_check(d(10, day)) == []
