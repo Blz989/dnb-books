@@ -236,7 +236,7 @@ def test_admin_post_action_shows_inventory_message(client, admin_user, inventory
   - **Value adjustment:** requires `quantity > 0` at that point, else `CostingError("The value adjustment on {date} has no stock to apply to.")` (date as `Mon D, YYYY`, e.g. `Oct 25, 2026`). FIFO spreads `value_change` across remaining layers by quantity share (each share rounded to the cent; the newest layer absorbs the remainder). Weighted average adds it to `value` and recomputes `average`.
   - A value adjustment that would make total value negative raises `CostingError("The value adjustment on {date} would make stock value negative.")`.
 
-- [ ] **Step 1: Write failing tests** (spec 5.6 examples with the sign convention)
+- [x] **Step 1: Write failing tests** (spec 5.6 examples with the sign convention)
 
 ```python
 def test_example_a_fifo():
@@ -273,10 +273,10 @@ def test_value_equals_inflows_plus_outflows_plus_adjustments(...): ...
 # invariant: r.value == sum(inflow values) + sum(costed outflow totals) + sum(value changes); r.quantity == sum(quantities)
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `items/costing.py`**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: FIFO and weighted average costing engine`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `items/costing.py`**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: FIFO and weighted average costing engine`
 
 ---
 
