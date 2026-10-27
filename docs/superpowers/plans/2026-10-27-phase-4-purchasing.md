@@ -152,17 +152,17 @@ tests/ test_vendors.py, test_purchasing_models.py, test_purchase_orders.py, test
     - Any unresolved name raises `PurchasingError("No vendor named {name}. Choose a vendor for these lines.")` with attribute `unresolved: list[str]`, and nothing is created.
     - Line quantity = SO line quantity. Price = the item's `purchase_cost`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - PO create, update, and close rules.
   - Drop-ship POs: two vendors make two POs.
   - Lines already on a PO are skipped.
   - Fuzzy name match works.
   - An unmatched name raises and creates nothing (Review Focus 2).
   - With `vendor_choices`, it succeeds.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: purchase orders and drop-ship POs`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: purchase orders and drop-ship POs`
 
 ---
 
