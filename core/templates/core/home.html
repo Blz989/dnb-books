@@ -1,5 +1,18 @@
 {% extends "core/base.html" %}
 {% block content %}
 <h1>DNB Books</h1>
-<p>Welcome, {{ user.get_username }}.</p>
+<h2>Reports</h2>
+<ul>
+  <li><a href="{% url 'reports:trial-balance' %}">Trial balance</a></li>
+  <li><a href="{% url 'reports:profit-and-loss' %}">Profit and loss</a></li>
+  <li><a href="{% url 'reports:balance-sheet' %}">Balance sheet</a></li>
+  <li><a href="{% url 'reports:general-ledger' %}">General ledger</a></li>
+</ul>
+<h2>Books</h2>
+<ul>
+  <li><a href="{% url 'admin:ledger_account_changelist' %}">Chart of accounts</a></li>
+  <li><a href="{% url 'admin:ledger_journalentry_changelist' %}">Journal entries</a></li>
+  <li><a href="{% url 'admin:ledger_accountingperiod_changelist' %}">Accounting periods</a></li>
+  <li><a href="{% url 'admin:index' %}">All admin screens</a></li>
+</ul>
 {% endblock %}

@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}Trial balance{% endblock %}
+{% block content %}
+<h1>Trial balance</h1>
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<p>As of {{ report.as_of|date:"Y-m-d" }}</p>
+<table class="report">
+  <thead><tr><th>Account</th><th>Name</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead>
+  <tbody>
+  {% for r in report.rows %}
+    <tr><td>{{ r.account.number }}</td><td>{{ r.account.name }}</td>
+        <td class="num">{% if r.debit %}{{ r.debit|floatformat:"2g" }}{% endif %}</td>
+        <td class="num">{% if r.credit %}{{ r.credit|floatformat:"2g" }}{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="4">No posted entries up to this date.</td></tr>
+  {% endfor %}
+    <tr class="total"><td></td><td>Total</td>
+        <td class="num">{{ report.total_debit|floatformat:"2g" }}</td><td class="num">{{ report.total_credit|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

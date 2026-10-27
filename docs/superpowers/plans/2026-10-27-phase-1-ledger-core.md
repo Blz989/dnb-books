@@ -438,7 +438,7 @@ Before committing, review the posting and report rules against the `finance:jour
   - `JournalEntryAdmin` with `JournalLineInline`: editable only while DRAFT (`has_change_permission`/`has_delete_permission` return False otherwise; inline add/delete off). Shows totals and difference. Action **"Post selected drafts"** calls `post_draft` per entry and reports each `PostingError` message via `messages.error`. Object page for POSTED entries shows a **Void** button (admin only) linking to `/admin/ledger/journalentry/<id>/void/`, a form with `date` and `reason`.
   - `AccountingPeriodAdmin`: actions **Close selected periods** (admin only) and a per-row **Reopen** link to a form requiring `reason`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_report_csv(client, admin_user, sample_ledger):
@@ -459,10 +459,10 @@ def test_reopen_without_reason_rejected(client, admin_user): ...
 
 CSV amounts are plain numbers with 2 decimals, no thousands separators. HTML shows separators.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement admin, forms, views, templates**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: admin screens for ledger and report pages with CSV export`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement admin, forms, views, templates**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: admin screens for ledger and report pages with CSV export`
 
 ---
 

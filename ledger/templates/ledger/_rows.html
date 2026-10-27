@@ -1,0 +1,3 @@
+{% for r in rows %}
+  <tr><td>{{ r.account.number }}</td><td>{{ r.account.name }}</td><td class="num">{{ r.amount|floatformat:"2g" }}</td></tr>
+{% endfor %}
