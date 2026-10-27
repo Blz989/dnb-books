@@ -1,8 +1,10 @@
 {% extends "core/base.html" %}
+{% load banking_tags %}
 {% block title %}{{ payment.number }}{% endblock %}
 {% block page_title %}{{ payment.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/vendors/{{ payment.vendor.pk }}/">{{ payment.vendor.name }}</a> · {{ payment.date|date:"Y-m-d" }} · {{ payment.get_method_display }}{% if payment.check_number %} #{{ payment.check_number }}{% endif %}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
 {% block page_actions %}
+  {% if payment|to_print %}<a class="btn primary" href="{% url 'banking:check-print' payment.number %}">Print check</a>{% endif %}
   {% if not is_void and unapplied > 0 %}<a class="btn primary" href="{% url 'purchasing:payment-apply' payment.number %}">Apply</a>{% endif %}
   {% if is_admin and not is_void %}<a class="btn" href="{% url 'purchasing:payment-void' payment.number %}">Void</a>{% endif %}
 {% endblock %}

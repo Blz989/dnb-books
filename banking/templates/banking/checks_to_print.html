@@ -1,0 +1,19 @@
+{% extends "core/base.html" %}
+{% block title %}Checks to print{% endblock %}
+{% block page_title %}Checks to print{% endblock %}
+{% block page_subtitle %}<div class="sub">Vendor payments and customer refunds paid by check that have no number yet. Load the voucher stock, then print one at a time.</div>{% endblock %}
+{% block content %}
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Date</th><th>Document</th><th>Pay to</th><th>From account</th><th class="num">Amount</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td style="white-space:nowrap">{{ r.doc.date|date:"Y-m-d" }}</td><td><span class="sku">{{ r.doc.number }}</span> <span class="dash">{{ r.kind }}</span></td>
+        <td>{{ r.party }}</td><td>{{ r.account }}</td><td class="num">{{ r.doc.amount|floatformat:"2g" }}</td>
+        <td><a class="btn primary" href="{{ r.url }}">Print check</a></td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">No checks are waiting to be printed.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

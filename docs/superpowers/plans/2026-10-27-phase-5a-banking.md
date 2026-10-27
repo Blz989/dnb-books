@@ -483,18 +483,18 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - **Reprint** (admin) of a printed check spoils the old number and goes back to the print page.
 - **Layout page:** the field table (x, y, size, visible), offset nudges, "Print calibration page", and Save.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The print flow advances the number once even when Yes is posted twice.
   - Spoiled moves to the next number.
   - A used number entered by hand is refused with the registry message.
   - Reprint is admin only.
   - Layout save and offset range.
   - The calibration PDF is served.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: two vendor payments to print)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of checks to print, the print page, the confirm step, the layout page, plus the rasterized check and calibration PDFs. Light and dark for screens, sent.
-- [ ] **Step 6: Commit** `feat: check printing and layout screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: two vendor payments to print)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of checks to print, the print page, the confirm step, the layout page, plus the rasterized check and calibration PDFs. Light and dark for screens, sent.
+- [x] **Step 6: Commit** `feat: check printing and layout screens`
 
 ---
 
