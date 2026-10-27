@@ -458,18 +458,18 @@ def test_void_reopens_closed_order(...): ...
   - URL `sales:invoice-pdf` `/sales/invoices/<number>/pdf/` → `application/pdf`, `Content-Disposition: inline; filename="<number>.pdf"`, login required.
 - The template matches `docs/design/invoice-mockup.html`: Letter size, 0.6 in margins, the same structure and colors. There is no Google Fonts link. Drop-ship lines carry the note "Shipped directly from the manufacturer". A void invoice gets a diagonal "VOID" watermark. The table header repeats on each page.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The HTML contains the number, customer, line SKUs, "Balance due", and the notes.
   - A drop-ship line has the note.
   - The PDF bytes start with `b"%PDF"` and are more than 2,000 bytes.
   - A 60-line invoice renders, and the HTML has a `<thead>`.
   - A void invoice has "VOID" in the HTML.
   - The view returns `application/pdf`.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots:** write demo invoice PDFs (one page, a void one, and the 60-line one) with `invoice_pdf`, rasterize each page with `pdftoppm -png -r 110` (poppler-utils, present in cloud sessions; dev only), compare against `docs/design/invoice-mockup.html`, and send the PNGs plus one PDF.
-- [ ] **Step 6: Commit** `feat: invoice PDF with WeasyPrint`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots:** write demo invoice PDFs (one page, a void one, and the 60-line one) with `invoice_pdf`, rasterize each page with `pdftoppm -png -r 110` (poppler-utils, present in cloud sessions; dev only), compare against `docs/design/invoice-mockup.html`, and send the PNGs plus one PDF.
+- [x] **Step 6: Commit** `feat: invoice PDF with WeasyPrint`
 
 ---
 
