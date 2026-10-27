@@ -305,7 +305,7 @@ def test_value_equals_inflows_plus_outflows_plus_adjustments(...): ...
   - `replay_item`: replays non-voided movements; for each outflow, `difference = costed.total_cost - effective_total` (effective = `total_cost` + sum of its revisions). Nonzero → `CostRevision(delta=difference)` dated the outflow's date if that month is open, else `trigger_date`; one journal entry per revision (`items.cost_revision`), offset = the outflow's `offset_account`. Rebuilds `FifoLayer` rows from `ReplayResult.layers`. A `CostingError` from replay propagates, so the surrounding transaction rolls back.
   - Concurrency: everything runs inside `transaction.atomic()`; SQLite IMMEDIATE transactions serialize writers (Phase 1 setting).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_opening_posts_inventory_vs_opening_equity(inv_settings, admin_user, make_item): ...
@@ -339,10 +339,10 @@ def test_value_adjustment_admin_only(standard_user, ...): ...
 def test_random_operations_keep_invariants(...): ...           # opening, adjustments ±, backdates, value adjustments
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `items/stock.py`.** Before committing, review the posting rules against the `finance:journal-entry` skill and record findings in the commit body.
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: stock movements with posting, negative stock, and cost replay`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `items/stock.py`.** Before committing, review the posting rules against the `finance:journal-entry` skill and record findings in the commit body.
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: stock movements with posting, negative stock, and cost replay`
 
 ---
 
