@@ -210,18 +210,29 @@ def issue_refund(
         available = payment_unapplied(source) if isinstance(source, Payment) else credit_unapplied(source)
         if amount > available:
             raise ReceiptError(f"Only {_money(available)} is available to refund from {source.number}.")
+        reference = (reference or "").strip()
+        if method == RefundMethod.CHECK and reference:
+            from banking.checknumbers import assert_free
+
+            assert_free(bank_account, reference, error=ReceiptError)
         number = next_number(DocType.REF)
         entry = post_entry(
             date=date, user=user, memo=f"Refund {number} {source.customer.name}", reference=reference,
             source_type="sales.refund", source_id=number,
             lines=[LineSpec(settings.ar_account, debit=amount), LineSpec(bank_account, credit=amount)],
         )
-        return Refund.objects.create(
+        refund = Refund.objects.create(
             number=number, customer=source.customer, date=date, bank_account=bank_account, method=method,
             reference=reference, amount=amount, journal_entry=entry, created_by=user,
             source_payment=source if isinstance(source, Payment) else None,
             source_credit_note=source if isinstance(source, CreditNote) else None,
         )
+        if method == RefundMethod.CHECK and reference:
+            from banking.checknumbers import record
+            from banking.models import CheckStatus
+
+            record(bank_account, reference, CheckStatus.HANDWRITTEN, refund=refund, user=user)
+        return refund
 
 
 # ---- voids ----
@@ -303,5 +314,8 @@ def void_refund(refund: Refund, *, user, reason: str, date: date_type | None = N
         current, reason = _begin_void(Refund, refund, user, reason)
         when = _void_date(current, date, [])
         _finish_void(current, user=user, reason=reason, when=when)
+        from banking.checknumbers import mark_voided
+
+        mark_voided(current)
     refund.refresh_from_db()
     return refund

@@ -42,7 +42,7 @@
   {% if vendors %}
   <div class="body check-only">
     <h2 style="margin-top:0">Check numbers</h2>
-    <p class="help">Each vendor gets its own check. A number can only be used once on a bank account.</p>
+    <p class="help">Each vendor gets its own check. Leave a number blank to print the check later from Banking. A number can only be used once on a bank account.</p>
     <div class="form-grid">
     {% for v in vendors %}
       <div class="form-row"><label for="check-{{ v.vendor.pk }}">{{ v.vendor.name }}</label><input type="text" id="check-{{ v.vendor.pk }}" name="check-{{ v.vendor.pk }}" value="{{ v.check }}" maxlength="30"></div>

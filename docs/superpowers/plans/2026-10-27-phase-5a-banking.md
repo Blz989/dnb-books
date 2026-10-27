@@ -313,16 +313,16 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - Produces (`words.py`): `amount_in_words(amount: Decimal) -> str`, for example "One thousand seventy-five and 00/100", "Zero and 07/100", "One million and 00/100", "Nineteen and 99/100". Pure function, no library.
 - `is_to_print(payment) -> bool`: method CHECK and a blank check number.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The words cases above plus 1,234,567.89.
   - A handwritten number is recorded and can't be reused.
   - A voided payment's number stays blocked: a new payment with that number is refused with "(voided)".
   - A blank CHECK number is allowed and is to print.
   - The updated Phase 4 test passes under the new rule.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: check number registry and amount in words`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: check number registry and amount in words`
 
 ---
 

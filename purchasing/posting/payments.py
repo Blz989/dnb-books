@@ -51,16 +51,10 @@ def _add_application(payment: VendorPayment, bill: Bill, amount: Decimal, date: 
     return BillPaymentApplication.objects.create(payment=payment, bill=bill, amount=amount, applied_on=date)
 
 
-def _normalize_check(number: str) -> str:
-    return " ".join((number or "").split()).casefold()
-
-
 def _check_number_free(paid_from: Account, number: str) -> None:
-    wanted = _normalize_check(number)
-    used = VendorPayment.objects.filter(
-        paid_from=paid_from, method=VendorPaymentMethod.CHECK, status=DocStatus.OPEN)
-    if any(_normalize_check(n) == wanted for n in used.values_list("check_number", flat=True)):
-        raise PurchasingError(f"Check {number.strip()} is already used on {paid_from}.")
+    from banking.checknumbers import assert_free
+
+    assert_free(paid_from, number, error=PurchasingError)
 
 
 def pay_vendor(
@@ -80,9 +74,9 @@ def pay_vendor(
             raise PurchasingError("Choose the bank account to pay from.")
         check_number = (check_number or "").strip()
         if method == VendorPaymentMethod.CHECK:
-            if not check_number:
-                raise PurchasingError(f"Enter the check number for {vendor.name}.")
-            _check_number_free(paid_from, check_number)
+            # A blank number means the check is still to be printed (Banking, Checks to print).
+            if check_number:
+                _check_number_free(paid_from, check_number)
         else:
             check_number = ""
         number = next_number(DocType.VP)
@@ -94,6 +88,11 @@ def pay_vendor(
         payment = VendorPayment.objects.create(
             number=number, vendor=vendor, date=date, method=method, paid_from=paid_from, check_number=check_number,
             reference=reference, amount=amount, journal_entry=entry, created_by=user)
+        if check_number:
+            from banking.checknumbers import record
+            from banking.models import CheckStatus
+
+            record(paid_from, check_number, CheckStatus.HANDWRITTEN, vendor_payment=payment, user=user)
         for bill, applied in applications:
             _add_application(payment, bill, applied, date)
         return payment
@@ -158,6 +157,9 @@ def void_vendor_payment(
         active = list(current.applications.filter(removed=False))
         when = void_date(current, date, list(current.applications.all()))
         finish_void(current, user=user, reason=reason, when=when)
+        from banking.checknumbers import mark_voided
+
+        mark_voided(current)
         for app in active:
             app.removed, app.removed_on = True, when
             app.save()

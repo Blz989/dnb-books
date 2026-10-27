@@ -4,7 +4,7 @@
 {% block page_subtitle %}<div class="sub">{{ source.customer.name }} · {{ available|floatformat:"2g" }} available to refund</div>{% endblock %}
 {% block content %}
 {% include "sales/_errors.html" %}
-<div class="banner info">A refund pays the customer back out of the bank. Printing refund checks comes later; for now, enter the check number you wrote.</div>
+<div class="banner info">A refund pays the customer back out of the bank. For a check, enter the number you wrote, or leave it blank to print the check later from Banking.</div>
 <div class="card"><div class="body">
 <form method="post">{% csrf_token %}
   <input type="hidden" name="token" value="{{ token }}">

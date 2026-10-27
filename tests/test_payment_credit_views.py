@@ -113,21 +113,22 @@ def test_duplicate_check_number_message_and_nothing_saved(adm, bills, vendor, ze
     a, _, z = bills
     r = adm.post("/purchasing/pay/", pay_post((a, "10.00"), (z, "10.00"), method="CHECK", paid_from=cash,
                                               checks={vendor: "1001", zed: "1001"}))
-    assert r.status_code == 200 and "Check 1001 is already used on 1000 Cash." in text(r)
+    assert r.status_code == 200 and "Check 1001 was already used on 1000 Cash (handwritten)." in text(r)
     assert VendorPayment.objects.count() == 0
     page = text(r)
     assert 'value="10.00"' in page  # what was typed is kept
 
 
-def test_check_needs_a_number_and_card_needs_a_card(adm, bills, cash, vendor):
+def test_blank_check_number_is_left_to_print_and_card_needs_a_card(adm, bills, cash, vendor):
     a = bills[0]
-    r = adm.post("/purchasing/pay/", pay_post((a, "10.00"), method="CHECK", paid_from=cash))
-    assert "Enter the check number for Acme Supply." in text(r)
+    r = adm.post("/purchasing/pay/", pay_post((a, "10.00"), method="CHECK", paid_from=cash, token="t1"))
+    assert r.status_code == 302  # a blank check number is allowed now: the check is left to print
+    assert VendorPayment.objects.get().check_number == ""
     r = adm.post("/purchasing/pay/", pay_post((a, "10.00"), method="CARD", paid_from=cash, token="t2"))
     assert "Choose the credit card used." in text(r)
     r = adm.post("/purchasing/pay/", pay_post((a, "10.00"), method="ACH", paid_from=None, token="t3"))
     assert "Choose the bank account to pay from." in text(r)
-    assert VendorPayment.objects.count() == 0
+    assert VendorPayment.objects.count() == 1  # only the check left to print
 
 
 def test_over_balance_and_bad_amount_and_nothing_chosen(adm, bills, cash):
