@@ -193,9 +193,15 @@ class AccountingPeriodAdmin(admin.ModelAdmin):
         if not is_admin(request.user):
             self.message_user(request, "Only an admin can do this.", messages.ERROR)
             return
+        closed = 0
         for period in queryset:
-            close_period(period.year, period.month, request.user)
-        self.message_user(request, f"Closed {queryset.count()} period(s).")
+            try:
+                close_period(period.year, period.month, request.user)
+                closed += 1
+            except PostingError as exc:
+                self.message_user(request, str(exc), messages.ERROR)
+        if closed:
+            self.message_user(request, f"Closed {closed} period(s).")
 
     def get_urls(self):
         custom = [

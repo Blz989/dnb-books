@@ -376,7 +376,10 @@ def void_movement_view(request, pk):
     if not form.is_valid():
         return render(request, "items/void_movement.html", {**context, "form": form})
     try:
-        void_movement(movement, user=request.user, reason=form.cleaned_data["reason"], date=form.cleaned_data["date"])
+        void_movement(movement, user=request.user, reason=form.cleaned_data["reason"], date=form.cleaned_data["date"],
+                      allow_negative=request.POST.get("allow_negative") == "1")
+    except NegativeStockWarning as exc:
+        return render(request, "items/void_movement.html", {**context, "form": form, "warnings": exc.messages})
     except (StockError, PostingError) as exc:
         return render(request, "items/void_movement.html", {**context, "form": form, **_error_messages(exc)})
     messages.success(request, f"Voided the {movement.get_kind_display().lower()} for {movement.item.sku}.")

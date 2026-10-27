@@ -24,3 +24,7 @@ class EntryStateError(PostingError):
 
 class ImmutableEntryError(PostingError):
     pass
+
+
+class PeriodCloseBlockedError(PostingError):
+    pass

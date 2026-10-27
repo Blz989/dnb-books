@@ -114,6 +114,12 @@ Replaying the full history is acceptable at DNB's scale (hundreds of movements p
 
 Example E: if September were closed, the backdated inflow itself would be blocked by the Phase 1 period lock. If October were closed but September open, the revision would be dated Sep 25 (the triggering movement's date).
 
+### 5.6a Review fixes (after Phase 2 merged)
+
+- **FIFO value adjustments** spread across remaining layers by each layer's share of **value** (quantity share only when the stock has no value yet). The largest layer absorbs the rounding remainder. This keeps every layer at or above zero, so a later outflow can never post a negative cost.
+- **Voiding an inflow** that would take quantity on hand below zero raises the same kind of warning as adjustments: "{sku} has {on_hand} on hand. Voiding this movement will take it to {new}. Continue?" The void screen offers "Void anyway".
+- **Month close check:** `ledger.periods.close_period` runs registered close checks. Items registers one that blocks closing when the Inventory Valuation difference at month end is not 0.00: "{Month YYYY} can't be closed: stock value and the inventory accounts differ by {d} at month end. Check the Inventory valuation report."
+
 ### 5.7 Invariants (checked in tests and on the valuation report)
 
 - For every Inventory-subtype account, the sum of effective costs of non-voided movements equals the account's ledger balance.
@@ -183,7 +189,7 @@ Home screen gains an Items section and a warning banner when any item is below z
 
 `sku, name, item_type, category, unit, sale_price, purchase_cost, vendor_part_number, costing_method, opening_quantity, opening_unit_cost, opening_date`
 
-Categories are created if missing. Blank `costing_method` means FIFO. `opening_*` columns are required together or not at all, and only for stock items. All opening stock in one file posts as one OPENING journal entry per date.
+Categories are created if missing. Blank `costing_method` means FIFO. `opening_*` columns are required together or not at all, and only for stock items. All opening stock in one file posts as one OPENING journal entry per date (one per inventory account if items use different ones), shared by that date's movements. Voiding one imported movement posts its own reversing entry and leaves the shared entry untouched.
 
 ## 7. Permissions
 

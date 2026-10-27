@@ -128,3 +128,15 @@ def negative_item_count() -> int:
         StockMovement.objects.filter(voided=False).values("item_id").annotate(q=Sum("quantity"))
         .filter(q__lt=0).count()
     )
+
+
+def close_check(year: int, month: int) -> list[str]:
+    """Registered with ledger.periods: a month can't close while stock and the inventory accounts disagree."""
+    import calendar
+
+    month_end = date(year, month, calendar.monthrange(year, month)[1])
+    difference = inventory_valuation(month_end).difference
+    if difference == 0:
+        return []
+    return [f"{calendar.month_name[month]} {year} can't be closed: stock value and the inventory accounts "
+            f"differ by {difference:,.2f} at month end. Check the Inventory valuation report."]

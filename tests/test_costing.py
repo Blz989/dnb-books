@@ -84,7 +84,8 @@ def test_value_adjustment_cannot_make_value_negative():
 def test_fifo_value_adjustment_spreads_across_layers():
     r = replay(FIFO, [Move(1, d(1), 10, D("1.00")), Move(2, d(2), 10, D("1.50")),
                       Move(3, d(3), 0, value_change=D("-5.00"))], D("0"))
-    assert [l.remaining_value for l in r.layers] == [D("7.50"), D("12.50")] and r.value == D("20.00")
+    # Spread by value share (10.00 and 15.00 of 25.00), not by quantity, so no layer can go below zero.
+    assert [l.remaining_value for l in r.layers] == [D("8.00"), D("12.00")] and r.value == D("20.00")
 
 
 def test_wavg_value_adjustment_changes_average():

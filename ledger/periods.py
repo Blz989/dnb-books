@@ -5,8 +5,18 @@ from django.utils import timezone
 
 from core.roles import require_admin
 
-from .errors import PeriodClosedError
+from .errors import PeriodCloseBlockedError, PeriodClosedError
 from .models import AccountingPeriod
+
+
+# Other apps register checks that must pass before a month closes, e.g. items checks that stock value
+# matches the inventory accounts. Each check takes (year, month) and returns problem messages.
+_close_checks = []
+
+
+def register_close_check(check) -> None:
+    if check not in _close_checks:
+        _close_checks.append(check)
 
 
 def get_period(d: date) -> AccountingPeriod:
@@ -28,6 +38,9 @@ def assert_open(d: date) -> None:
 
 def close_period(year: int, month: int, user) -> AccountingPeriod:
     require_admin(user)
+    problems = [p for check in _close_checks for p in check(year, month)]
+    if problems:
+        raise PeriodCloseBlockedError(" ".join(problems))
     period = get_period(date(year, month, 1))
     period.is_closed = True
     period.closed_by = user

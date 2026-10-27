@@ -151,7 +151,7 @@ def parse_items_csv(text: str) -> ImportPreview:
 
 
 def apply_import(preview: ImportPreview, *, user) -> list[Item]:
-    from .stock import StockLine, record_movements  # stock imports models; avoid a cycle at import time
+    from .stock import StockLine, record_opening_batch  # stock imports models; avoid a cycle at import time
 
     require_admin(user)
     if preview.errors:
@@ -180,5 +180,5 @@ def apply_import(preview: ImportPreview, *, user) -> list[Item]:
             if r.opening_quantity:
                 openings.setdefault(r.opening_date, []).append(StockLine(item, r.opening_quantity, unit_cost=r.opening_unit_cost))
         for day, lines in sorted(openings.items()):
-            record_movements(kind=MovementKind.OPENING, date=day, lines=lines, user=user)
+            record_opening_batch(date=day, lines=lines, user=user)
         return items

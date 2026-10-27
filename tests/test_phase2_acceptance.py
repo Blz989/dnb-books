@@ -82,4 +82,6 @@ def test_phase_2_acceptance(
     after = c.get("/reports/inventory-valuation/?as_of=2026-10-31").context["report"]
     assert after.difference == D("0.00") and after.total == value_before - D("20.00")
     assert check_invariants() == []
-    assert JournalEntry.objects.filter(source_type="items.movement").count() == 43
+    # 3 hand-entered movements; the 40 imported openings share one entry for their single date.
+    assert JournalEntry.objects.filter(source_type="items.movement").count() == 3
+    assert JournalEntry.objects.filter(source_type="items.import").count() == 1
