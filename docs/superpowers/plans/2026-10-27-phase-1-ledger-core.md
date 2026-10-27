@@ -554,7 +554,7 @@ def test_home_shows_banner(client, standard_user, failed_run):
 **Files:**
 - Create: `tests/test_acceptance.py`
 
-- [ ] **Step 1: Write the acceptance test** (Spec 12, "Phase 1 done when"): as an admin through the Django test client only, create two accounts in admin, create a draft entry with two lines, post it with the admin action, then load all four report pages and assert the amount appears on each; run `backup_now` and `restore_drill` via `call_command` against the file-backed test DB and assert both exit cleanly.
-- [ ] **Step 2: Run full suite** `uv run pytest -q` → all pass, no warnings about naive datetimes.
+- [x] **Step 1: Write the acceptance test** (Spec 12, "Phase 1 done when"): as an admin through the Django test client only, create two accounts in admin, create a draft entry with two lines, post it with the admin action, then load all four report pages and assert the amount appears on each; run `backup_now` and `restore_drill` via `call_command` against the file-backed test DB and assert both exit cleanly.
+- [x] **Step 2: Run full suite** `uv run pytest -q` → all pass, no warnings about naive datetimes.
 - [ ] **Step 3: Manual check on a real machine:** `start` script, log in from a second browser on the network, post one entry, view reports, run `backup_now`, confirm the encrypted file appears in the synced folder, run `restore_drill`.
-- [ ] **Step 4: Commit** `test: phase 1 acceptance`
+- [x] **Step 4: Commit** `test: phase 1 acceptance`
