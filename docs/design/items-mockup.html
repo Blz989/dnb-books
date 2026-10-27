@@ -1,0 +1,129 @@
+<!doctype html>
+<!-- Approved visual reference for DNB Books (direction C, Ledger paper). Open with ?t=light or ?t=dark. Not app code. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Items mockup (Ledger paper)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ---------- shared structure ---------- */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+.app { display: grid; grid-template-columns: var(--side-w) 1fr; min-height: 100vh; }
+aside { background: var(--side-bg); color: var(--side-text); padding: 20px 14px; border-right: 1px solid var(--side-border); }
+.brand { font-weight: 700; font-size: 16px; padding: 4px 10px 20px; display: flex; gap: 10px; align-items: center; font-family: var(--brand-font); }
+.brand i { width: 26px; height: 26px; border-radius: var(--r-sm); background: var(--accent); display: inline-block; }
+nav a { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: var(--r-sm); color: inherit; text-decoration: none; margin-bottom: 2px; opacity: .85; }
+nav a.on { background: var(--side-active); opacity: 1; font-weight: 600; }
+nav .sec { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .55; padding: 16px 10px 6px; }
+nav .pill { font-size: 11px; background: var(--warn-bg); color: var(--warn-text); border-radius: 10px; padding: 0 7px; }
+main { padding: var(--pad); }
+.top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+h1 { margin: 0; font-size: var(--h1); font-family: var(--head-font); font-weight: 650; letter-spacing: -.01em; }
+.sub { color: var(--muted); margin-top: 4px; }
+.btn { font: inherit; font-weight: 500; padding: 8px 14px; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.actions { display: flex; gap: 8px; align-items: center; }
+.toggle { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; margin-right: 8px; }
+.toggle span { padding: 6px 10px; font-size: 12px; color: var(--muted); background: var(--surface); }
+.toggle span.on { background: var(--side-active-2); color: var(--text); font-weight: 600; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+.kpi .l { color: var(--muted); font-size: 12px; }
+.kpi .v { font-size: 22px; font-weight: 650; margin-top: 4px; font-family: var(--num-font); font-variant-numeric: tabular-nums; }
+.kpi.warn .v { color: var(--warn-text-strong); }
+.banner { display: flex; gap: 10px; align-items: center; background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-border); border-radius: var(--r); padding: 10px 14px; margin-bottom: 16px; }
+.banner a { color: inherit; font-weight: 600; margin-left: auto; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.filters { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border); align-items: center; }
+.input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg); color: var(--muted); }
+.select { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg); color: var(--text); min-width: 130px; }
+.chk { color: var(--muted); font-size: 13px; margin-left: 6px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: var(--cell); border-bottom: 1px solid var(--border); background: var(--thead); text-transform: var(--th-case); letter-spacing: var(--th-ls); }
+td { padding: var(--cell); border-bottom: 1px solid var(--row-border); }
+tr:hover td { background: var(--hover); }
+.num { text-align: right; font-family: var(--num-font); font-variant-numeric: tabular-nums; }
+.sku { font-family: var(--num-font); font-size: 13px; color: var(--accent-text); font-weight: 500; }
+.tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--tag-bg); color: var(--tag-text); }
+.tag.ns { background: transparent; border: 1px dashed var(--border); color: var(--muted); }
+.neg { color: var(--warn-text-strong); font-weight: 600; }
+.dash { color: var(--muted); }
+.foot { display: flex; justify-content: space-between; padding: 10px 14px; color: var(--muted); font-size: 13px; }
+
+/* ---------- C: Ledger paper ---------- */
+[data-v=c] { --font: Inter, system-ui, sans-serif; --head-font: "Source Serif 4", Georgia, serif; --brand-font: "Source Serif 4"; --num-font: Inter, sans-serif;
+  --side-w: 236px; --pad: 30px 40px; --h1: 30px; --r: 6px; --r-sm: 5px; --cell: 11px 14px; --th-case: none; --th-ls: 0; }
+[data-v=c][data-t=light] { --bg: #f6f2ea; --surface: #fffdf8; --text: #2b2620; --muted: #6f655a; --border: #e3dccd; --row-border: #eee8db; --thead: #faf6ee; --hover: #f8f3e8;
+  --side-bg: #1f3a2f; --side-text: #f2ede2; --side-border: #1f3a2f; --side-active: #2d4f41; --side-active-2: #e6efe8;
+  --accent: #2f6b4f; --accent-text: #2f6b4f; --on-accent: #fff; --tag-bg: #e6efe8; --tag-text: #24553e;
+  --warn-bg: #fbeee0; --warn-border: #efcfab; --warn-text: #8a4b14; --warn-text-strong: #b4541a; }
+[data-v=c][data-t=dark] { --bg: #171512; --surface: #201d19; --text: #ece6da; --muted: #a89f90; --border: #36312a; --row-border: #2a2621; --thead: #1c1a16; --hover: #26221d;
+  --side-bg: #12201a; --side-text: #ece6da; --side-border: #12201a; --side-active: #1f3a2f; --side-active-2: #1f3a2f;
+  --accent: #7cc4a0; --accent-text: #9bd5b7; --on-accent: #10251b; --tag-bg: #1f3a2f; --tag-text: #b9e3cc;
+  --warn-bg: #2b1d10; --warn-border: #5a3a1a; --warn-text: #f3c08a; --warn-text-strong: #f59e5b; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><i></i>DNB Books</div>
+    <nav>
+      <a href="#">Home</a>
+      <div class="sec">Inventory</div>
+      <a href="#" class="on">Items <span class="pill">3 below zero</span></a>
+      <a href="#">Adjustments</a>
+      <a href="#">Counts</a>
+      <div class="sec">Books</div>
+      <a href="#">Journal entries</a>
+      <a href="#">Chart of accounts</a>
+      <a href="#">Reports</a>
+      <div class="sec">Setup</div>
+      <a href="#">Settings</a>
+    </nav>
+  </aside>
+  <main>
+    <div class="top">
+      <div><h1>Items</h1><div class="sub">1,240 active items · stock valued as of today</div></div>
+      <div class="actions">
+        <div class="toggle"><span>Auto</span><span class="L">Light</span><span class="D">Dark</span></div>
+        <button class="btn">Import CSV</button><button class="btn primary">+ New item</button>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">Stock value</div><div class="v">$184,392.18</div></div>
+      <div class="kpi"><div class="l">Stock items</div><div class="v">1,108</div></div>
+      <div class="kpi"><div class="l">Non-stock items</div><div class="v">132</div></div>
+      <div class="kpi warn"><div class="l">Below zero</div><div class="v">3</div></div>
+    </div>
+    <div class="banner">⚠ 3 items are below zero. Their cost is estimated until stock is received or counted. <a href="#">Review →</a></div>
+    <div class="card">
+      <div class="filters">
+        <div class="input">Search SKU, name, or vendor part #</div>
+        <div class="select">All categories ▾</div><div class="select">All types ▾</div>
+        <span class="chk">☐ Show inactive</span>
+      </div>
+      <table>
+        <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Type</th><th class="num">On hand</th><th class="num">Unit cost</th><th class="num">Value</th></tr></thead>
+        <tbody>
+          <tr><td class="sku">BOLT-14</td><td>Hex bolt 1/4" zinc</td><td>Fasteners</td><td><span class="tag">FIFO</span></td><td class="num">980</td><td class="num">0.4950</td><td class="num">485.10</td></tr>
+          <tr><td class="sku">BOLT-38</td><td>Hex bolt 3/8" zinc</td><td>Fasteners</td><td><span class="tag">FIFO</span></td><td class="num">412</td><td class="num">0.7200</td><td class="num">296.64</td></tr>
+          <tr><td class="sku">PNT-RED-QT</td><td>Red enamel, quart</td><td>Paint</td><td><span class="tag">Avg</span></td><td class="num neg">−3</td><td class="num">7.2000</td><td class="num neg">−21.60</td></tr>
+          <tr><td class="sku">PNT-WHT-GL</td><td>White latex, gallon</td><td>Paint</td><td><span class="tag">Avg</span></td><td class="num">64</td><td class="num">18.4375</td><td class="num">1,180.00</td></tr>
+          <tr><td class="sku">TAPE-BL-2</td><td>Blue painter's tape 2"</td><td>Supplies</td><td><span class="tag">FIFO</span></td><td class="num">210</td><td class="num">3.1000</td><td class="num">651.00</td></tr>
+          <tr><td class="sku">SO-PART</td><td>Special order part</td><td class="dash">—</td><td><span class="tag ns">Non-stock</span></td><td class="num dash">—</td><td class="num dash">—</td><td class="num dash">—</td></tr>
+          <tr><td class="sku">WIRE-12-250</td><td>12 AWG wire, 250 ft spool</td><td>Electrical</td><td><span class="tag">FIFO</span></td><td class="num">18</td><td class="num">96.5000</td><td class="num">1,737.00</td></tr>
+          <tr><td class="sku">GLOVE-NIT-L</td><td>Nitrile gloves, large, box</td><td>Supplies</td><td><span class="tag">Avg</span></td><td class="num">47</td><td class="num">11.2340</td><td class="num">528.00</td></tr>
+        </tbody>
+      </table>
+      <div class="foot"><span>Showing 1–50 of 1,240</span><span>← Prev · Next →</span></div>
+    </div>
+  </main>
+</div>
+<script>
+const q = new URLSearchParams(location.search), b = document.body;
+b.dataset.v = 'c'; b.dataset.t = q.get('t') || 'light';
+document.querySelector('.toggle ' + (b.dataset.t === 'dark' ? '.D' : '.L')).classList.add('on');
+</script>
+</body>
+</html>

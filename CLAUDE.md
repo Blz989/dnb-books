@@ -19,6 +19,17 @@ Read both before starting. The plan's Global Constraints, Review Focus, and per-
 6. Keep `README.md` current: Tasks 1 and 10 fill in its "Getting started" section, and the "Status" line should say Phase 1 is built once the PR is ready. Do not remove the overview, roadmap, or cutover criteria.
 7. When all 11 tasks pass, open a PR into `main` titled `Phase 1: Ledger core`. The PR body lists each task with its status, the final `uv run pytest -q` output, any deviations from the plan and why, and the manual checks from Task 11 Step 3 that could not be run in a cloud container (these are for the owner to do on the office PC).
 
+## Standing rule: send screenshots of anything the owner will see
+
+The owner aligns on the work visually. Whenever a session builds or changes a screen, report, PDF, or printed output:
+
+1. Run the app against a throwaway demo database with realistic sample data (never the real `data/` database), using the pre-installed Playwright Chromium (`require('playwright')` in Node, no install needed).
+2. Capture full-page screenshots of every new or changed screen, including error states and empty states that the change touches. For printed output (checks, invoices), screenshot the rendered PDF.
+3. Send them to the owner with the `SendUserFile` tool as each task that changes the UI is completed, not batched at the end, with a one-line caption saying what each shows.
+4. List the screens sent in the PR description. Do not commit screenshots to the repo.
+
+If `SendUserFile` is not available in the session, save the screenshots under the session's scratchpad and say so in the PR so the owner can ask for them.
+
 ## Commands
 
 ```bash
