@@ -7,6 +7,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from core.roles import require_admin
+
 from .errors import (
     EntryStateError, InactiveAccountError, InvalidLineError, UnbalancedEntryError,
 )
@@ -120,3 +122,31 @@ def post_draft(entry: JournalEntry, user) -> JournalEntry:
         _mark_posted(current, user)
     entry.refresh_from_db()
     return entry
+
+
+def void_entry(entry: JournalEntry, *, user, reason: str, date: date_type | None = None) -> JournalEntry:
+    """Void by posting a reversing entry; the original stays on record as VOID."""
+    require_admin(user)
+    reason = (reason or "").strip()
+    with transaction.atomic():
+        current = JournalEntry.objects.get(pk=entry.pk)
+        if current.status != EntryStatus.POSTED:
+            raise EntryStateError("Only posted entries can be voided.")
+        if not reason:
+            raise ValueError("A reason is required to void an entry.")
+        reversal = post_entry(
+            date=date or current.date,
+            user=user,
+            memo=f"Void of {current.display_number}: {reason}",
+            source_type=current.source_type,
+            source_id=current.source_id,
+            reverses=current,
+            lines=[
+                LineSpec(l.account, debit=l.credit, credit=l.debit, description=l.description)
+                for l in current.lines.select_related("account")
+            ],
+        )
+        current.status = EntryStatus.VOID
+        current.save()
+    entry.refresh_from_db()
+    return reversal

@@ -338,7 +338,7 @@ def test_concurrent_posts_both_succeed(admin_user, cash, revenue): ...
 - Produces: `void_entry(entry: JournalEntry, *, user, reason: str, date: date | None = None) -> JournalEntry`. Admin only (`require_admin`). `reason` required. Date defaults to `entry.date`. In one transaction: posts a reversal via `post_entry` with each line's debit and credit swapped, `memo = f"Void of {entry.display_number}: {reason}"`, `reverses=entry`, same `source_type/source_id`; then sets `entry.status = VOID`. Returns the reversal.
 - Errors: entry not POSTED → `EntryStateError("Only posted entries can be voided.")`. Reversal date in a closed month → `PeriodClosedError` with the message from `assert_open`, and the original stays POSTED.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_void_nets_to_zero(admin_user, posted_entry, cash):
@@ -359,10 +359,10 @@ def test_cannot_void_twice(...): ...
 def test_standard_user_cannot_void(...): ...
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `void_entry`**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: void posted entries via reversing entry`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `void_entry`**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: void posted entries via reversing entry`
 
 ---
 
