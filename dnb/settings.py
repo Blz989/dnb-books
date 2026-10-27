@@ -22,6 +22,12 @@ ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DNB_ALLOWED_HOSTS", "localho
 DNB_DB_PATH = Path(os.environ.get("DNB_DB_PATH") or BASE_DIR / "data" / "dnb.sqlite3")
 DNB_BACKUP_DIR = Path(os.environ["DNB_BACKUP_DIR"]) if os.environ.get("DNB_BACKUP_DIR") else BASE_DIR / "data" / "backups"
 DNB_BACKUP_KEY = os.environ.get("DNB_BACKUP_KEY", "")
+# Off-site copy through rclone, e.g. "gdrive:dnb-backups". Blank keeps backups local only.
+DNB_BACKUP_REMOTE = os.environ.get("DNB_BACKUP_REMOTE", "").strip()
+DNB_RCLONE = [os.environ.get("DNB_RCLONE", "rclone")]
+# Scheduler (docker compose "scheduler" service), local time, HH:MM.
+DNB_BACKUP_TIME = os.environ.get("DNB_BACKUP_TIME", "01:15")
+DNB_DRILL_TIME = os.environ.get("DNB_DRILL_TIME", "02:15")
 
 # data/ is not in git, so a fresh install needs it created.
 DNB_DB_PATH.parent.mkdir(parents=True, exist_ok=True)

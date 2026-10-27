@@ -1,0 +1,24 @@
+# Start:   docker compose up -d --build
+# Update:  ./update.sh
+services:
+  app:
+    build: .
+    image: dnb-books
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+
+  scheduler:
+    image: dnb-books
+    env_file: .env
+    environment:
+      DNB_SKIP_MIGRATE: "1"   # the app service migrates; avoid two migrations at once
+    command: ["python", "manage.py", "run_scheduler"]
+    volumes:
+      - ./data:/data
+    depends_on:
+      - app
+    restart: unless-stopped

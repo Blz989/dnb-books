@@ -1,13 +1,10 @@
 #!/bin/sh
-# Back up, pull the new version, apply database changes. Stops on first failure.
+# Back up, pull the new version, rebuild, restart. Database changes apply when the app starts.
+# Stops on the first failure, so nothing is rebuilt if the backup fails.
 set -e
 cd "$(dirname "$0")"
-if uv run python manage.py help backup_now >/dev/null 2>&1; then
-  uv run python manage.py backup_now
-else
-  echo "Notice: backup_now is not available yet, skipping backup."
-fi
+docker compose exec -T -u dnb app python manage.py backup_now
 git pull
-uv sync
-uv run python manage.py migrate
-uv run python manage.py collectstatic --noinput
+docker compose build
+docker compose up -d
+docker compose ps

@@ -1,6 +1,6 @@
 # DNB Books
 
-Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. Django + SQLite, runs on one office PC, a few users on the office network. The owner directs the work and is not a developer; Claude writes and maintains the code.
+Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. Django + SQLite, runs in Docker on one Linux server, a few users on the office network. The owner directs the work and is not a developer; Claude writes and maintains the code.
 
 ## Source of truth
 
@@ -41,6 +41,7 @@ uv run pytest -q                 # full test suite
 uv run pytest tests/test_x.py -v # one file
 uv run python manage.py migrate
 uv run python manage.py serve    # start the app (waitress) on 0.0.0.0:8000
+docker compose up -d --build     # production-like run (app + scheduler); see README
 ```
 
 ## Non-negotiable rules
