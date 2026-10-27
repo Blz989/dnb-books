@@ -1,18 +1,31 @@
 import os
+import sys
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.environ.get("DNB_SECRET_KEY", "dev-only-insecure-key")
 DEBUG = os.environ.get("DNB_DEBUG", "") == "1"
+SECRET_KEY = os.environ.get("DNB_SECRET_KEY", "")
+if SECRET_KEY in ("", "change-me"):
+    if DEBUG or "pytest" in sys.modules:
+        SECRET_KEY = "dev-and-test-only-key"
+    else:
+        raise ImproperlyConfigured(
+            "DNB_SECRET_KEY is not set. Copy .env.example to .env and put a long random value there."
+        )
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DNB_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
 DNB_DB_PATH = Path(os.environ.get("DNB_DB_PATH") or BASE_DIR / "data" / "dnb.sqlite3")
 DNB_BACKUP_DIR = Path(os.environ["DNB_BACKUP_DIR"]) if os.environ.get("DNB_BACKUP_DIR") else BASE_DIR / "data" / "backups"
 DNB_BACKUP_KEY = os.environ.get("DNB_BACKUP_KEY", "")
+
+# data/ is not in git, so a fresh install needs it created.
+DNB_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+(BASE_DIR / "data").mkdir(exist_ok=True)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
