@@ -225,3 +225,15 @@ def items_purge():
             c.execute(f"DELETE FROM {table}")
         for sql in mig.FORWARD:
             c.execute(sql)
+
+
+# ---- contacts fixtures (Phase 3, Task 2) ----
+@pytest.fixture
+def customer(db):
+    from contacts.models import Customer, Terms
+
+    return Customer.objects.create(
+        name="Acme Builders", terms=Terms.NET_30,
+        billing_address="100 Main St\nSpringfield, IL 62701",
+        ship_to_address="Dock 4, 200 Industrial Way\nSpringfield, IL 62702",
+    )

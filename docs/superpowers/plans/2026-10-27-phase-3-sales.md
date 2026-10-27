@@ -135,11 +135,11 @@ def test_system_void_movement_skips_admin(...): ...
 - `setup_roles`: Standard gets add, change, and view on `contacts.customer`. Admin gets all permissions for `contacts` and `sales` (add both to `ADMIN_APPS`).
 - `conftest.py`: a `customer` fixture ("Acme Builders", NET_30, a billing and a ship-to address).
 
-- [ ] **Step 1: Failing tests:** `due_date(NET_30, date(2026, 10, 27)) == date(2026, 11, 26)`; due on receipt is the same day; a duplicate name (different case) is rejected with the message.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: customers with payment terms`
+- [x] **Step 1: Failing tests:** `due_date(NET_30, date(2026, 10, 27)) == date(2026, 11, 26)`; due on receipt is the same day; a duplicate name (different case) is rejected with the message.
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: customers with payment terms`
 
 ---
 

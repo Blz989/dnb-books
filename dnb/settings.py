@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "core",
     "ledger",
     "items",
+    "contacts",
     "backup",
 ]
 
