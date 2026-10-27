@@ -173,7 +173,7 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Command `sync_banks` runs `sync_all()`.
   - Command `plaid_sandbox_check` runs against `PLAID_ENV=sandbox` only (it refuses otherwise): creates a sandbox public token for institution `ins_109508`, exchanges it, syncs, and prints counts. Manual use only.
 
-- [ ] **Step 1: Failing tests (with `FakePlaidClient`):**
+- [x] **Step 1: Failing tests (with `FakePlaidClient`):**
   - Two pages are applied and the cursor saved.
   - Pending is skipped.
   - Modified and removed are handled.
@@ -181,10 +181,10 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Login required sets NEEDS_LOGIN.
   - The access token never appears in `str(PlaidError)` or the log output (caplog).
   - The scheduler includes `sync_banks` at 06:00.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: Plaid sync`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: Plaid sync`
 
 ---
 

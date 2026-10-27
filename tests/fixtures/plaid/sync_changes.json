@@ -1,0 +1,10 @@
+{
+  "added": [],
+  "modified": [
+    {"transaction_id": "tx-3", "account_id": "acct-chk", "date": "2026-01-08", "name": "Coffee Shop #2", "amount": 27.50, "pending": false, "check_number": null},
+    {"transaction_id": "tx-2", "account_id": "acct-chk", "date": "2026-01-06", "name": "Check 2050 changed", "amount": 999.00, "pending": false, "check_number": "2050"}
+  ],
+  "removed": [{"transaction_id": "tx-3"}, {"transaction_id": "tx-1"}, {"transaction_id": "tx-pending-gone"}],
+  "next_cursor": "cursor-3",
+  "has_more": false
+}

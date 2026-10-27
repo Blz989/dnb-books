@@ -1,0 +1,4 @@
+{"accounts": [
+  {"account_id": "acct-chk", "name": "Plaid Checking", "mask": "0000", "type": "depository", "subtype": "checking"},
+  {"account_id": "acct-card", "name": "Plaid Credit Card", "mask": "3333", "type": "credit", "subtype": "credit card"}
+]}

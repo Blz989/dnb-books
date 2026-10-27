@@ -1,0 +1,11 @@
+{
+  "added": [
+    {"transaction_id": "tx-4", "account_id": "acct-chk", "date": "2026-01-09", "name": "Pending Lunch", "amount": 12.00, "pending": true, "check_number": null},
+    {"transaction_id": "tx-5", "account_id": "acct-card", "date": "2026-01-09", "name": "Office Depot", "amount": 86.40, "pending": false, "check_number": null},
+    {"transaction_id": "tx-6", "account_id": "acct-other", "date": "2026-01-09", "name": "Unmapped account", "amount": 1.00, "pending": false, "check_number": null}
+  ],
+  "modified": [],
+  "removed": [],
+  "next_cursor": "cursor-2",
+  "has_more": false
+}
