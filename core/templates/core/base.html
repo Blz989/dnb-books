@@ -1,33 +1,64 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}DNB Books{% endblock %}</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 0; color: #1a1a1a; background: #f6f6f4; }
-    header { background: #23395b; color: #fff; padding: .75rem 1.5rem; display: flex; justify-content: space-between; }
-    header a { color: #fff; }
-    main { max-width: 60rem; margin: 1.5rem auto; padding: 0 1rem; }
-    .banner { padding: .75rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
-    .banner.ok { background: #e3f3e6; } .banner.warning { background: #fff2cc; } .banner.error { background: #f8d7da; }
-    .messages li { list-style: none; padding: .5rem 1rem; background: #e8eef7; margin-bottom: .5rem; }
-  </style>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("dnb-theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) { /* storage unavailable: Auto */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="{% static 'core/app.css' %}">
+  <script src="{% static 'core/theme.js' %}" defer></script>
 </head>
 <body>
-  <header>
-    <a href="{% url 'home' %}"><strong>DNB Books</strong></a>
-    {% if user.is_authenticated %}
-    <span>{{ user.get_username }} &middot;
+<div class="app{% if not user.is_authenticated %} bare{% endif %}">
+  {% if user.is_authenticated %}
+  <aside>
+    <a class="brand" href="{% url 'home' %}"><i></i>DNB Books</a>
+    <nav>
+      <a href="{% url 'home' %}"{% if nav_active == "home" %} class="on"{% endif %}>Home</a>
+      <div class="sec">Inventory</div>
+      <a href="/items/"{% if nav_active == "items" %} class="on"{% endif %}>Items{% if negative_stock_count %} <span class="pill">{{ negative_stock_count }} below zero</span>{% endif %}</a>
+      <a href="/items/adjustments/"{% if nav_active == "adjustments" %} class="on"{% endif %}>Adjustments</a>
+      <a href="/items/counts/"{% if nav_active == "counts" %} class="on"{% endif %}>Counts</a>
+      <div class="sec">Books</div>
+      <a href="{% url 'admin:ledger_journalentry_changelist' %}"{% if nav_active == "journal" %} class="on"{% endif %}>Journal entries</a>
+      <a href="{% url 'admin:ledger_account_changelist' %}"{% if nav_active == "accounts" %} class="on"{% endif %}>Chart of accounts</a>
+      <a href="{% url 'reports:trial-balance' %}"{% if nav_active == "reports" %} class="on"{% endif %}>Reports</a>
+      <div class="sec">Setup</div>
+      <a href="/items/settings/"{% if nav_active == "settings" %} class="on"{% endif %}>Settings</a>
+      <a href="{% url 'admin:index' %}">Admin</a>
+    </nav>
+    <div class="side-user">{{ user.get_username }} &middot;
       <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}<button type="submit">Log out</button></form>
-    </span>
-    {% endif %}
-  </header>
+    </div>
+  </aside>
+  {% endif %}
   <main>
+    <div class="top">
+      <div>
+        <h1>{% block page_title %}DNB Books{% endblock %}</h1>
+        {% block page_subtitle %}{% endblock %}
+      </div>
+      <div class="actions">
+        <div class="toggle" role="group" aria-label="Theme">
+          <button type="button" data-theme-choice="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+        </div>
+        {% block page_actions %}{% endblock %}
+      </div>
+    </div>
     {% block messages %}
-    {% if messages %}<ul class="messages">{% for m in messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+    {% for m in messages %}<div class="banner {% if m.tags == 'error' %}error{% elif m.tags == 'warning' %}warning{% else %}ok{% endif %}">{{ m }}</div>{% endfor %}
     {% endblock %}
     {% block content %}{% endblock %}
   </main>
+</div>
 </body>
 </html>

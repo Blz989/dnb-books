@@ -1,11 +1,12 @@
 {% extends "core/base.html" %}
 {% block title %}General ledger{% endblock %}
+{% block page_title %}General ledger{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">{{ report.account }}, {{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}</div>{% endif %}{% endblock %}
 {% block content %}
-<h1>General ledger</h1>
+<div class="card">
 {% include "ledger/_filter_form.html" %}
 {% if report %}
-<p>{{ report.account }}, {{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}</p>
-<table class="report">
+<table class="data">
   <thead><tr><th>Date</th><th>Entry</th><th>Reference</th><th>Description</th>
     <th class="num">Debit</th><th class="num">Credit</th><th class="num">Balance</th></tr></thead>
   <tbody>
@@ -20,4 +21,5 @@
   </tbody>
 </table>
 {% endif %}
+</div>
 {% endblock %}

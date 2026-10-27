@@ -1,11 +1,12 @@
 {% extends "core/base.html" %}
 {% block title %}Trial balance{% endblock %}
+{% block page_title %}Trial balance{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">As of {{ report.as_of|date:"Y-m-d" }}</div>{% endif %}{% endblock %}
 {% block content %}
-<h1>Trial balance</h1>
+<div class="card">
 {% include "ledger/_filter_form.html" %}
 {% if report %}
-<p>As of {{ report.as_of|date:"Y-m-d" }}</p>
-<table class="report">
+<table class="data">
   <thead><tr><th>Account</th><th>Name</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead>
   <tbody>
   {% for r in report.rows %}
@@ -19,4 +20,5 @@
   </tbody>
 </table>
 {% endif %}
+</div>
 {% endblock %}

@@ -1,11 +1,14 @@
 {% extends "core/base.html" %}
 {% block title %}Log in{% endblock %}
+{% block page_title %}Log in{% endblock %}
 {% block content %}
-<h1>Log in</h1>
-{% if form.errors %}<p class="banner error">Wrong username or password.</p>{% endif %}
+{% if form.errors %}<div class="banner error">Wrong username or password.</div>{% endif %}
+<div class="card"><div class="body">
 <form method="post">{% csrf_token %}
-  {{ form.as_p }}
+  <div class="form-row"><label for="{{ form.username.id_for_label }}">Username</label>{{ form.username }}</div>
+  <div class="form-row"><label for="{{ form.password.id_for_label }}">Password</label>{{ form.password }}</div>
   <input type="hidden" name="next" value="{{ next }}">
-  <button type="submit">Log in</button>
+  <button type="submit" class="btn primary">Log in</button>
 </form>
+</div></div>
 {% endblock %}

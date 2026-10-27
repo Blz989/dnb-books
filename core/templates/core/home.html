@@ -1,19 +1,27 @@
 {% extends "core/base.html" %}
+{% block title %}Home{% endblock %}
+{% block page_title %}DNB Books{% endblock %}
+{% block page_subtitle %}<div class="sub">Books and inventory</div>{% endblock %}
 {% block content %}
-<h1>DNB Books</h1>
-<div class="banner {{ backup.level }}">{{ backup.message }}</div>
-<h2>Reports</h2>
-<ul>
-  <li><a href="{% url 'reports:trial-balance' %}">Trial balance</a></li>
-  <li><a href="{% url 'reports:profit-and-loss' %}">Profit and loss</a></li>
-  <li><a href="{% url 'reports:balance-sheet' %}">Balance sheet</a></li>
-  <li><a href="{% url 'reports:general-ledger' %}">General ledger</a></li>
-</ul>
-<h2>Books</h2>
-<ul>
-  <li><a href="{% url 'admin:ledger_account_changelist' %}">Chart of accounts</a></li>
-  <li><a href="{% url 'admin:ledger_journalentry_changelist' %}">Journal entries</a></li>
-  <li><a href="{% url 'admin:ledger_accountingperiod_changelist' %}">Accounting periods</a></li>
-  <li><a href="{% url 'admin:index' %}">All admin screens</a></li>
-</ul>
+<div class="kpis">
+  <div class="kpi{% if backup.level != "ok" %} warn{% endif %}"><div class="l">Backups</div><div class="v">{% if backup.level == "ok" %}OK{% else %}Needs attention{% endif %}</div><div class="note">{{ backup.message }}</div></div>
+  <div class="kpi{% if negative_stock_count %} warn{% endif %}"><div class="l">Items below zero</div><div class="v">{{ negative_stock_count }}</div></div>
+</div>
+{% if backup.level != "ok" %}<div class="banner {{ backup.level }}">{{ backup.message }}</div>{% endif %}
+<div class="card"><div class="body">
+  <h2 style="margin-top:0">Reports</h2>
+  <ul class="links">
+    <li><a href="{% url 'reports:trial-balance' %}">Trial balance</a></li>
+    <li><a href="{% url 'reports:profit-and-loss' %}">Profit and loss</a></li>
+    <li><a href="{% url 'reports:balance-sheet' %}">Balance sheet</a></li>
+    <li><a href="{% url 'reports:general-ledger' %}">General ledger</a></li>
+  </ul>
+  <h2>Books</h2>
+  <ul class="links">
+    <li><a href="{% url 'admin:ledger_account_changelist' %}">Chart of accounts</a></li>
+    <li><a href="{% url 'admin:ledger_journalentry_changelist' %}">Journal entries</a></li>
+    <li><a href="{% url 'admin:ledger_accountingperiod_changelist' %}">Accounting periods</a></li>
+    <li><a href="{% url 'admin:index' %}">All admin screens</a></li>
+  </ul>
+</div></div>
 {% endblock %}

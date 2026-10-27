@@ -83,7 +83,7 @@ tests/
   - `node scripts/screenshots.mjs <base_url> <out_dir> <path> [<path> ...]`: logs in as `demo`, saves `<out_dir>/<slug>-light.png` and `-dark.png` (full page, 1360×860 viewport) per path.
 - Fonts: Inter (variable woff2) and Source Serif 4 (600 weight woff2), latin subsets, copied from the npm packages `@fontsource-variable/inter` and `@fontsource/source-serif-4`, with each package's OFL license file next to them. `@font-face` in `app.css`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_base_has_theme_toggle_and_tokens(client, standard_user):
@@ -115,11 +115,11 @@ def test_seed_demo_refuses_non_empty_ledger(posted_entry):
 
 All Phase 1 view tests must still pass unchanged.
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** base layout, CSS, theme script, fonts, restyled home (summary cards: backup status, items below zero placeholder; quick links) and the four report templates (same context variables; tables use `table.data`, numbers `td.num`), `seed_demo`, `screenshots.mjs`, README "Taking screenshots" section.
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Screenshots** of `/`, the four reports, and the login page, light and dark. Compare the shell (sidebar, header, toggle, cards) against `docs/design/items-mockup.html` rendered at the same size; send with `SendUserFile`.
-- [ ] **Step 6: Commit** `feat: Ledger paper design system and restyled home and reports`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** base layout, CSS, theme script, fonts, restyled home (summary cards: backup status, items below zero placeholder; quick links) and the four report templates (same context variables; tables use `table.data`, numbers `td.num`), `seed_demo`, `screenshots.mjs`, README "Taking screenshots" section.
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Screenshots** of `/`, the four reports, and the login page, light and dark. Compare the shell (sidebar, header, toggle, cards) against `docs/design/items-mockup.html` rendered at the same size; send with `SendUserFile`.
+- [x] **Step 6: Commit** `feat: Ledger paper design system and restyled home and reports`
 
 ---
 

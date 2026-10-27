@@ -7,4 +7,4 @@ from backup.service import backup_status
 
 @login_required
 def home(request):
-    return render(request, "core/home.html", {"backup": backup_status(timezone.now())})
+    return render(request, "core/home.html", {"backup": backup_status(timezone.now()), "nav_active": "home"})

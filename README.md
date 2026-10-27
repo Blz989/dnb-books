@@ -127,3 +127,20 @@ uv run pytest -q   # run tests
 ```
 
 Each phase gets its own spec and plan before any code is written. Work happens on `claude/*` branches and lands through pull requests into `main`.
+
+
+## Development
+
+### Taking screenshots
+
+Screens are checked visually against `docs/design/items-mockup.html`. Use a throwaway database, never `data/`:
+
+```bash
+export DNB_DB_PATH=/tmp/demo.sqlite3 DNB_DEBUG=1
+uv run python manage.py migrate
+uv run python manage.py seed_demo          # user demo / demo-pass-123; refuses a non-empty database
+uv run python manage.py runserver 8765 --noreload &
+node scripts/screenshots.mjs http://127.0.0.1:8765 /tmp/shots / /reports/trial-balance/
+```
+
+This saves `<name>-light.png` and `<name>-dark.png` (full page) for each path. It uses the Playwright that is pre-installed in cloud sessions and is not an app dependency.
