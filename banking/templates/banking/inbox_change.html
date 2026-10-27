@@ -1,0 +1,34 @@
+{% extends "core/base.html" %}
+{% block title %}Change match{% endblock %}
+{% block page_title %}Change what this is{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ txn.date|date:"Y-m-d" }} · {{ txn.description }} · <strong>{{ txn.amount|floatformat:"2g" }}</strong> · {{ txn.bank_account.ledger_account.name }}</div>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <h2 style="margin-top:0">Match to something already in the books</h2>
+  <div class="card">
+    <table class="data">
+      <thead><tr><th></th><th>Match</th><th class="num">Score</th></tr></thead>
+      <tbody>
+      {% for c in candidates %}
+        <tr><td><input type="radio" name="candidate" value="{{ c.key }}" id="cand-{{ forloop.counter }}"{% if forloop.first %} checked{% endif %}></td>
+          <td><label for="cand-{{ forloop.counter }}">{{ c.c.label }}</label></td><td class="num">{{ c.c.score }}</td></tr>
+      {% empty %}<tr><td colspan="3" class="empty">Nothing in the books looks like this row.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if candidates %}<div class="foot"><span></span><span><button type="submit" name="action" value="candidate" class="btn primary">Use the selected match</button></span></div>{% endif %}
+  </div>
+  <h2>Or book it to an account</h2>
+  <div class="card"><div class="body form-grid">
+    <div class="form-row"><label for="id_account">Account</label>
+      <select name="account" id="id_account"><option value="">Choose an account</option>
+        {% for a in accounts %}<option value="{{ a.pk }}">{{ a }}</option>{% endfor %}</select>
+      <span class="help">Posts a journal entry dated {{ txn.date|date:"Y-m-d" }} between this bank account and the one you choose.</span></div>
+    <div class="form-row"><label for="id_memo">Memo</label><input type="text" name="memo" id="id_memo" maxlength="200" value="{{ txn.description }}"></div>
+  </div>
+  <div class="foot"><span></span><span><button type="submit" name="action" value="entry" class="btn primary">Book it</button></span></div></div>
+  <a class="btn" href="{% url 'banking:inbox' %}">Back to the inbox</a>
+</form>
+{% endblock %}

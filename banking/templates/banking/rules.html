@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+{% block title %}Rules{% endblock %}
+{% block page_title %}Rules{% endblock %}
+{% block page_subtitle %}<div class="sub">When a bank description matches, the inbox suggests booking it to that account. The first active match wins.</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="{% url 'banking:inbox' %}">Back to the inbox</a><a class="btn primary" href="{% url 'banking:rule-new' %}">+ New rule</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Order</th><th>When the description</th><th>Account</th><th>Applies to</th><th>Memo</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rules %}
+      <tr{% if not r.is_active %} style="opacity:.6"{% endif %}>
+        <td style="white-space:nowrap">{{ forloop.counter }}
+          <form method="post" action="{% url 'banking:rule-move' r.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="direction" value="up"><button type="submit" class="btn" aria-label="Move up"{% if forloop.first %} disabled{% endif %}>↑</button></form>
+          <form method="post" action="{% url 'banking:rule-move' r.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="direction" value="down"><button type="submit" class="btn" aria-label="Move down"{% if forloop.last %} disabled{% endif %}>↓</button></form></td>
+        <td>{{ r.get_pattern_type_display }} <strong>{{ r.pattern }}</strong></td>
+        <td>{{ r.account }}</td>
+        <td>{% if r.bank_account %}{{ r.bank_account.ledger_account.name }}{% else %}<span class="dash">Every account</span>{% endif %}</td>
+        <td>{{ r.memo|default:"" }}</td>
+        <td style="white-space:nowrap"><a class="btn" href="{% url 'banking:rule-edit' r.pk %}">Edit</a>
+          <form method="post" action="{% url 'banking:rule-toggle' r.pk %}" style="display:inline">{% csrf_token %}<button type="submit" class="btn">{% if r.is_active %}Turn off{% else %}Turn on{% endif %}</button></form></td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="empty">No rules yet. A rule saves you from picking the same account for the same bank fee every month.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

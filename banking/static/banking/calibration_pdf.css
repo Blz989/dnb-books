@@ -1,0 +1,14 @@
+@page { size: Letter; margin: 0; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Inter", Helvetica, Arial, sans-serif; color: #111; background: #fff; }
+.sheet { position: relative; width: 8.5in; height: 11in; overflow: hidden; }
+.vline { position: absolute; top: 0; bottom: 0; width: 0; border-left: 0.5pt solid #bbb; }
+.hline { position: absolute; left: 0; right: 0; height: 0; border-top: 0.5pt solid #bbb; }
+.vline.major, .hline.major { border-color: #666; border-width: 0.9pt; }
+.vlabel { position: absolute; top: 0.02in; margin-left: 0.03in; font-size: 7pt; color: #444; }
+.hlabel { position: absolute; left: 0.02in; margin-top: 0.02in; font-size: 7pt; color: #444; }
+.box { position: absolute; border: 1pt solid #111; }
+.box span { position: absolute; left: 0.04in; top: 0.02in; font-size: 7pt; background: #fff; padding: 0 2pt; }
+.note { position: absolute; width: 7in; background: #fff; border: 1pt solid #111; padding: 8pt 10pt; font-size: 9pt; }
+.note h3 { margin: 0 0 4pt; font-size: 11pt; }
+.note p { margin: 0 0 4pt; }

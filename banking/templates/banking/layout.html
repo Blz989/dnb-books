@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block title %}Check layout{% endblock %}
+{% block page_title %}Check layout{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ account.ledger_account }} · positions in inches from the top left of the page, sizes in points</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="{% url 'banking:calibrate' account.pk %}" target="_blank" rel="noopener">Print calibration page</a>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+<div class="banner info">Print the calibration page at 100% (actual size) and hold it against a voucher check in front of a light. If the boxes sit off the lines, nudge the offsets, save, and print it again.</div>
+<form method="post">{% csrf_token %}
+  <div class="card">
+    <table class="data">
+      <thead><tr><th>Field</th><th>X (in)</th><th>Y (in)</th><th>Size (pt)</th><th>Printed</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr><td>{{ r.label }}</td>
+          <td><input type="number" step="0.01" min="0" max="8.5" name="x-{{ r.name }}" value="{{ r.x }}" aria-label="{{ r.label }} X" style="width:7rem"></td>
+          <td><input type="number" step="0.01" min="0" max="11" name="y-{{ r.name }}" value="{{ r.y }}" aria-label="{{ r.label }} Y" style="width:7rem"></td>
+          <td><input type="number" step="0.5" min="6" max="20" name="size-{{ r.name }}" value="{{ r.size }}" aria-label="{{ r.label }} size" style="width:6rem"></td>
+          <td><input type="checkbox" name="visible-{{ r.name }}" value="on"{% if r.visible %} checked{% endif %} aria-label="Print {{ r.label }}"></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <h2>Printer offset</h2>
+  <div class="card"><div class="body form-grid">
+    <div class="form-row"><label for="offset_x">Across (X)</label><input type="number" step="0.01" min="-0.50" max="0.50" id="offset_x" name="offset_x" value="{{ offset_x }}"><span class="help">Added to every field. Positive moves right. -0.50 to 0.50 in, in 0.01 steps.</span></div>
+    <div class="form-row"><label for="offset_y">Down (Y)</label><input type="number" step="0.01" min="-0.50" max="0.50" id="offset_y" name="offset_y" value="{{ offset_y }}"><span class="help">Added to every field. Positive moves down.</span></div>
+  </div></div>
+  <button type="submit" class="btn primary">Save layout</button>
+  <a class="btn" href="{% url 'banking:accounts' %}">Cancel</a>
+</form>
+{% endblock %}

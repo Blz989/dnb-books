@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% block title %}Bank accounts{% endblock %}
+{% block page_title %}Bank accounts{% endblock %}
+{% block page_subtitle %}<div class="sub">Banks, cards, and loans connected to the books</div>{% endblock %}
+{% block page_actions %}{% if is_admin %}{% if plaid_ready %}<a class="btn" href="{% url 'banking:link' %}">Link with Plaid</a>{% endif %}<a class="btn primary" href="{% url 'banking:account-new' %}">+ Add account</a>{% endif %}{% endblock %}
+{% block content %}
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Account</th><th>Kind</th><th>Connection</th><th class="num">Balance</th><th>Last reconciled</th><th class="num">Inbox</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><strong>{{ r.account.ledger_account.name }}</strong>{% if r.account.mask %} <span class="dash">···· {{ r.account.mask }}</span>{% endif %}{% if not r.account.is_active %} <span class="tag ns">Inactive</span>{% endif %}
+          <div class="on-hand">{{ r.account.ledger_account.number }}</div></td>
+        <td>{{ r.account.get_kind_display }}</td>
+        <td>{% if r.item %}{{ r.item.institution_name }}
+            {% if r.item.status == "OK" %}<div class="on-hand">{% if r.item.last_sync_at %}Synced {{ r.item.last_sync_at|date:"Y-m-d H:i" }}{% else %}Not synced yet{% endif %}</div>
+            {% elif r.item.status == "NEEDS_LOGIN" %}<div><span class="tag overdue">Needs login</span>{% if is_admin %} <a href="{% url 'banking:link-update' r.item.pk %}">Re-link</a>{% endif %}</div>
+            {% else %}<div><span class="tag overdue">Error</span></div><div class="on-hand">{{ r.item.last_error }}</div>{% endif %}
+          {% else %}<span class="dash">File import</span>{% endif %}</td>
+        <td class="num">{{ r.balance|floatformat:"2g" }}{% if r.account.is_liability %} <span class="dash">owed</span>{% endif %}</td>
+        <td>{% if r.last_reconciled %}{{ r.last_reconciled|date:"Y-m-d" }}{% else %}<span class="dash">Never</span>{% endif %}</td>
+        <td class="num"><a href="/banking/inbox/?account={{ r.account.pk }}">{{ r.account.inbox }}</a></td>
+        <td style="white-space:nowrap">
+          <a class="btn" href="{% url 'banking:import-file' r.account.pk %}">Import file</a>
+          {% if is_admin %}
+            {% if r.item %}<form method="post" action="{% url 'banking:sync-now' r.item.pk %}" style="display:inline">{% csrf_token %}<button type="submit" class="btn">Sync now</button></form>{% endif %}
+            <a class="btn" href="{% url 'banking:account-edit' r.account.pk %}">Edit</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7" class="empty">No bank accounts yet. {% if is_admin %}Add one, then import a statement file or link it with Plaid.{% else %}Ask an admin to add one.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

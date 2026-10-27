@@ -287,3 +287,41 @@ def card(db):
 @pytest.fixture
 def freight(db):
     return _account("6150", "Freight in", AccountType.EXPENSE, AccountSubtype.EXPENSE)
+
+
+# ---- banking fixtures (Phase 5a, Task 2) ----
+@pytest.fixture
+def field_key(settings):
+    from cryptography.fernet import Fernet
+
+    settings.DNB_FIELD_KEY = Fernet.generate_key().decode()
+    return settings.DNB_FIELD_KEY
+
+
+@pytest.fixture
+def checking(db, bank):
+    from banking.models import AccountKind, BankAccount
+
+    return BankAccount.objects.create(
+        ledger_account=bank, kind=AccountKind.CHECKING, mask="1234", next_check_number=2051,
+    )
+
+
+@pytest.fixture
+def card_account(db, card):
+    from banking.models import AccountKind, BankAccount
+
+    return BankAccount.objects.create(ledger_account=card, kind=AccountKind.CARD, mask="9876")
+
+
+@pytest.fixture
+def loan(db):
+    from banking.models import AccountKind, BankAccount
+
+    acct = _account("2500", "Equipment loan", AccountType.LIABILITY, AccountSubtype.LONG_TERM_LIABILITY)
+    return BankAccount.objects.create(ledger_account=acct, kind=AccountKind.LOAN, mask="5555")
+
+
+@pytest.fixture
+def interest_expense(db):
+    return _account("6800", "Interest expense", AccountType.EXPENSE, AccountSubtype.EXPENSE)

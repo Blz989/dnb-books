@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Reconciliation report</title>
+</head><body>
+<h1>Reconciliation report</h1>
+<div class="sub">{{ account }} · statement dated {{ rec.statement_date|date:"F j, Y" }} · prepared {{ now|date:"F j, Y" }}</div>
+
+<table class="summary">
+  <tr><td>Beginning balance{% if is_liability %} (amount owed){% endif %}</td><td class="num">{{ opening|floatformat:"2g" }}</td></tr>
+  <tr><td>Cleared this period</td><td class="num">{{ cleared_total|floatformat:"2g" }}</td></tr>
+  <tr><td>Statement balance</td><td class="num">{{ rec.statement_balance|floatformat:"2g" }}</td></tr>
+  <tr><td>Difference</td><td class="num">{{ difference|floatformat:"2g" }}</td></tr>
+</table>
+
+<h2>Cleared {% if is_liability %}payments and credits{% else %}deposits and credits{% endif %}</h2>
+{% include "banking/_report_rows.html" with rows=cleared_deposits %}
+<h2>Cleared {% if is_liability %}purchases and draws{% else %}payments and debits{% endif %}</h2>
+{% include "banking/_report_rows.html" with rows=cleared_payments %}
+<h2>Outstanding checks and payments</h2>
+{% include "banking/_report_rows.html" with rows=outstanding %}
+<h2>Deposits in transit</h2>
+{% include "banking/_report_rows.html" with rows=in_transit %}
+</body></html>

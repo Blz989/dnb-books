@@ -1,0 +1,54 @@
+{% extends "core/base.html" %}
+{% block title %}Inbox{% endblock %}
+{% block page_title %}Inbox{% endblock %}
+{% block page_subtitle %}<div class="sub">Bank activity waiting for you. Confirm a suggestion, or choose what it is. Nothing is booked until you do.</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="{% url 'banking:rules' %}">Rules</a><a class="btn" href="{% url 'banking:transfer-new' %}">New transfer</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <form method="get" class="filters">
+    <label>Account<select name="account"><option value="">All accounts</option>
+      {% for a in accounts %}<option value="{{ a.pk }}"{% if account_id == a.pk|stringformat:"s" %} selected{% endif %}>{{ a.ledger_account.name }}{% if a.mask %} ···· {{ a.mask }}{% endif %}</option>{% endfor %}</select></label>
+    <label>Status<select name="status">{% for value, label in statuses %}<option value="{{ value }}"{% if status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+    <button type="submit" class="btn">Filter</button>
+  </form>
+  <form method="post" action="{% url 'banking:inbox-bulk' %}" id="bulk-form">{% csrf_token %}
+    <input type="hidden" name="token" value="{{ bulk_token }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+  </form>
+  <table class="data">
+    <thead><tr><th>{% if status == "NEW" %}<span class="dash" title="Tick rows to confirm together">✓</span>{% endif %}</th><th>Date</th><th>Description</th><th class="num">Amount</th><th>Suggestion</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for i in items %}
+      <tr>
+        <td>{% if i.suggestion %}<input type="checkbox" name="rows" value="{{ i.txn.pk }}" form="bulk-form" aria-label="Select {{ i.txn.description }}">{% endif %}</td>
+        <td style="white-space:nowrap">{{ i.txn.date|date:"Y-m-d" }}</td>
+        <td>{{ i.txn.description }}{% if i.txn.check_number %} <span class="dash">check {{ i.txn.check_number }}</span>{% endif %}
+          <div class="on-hand">{{ i.txn.bank_account.ledger_account.name }}{% if i.txn.exclude_reason %} · {{ i.txn.exclude_reason }}{% endif %}</div></td>
+        <td class="num{% if i.txn.amount < 0 %} neg{% endif %}">{{ i.txn.amount|floatformat:"2g" }}</td>
+        <td>{% if i.suggestion %}{{ i.suggestion.label }} <span class="tag">{{ i.suggestion.score }}</span>
+            {% elif i.matched %}<span class="tag">{{ i.txn.get_status_display }}</span> {{ i.matched }}
+            {% elif i.txn.status == "NEW" %}<span class="dash">No suggestion</span>
+            {% else %}<span class="tag ns">{{ i.txn.get_status_display }}</span>{% endif %}</td>
+        <td style="white-space:nowrap">
+        {% if i.txn.status == "NEW" %}
+          {% if i.suggestion %}<form method="post" action="{% url 'banking:inbox-confirm' i.txn.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="token" value="{{ i.token }}"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn primary">Confirm</button></form>{% endif %}
+          <a class="btn" href="{% url 'banking:inbox-change' i.txn.pk %}">Change</a>
+          <a class="btn" href="{% url 'banking:transfer-new' %}?from_txn={{ i.txn.pk }}">Transfer</a>
+          <details style="display:inline-block;vertical-align:top"><summary class="btn">Exclude</summary>
+            <form method="post" action="{% url 'banking:inbox-exclude' i.txn.pk %}" style="margin-top:6px">{% csrf_token %}<input type="hidden" name="token" value="{{ i.token }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <input type="text" name="reason" placeholder="Why exclude it?" aria-label="Reason for excluding" maxlength="200"> <button type="submit" class="btn">Exclude</button></form></details>
+        {% elif i.txn.status == "EXCLUDED" %}
+          <form method="post" action="{% url 'banking:inbox-restore' i.txn.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn">Restore</button></form>
+        {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="empty">{% if status == "NEW" %}Nothing waiting. Import a statement or sync a linked bank to fill the inbox.{% else %}No rows to show.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>{% if status == "NEW" %}<button type="submit" form="bulk-form" class="btn">Confirm ticked rows</button>{% endif %}</span>
+    <span>{{ page.paginator.count }} row{{ page.paginator.count|pluralize }}{% if page.has_previous %} · <a href="?status={{ status }}&account={{ account_id }}&page={{ page.previous_page_number }}">← Prev</a>{% endif %}{% if page.has_next %} · <a href="?status={{ status }}&account={{ account_id }}&page={{ page.next_page_number }}">Next →</a>{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

@@ -100,15 +100,17 @@ def test_account_must_fit_the_method(three_bills, admin_user, cash, card):
                   check_numbers={a.vendor_id: "5"})
 
 
-def test_check_needs_a_number(three_bills, admin_user, cash):
+def test_check_without_a_number_is_left_to_print(three_bills, admin_user, cash):
+    # Phase 5a (spec 5.5): a blank number on a check payment means "to print", not an error.
     a = three_bills[0]
-    with pytest.raises(PurchasingError, match="Enter the check number for Acme Supply."):
-        pay_bills(date=d(10, 20), method=M.CHECK, paid_from=cash, user=admin_user, lines=[PayLine(a, D("1.00"))])
+    [payment] = pay_bills(date=d(10, 20), method=M.CHECK, paid_from=cash, user=admin_user,
+                          lines=[PayLine(a, D("1.00"))])
+    assert payment.check_number == ""
 
 
 def test_same_check_number_for_two_vendors_in_one_batch_is_refused(three_bills, admin_user, cash, ap):
     a, _, z = three_bills
-    with pytest.raises(PurchasingError, match="Check 1001 is already used on"):
+    with pytest.raises(PurchasingError, match="Check 1001 was already used on"):
         pay_bills(date=d(10, 20), method=M.CHECK, paid_from=cash, user=admin_user,
                   lines=[PayLine(a, D("10.00")), PayLine(z, D("10.00"))],
                   check_numbers={a.vendor_id: "1001", z.vendor_id: " 1001"})
@@ -121,14 +123,16 @@ def test_check_number_reused_on_the_same_account_is_refused_but_not_on_another(t
     a, b, z = three_bills
     first = pay_vendor(vendor=a.vendor, date=d(10, 20), method=M.CHECK, amount=D("10.00"), paid_from=cash,
                        user=admin_user, check_number="1001", applications=[(a, D("10.00"))])
-    with pytest.raises(PurchasingError, match=r"Check 1001 is already used on 1000 Cash\."):
+    with pytest.raises(PurchasingError, match=r"Check 1001 was already used on 1000 Cash \(handwritten\)\."):
         pay_vendor(vendor=z.vendor, date=d(10, 21), method=M.CHECK, amount=D("10.00"), paid_from=cash,
                    user=admin_user, check_number="1001")
     pay_vendor(vendor=z.vendor, date=d(10, 21), method=M.CHECK, amount=D("10.00"), paid_from=bank2,
                user=admin_user, check_number="1001")
     void_vendor_payment(first, user=admin_user, reason="Lost in the mail")
-    pay_vendor(vendor=z.vendor, date=d(10, 22), method=M.CHECK, amount=D("10.00"), paid_from=cash,
-               user=admin_user, check_number="1001")
+    # Phase 5a (spec 2): a voided check's number is never reused on that account.
+    with pytest.raises(PurchasingError, match=r"Check 1001 was already used on 1000 Cash \(voided\)\."):
+        pay_vendor(vendor=z.vendor, date=d(10, 22), method=M.CHECK, amount=D("10.00"), paid_from=cash,
+                   user=admin_user, check_number="1001")
 
 
 def test_payment_dated_before_the_bill_is_refused(three_bills, admin_user, cash, ap):

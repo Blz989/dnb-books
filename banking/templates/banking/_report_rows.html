@@ -1,0 +1,6 @@
+{% if rows %}
+<table>
+  <tr><th>Date</th><th>Number</th><th>Description</th><th class="num">Amount</th></tr>
+  {% for r in rows %}<tr><td>{{ r.date|date:"M j, Y" }}</td><td>{{ r.number }}</td><td>{{ r.description }}</td><td class="num">{{ r.amount|floatformat:"2g" }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="none">None.</p>{% endif %}

@@ -27,6 +27,11 @@
   <div class="kpi{% if bills_overdue_count %} warn{% endif %}"><div class="l">Overdue bills</div><div class="v">{{ bills_overdue_total|floatformat:"2g" }}</div><div class="note"><a href="/purchasing/bills/?overdue=1">{{ bills_overdue_count }} overdue bill{{ bills_overdue_count|pluralize }}</a></div></div>
 </div>
 <div class="kpis">
+  <div class="kpi"><div class="l">Inbox items waiting</div><div class="v">{{ bank_inbox_count }}</div><div class="note"><a href="/banking/inbox/">Open the inbox</a></div></div>
+  <div class="kpi{% if bank_sync.level == "warning" %} warn{% endif %}"><div class="l">Bank sync</div><div class="v" style="font-size:16px">{{ bank_sync.message }}</div><div class="note">{% if bank_sync.needs_login %}{% for item in bank_sync.needs_login %}{% if is_admin %}<a href="/banking/link/{{ item.pk }}/update/">Re-link {{ item.institution_name }}</a>{% else %}Ask an admin to re-link {{ item.institution_name }}{% endif %}{% if not forloop.last %} · {% endif %}{% endfor %}{% else %}<a href="/banking/">Bank accounts</a>{% endif %}</div></div>
+  <div class="kpi{% if unreconciled %} warn{% endif %}"><div class="l">Not reconciled in 40 days</div><div class="v">{{ unreconciled|length }}</div><div class="note">{% if unreconciled %}{% for a in unreconciled %}<a href="/banking/reconcile/{{ a.pk }}/">{{ a.ledger_account.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}All accounts are up to date.{% endif %}</div></div>
+</div>
+<div class="kpis">
   <div class="kpi{% if backup.level != "ok" %} warn{% endif %}"><div class="l">Backups</div><div class="v">{% if backup.level == "ok" %}OK{% else %}Needs attention{% endif %}</div><div class="note">{{ backup.message }}</div></div>
   <div class="kpi"><div class="l">Stock value</div><div class="v">{{ stock_value|floatformat:"2g" }}</div><div class="note"><a href="/reports/inventory-valuation/">Inventory valuation</a></div></div>
   <div class="kpi{% if negative_stock_count %} warn{% endif %}"><div class="l">Items below zero</div><div class="v">{{ negative_stock_count }}</div><div class="note"><a href="/reports/negative-stock/">Negative stock report</a></div></div>

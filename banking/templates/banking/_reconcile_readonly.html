@@ -1,0 +1,7 @@
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Date</th><th>Number</th><th>Description</th><th class="num">Amount</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td style="white-space:nowrap">{{ r.date|date:"Y-m-d" }}</td><td>{{ r.number }}</td><td>{{ r.description }}</td><td class="num">{{ r.amount|floatformat:"2g" }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="empty">None.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>

@@ -70,14 +70,14 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
     - Before anything else it calls `lock_message(entry)` and raises `EntryStateError(message)` if set.
     - After the reversal is posted it calls each void hook with the original entry.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A registered check blocks `void_entry` with its message, and nothing is posted.
   - A hook is called once with the voided entry.
   - With no registrations, behavior is unchanged (the full Phase 1 to 4 suite passes).
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: ledger lock checks and void hooks`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: ledger lock checks and void hooks`
 
 ---
 
@@ -100,16 +100,16 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - Roles: Standard gets add, change, and view on BankTransaction, Match, Rule, Transfer, CheckNumber, and view on the rest. `ADMIN_APPS` gains `banking`.
 - Fixtures: `checking` (BankAccount on `bank`, CHECKING, next_check_number 2051), `card_account` (CARD on `card`), `loan` (2500 LONG_TERM_LIABILITY "Equipment loan", LOAN), `interest_expense` (6800 EXPENSE), `field_key` (sets `DNB_FIELD_KEY`).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Encrypt and decrypt round trip; the raw DB column does not contain the token.
   - A missing key gives the message.
   - A subtype/kind mismatch is rejected.
   - Unique `(bank_account, external_id)`.
   - The `Match` exactly-one constraint.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: banking models and encrypted Plaid tokens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: banking models and encrypted Plaid tokens`
 
 ---
 
@@ -132,17 +132,17 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
     - Row errors mean nothing is saved.
     - For CARD and LOAN accounts, files are read as exported: purchases and draws come out negative.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Each fixture parses to the expected rows (amounts and dates spelled out in the tests).
   - `messy.csv` (BOM, `$`, parentheses, Total row) parses (Review Focus 1).
   - A bad amount on row 7 gives "Row 7: amount must be a number." and nothing is saved.
   - A second import of the same file reports added 0, skipped N.
   - Plaid/file overlap is excluded with the reason.
   - Two identical charges on the same day both import.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: OFX, QFX, and CSV statement import`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: OFX, QFX, and CSV statement import`
 
 ---
 
@@ -173,7 +173,7 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Command `sync_banks` runs `sync_all()`.
   - Command `plaid_sandbox_check` runs against `PLAID_ENV=sandbox` only (it refuses otherwise): creates a sandbox public token for institution `ins_109508`, exchanges it, syncs, and prints counts. Manual use only.
 
-- [ ] **Step 1: Failing tests (with `FakePlaidClient`):**
+- [x] **Step 1: Failing tests (with `FakePlaidClient`):**
   - Two pages are applied and the cursor saved.
   - Pending is skipped.
   - Modified and removed are handled.
@@ -181,10 +181,10 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Login required sets NEEDS_LOGIN.
   - The access token never appears in `str(PlaidError)` or the log output (caplog).
   - The scheduler includes `sync_banks` at 06:00.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: Plaid sync`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: Plaid sync`
 
 ---
 
@@ -210,7 +210,7 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Void hook `release_matches(entry)`: a `Match` whose target's journal entry is the voided one is deleted, and its transaction goes back to NEW (Review Focus 5).
   - "Already matched" means a `Match` exists for the target. Candidates exclude matched targets and void documents.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A vendor check payment with the check number scores 100 and wins over an amount-only document.
   - A deposit total matches.
   - An ACH customer payment matches within 10 days, but not at 11.
@@ -219,10 +219,10 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Exclude and restore.
   - Voiding a matched payment returns its transaction to NEW.
   - A matched target is not offered again.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review against `finance:reconciliation` and record findings in the commit body.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: bank feed inbox`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review against `finance:reconciliation` and record findings in the commit body.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: bank feed inbox`
 
 ---
 
@@ -246,14 +246,14 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Card payoff needs `to_account.kind == CARD`: "A card payoff goes to a credit card account."
 - Transfer candidate (spec 5.2): a transfer whose other account is this account, the same absolute amount, ±5 days, and no match yet on this account's side, scored 75 − days apart.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The entries for each kind.
   - The loan sum message.
   - A card payoff seen from the checking side creates the transfer. The card account's row then suggests that transfer, and confirming books nothing new: the trial balance is unchanged by the second confirm.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review against `finance:journal-entry` and record findings.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: transfers and loan payments`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review against `finance:journal-entry` and record findings.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: transfers and loan payments`
 
 ---
 
@@ -282,17 +282,17 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Lock check `entry_lock(entry) -> str | None`: any line of the entry is reconciled → "{number} is part of the {Month YYYY} reconciliation for {account}. An admin must undo that reconciliation first." Here `{number}` is the entry's `source_id`, or `display_number` when it has none.
   - `purchasing.edit_bill`: before editing, any applied payment whose entry `lock_message` returns a message raises `PurchasingError` with that message.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The difference math for checking and for the card (positive amount owed).
   - Finish only at 0.00.
   - The opening balance carries to the next month.
   - Locks block a void of a sales payment, a deposit, a vendor payment, a transfer, and an inbox entry, plus `edit_bill` with a locked payment, each with the message.
   - Undo of the latest unlocks; undo of an older one is refused.
   - The report PDF renders and lists outstanding checks.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: reconciliation with locks`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: reconciliation with locks`
 
 ---
 
@@ -313,16 +313,16 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - Produces (`words.py`): `amount_in_words(amount: Decimal) -> str`, for example "One thousand seventy-five and 00/100", "Zero and 07/100", "One million and 00/100", "Nineteen and 99/100". Pure function, no library.
 - `is_to_print(payment) -> bool`: method CHECK and a blank check number.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The words cases above plus 1,234,567.89.
   - A handwritten number is recorded and can't be reused.
   - A voided payment's number stays blocked: a new payment with that number is refused with "(voided)".
   - A blank CHECK number is allowed and is to print.
   - The updated Phase 4 test passes under the new rule.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: check number registry and amount in words`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: check number registry and amount in words`
 
 ---
 
@@ -357,17 +357,17 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - `calibration_pdf(bank_account) -> bytes`: field outlines, a 0.25 in grid, labels, and the current offsets printed.
   - `save_layout(bank_account, *, fields: dict, offset_x: Decimal, offset_y: Decimal, user)`: admin; offsets between −0.50 and 0.50 ("Offsets must be between -0.50 and 0.50 inches.").
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The context for a two-bill payment matches the mockup values.
   - Stub overflow at 13 bills.
   - The PDF starts with `%PDF`.
   - An offset of 0.10 shifts every field's `left` in the rendered HTML by 0.10 in.
   - The offset range is enforced.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots:** rasterize the check PDF and the calibration PDF with `pdftoppm`, compare the check against `docs/design/check-mockup.html`, and send both.
-- [ ] **Step 6: Commit** `feat: check and calibration PDFs`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots:** rasterize the check PDF and the calibration PDF with `pdftoppm`, compare the check against `docs/design/check-mockup.html`, and send both.
+- [x] **Step 6: Commit** `feat: check and calibration PDFs`
 
 ---
 
@@ -390,17 +390,17 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - "Sync now" (admin) runs `sync_item` for that item and shows the counts.
 - Import: upload (OFX/QFX/CSV, max 5 MB), then CSV mapping with a 5-row preview (saved to `csv_mapping`), then the result counts.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The account list shows balances and the inbox count.
   - Link is admin only and hidden without Plaid settings.
   - Exchange stores an encrypted token (with the fake client).
   - Import flows for OFX and for CSV with the mapping saved and reused.
   - A file too large shows "The file is too large (5 MB limit)."
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: checking, savings, card, and loan accounts; imported statement rows)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of bank accounts, the link page (Plaid not set up message), the import mapping preview, and the import result. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: bank account, link, and import screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: checking, savings, card, and loan accounts; imported statement rows)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of bank accounts, the link page (Plaid not set up message), the import mapping preview, and the import result. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: bank account, link, and import screens`
 
 ---
 
@@ -420,7 +420,7 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - **Rules:** list (ordered; move up and down), add, edit, toggle.
 - **Transfers:** list and new form. Kind, accounts, amount, principal, interest, and interest account show for loans.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Confirm through the view.
   - Change to another candidate.
   - New entry with an account.
@@ -429,11 +429,11 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - The rule order is used.
   - A transfer from an inbox row pre-fills it.
   - A double submit posts once (token).
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the inbox (with suggestions), Change, the rules list and form, the transfer form (loan), and the transfer list. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: inbox, rules, and transfer screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the inbox (with suggestions), Change, the rules list and form, the transfer form (loan), and the transfer list. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: inbox, rules, and transfer screens`
 
 ---
 
@@ -452,16 +452,16 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Buttons: Finish (admin, enabled at 0.00), Cancel.
 - **Finished:** the reconciliation page links to `report.pdf` and offers Undo (admin, reason).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Start, tick, finish through the views.
   - Finish is refused at a nonzero difference with the message.
   - The report PDF is served.
   - Undo needs a reason and admin.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of start, the working page (difference not zero), at zero, the finished page, and the report PDF page 1 (rasterized). Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: reconcile screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of start, the working page (difference not zero), at zero, the finished page, and the report PDF page 1 (rasterized). Light and dark, sent.
+- [x] **Step 6: Commit** `feat: reconcile screens`
 
 ---
 
@@ -483,18 +483,18 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - **Reprint** (admin) of a printed check spoils the old number and goes back to the print page.
 - **Layout page:** the field table (x, y, size, visible), offset nudges, "Print calibration page", and Save.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The print flow advances the number once even when Yes is posted twice.
   - Spoiled moves to the next number.
   - A used number entered by hand is refused with the registry message.
   - Reprint is admin only.
   - Layout save and offset range.
   - The calibration PDF is served.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: two vendor payments to print)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of checks to print, the print page, the confirm step, the layout page, plus the rasterized check and calibration PDFs. Light and dark for screens, sent.
-- [ ] **Step 6: Commit** `feat: check printing and layout screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: two vendor payments to print)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of checks to print, the print page, the confirm step, the layout page, plus the rasterized check and calibration PDFs. Light and dark for screens, sent.
+- [x] **Step 6: Commit** `feat: check printing and layout screens`
 
 ---
 
@@ -504,23 +504,23 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - Modify: `core/views.py`, `core/templates/core/home.html`, `README.md` (Status; What it does: Banking row; Getting started: generate `DNB_FIELD_KEY`, Plaid `.env` values, how to run `plaid_sandbox_check`, check calibration steps)
 - Create: `tests/test_phase5a_acceptance.py`
 
-- [ ] **Step 1: Home cards:**
+- [x] **Step 1: Home cards:**
   - **Inbox items waiting** (count, linking to the inbox).
   - **Bank sync** ("Last sync {time}"; a warning if over 24 hours or any item is NEEDS_LOGIN, with "Re-link").
   - **Not reconciled in 40 days** (account names).
 
   Test them.
-- [ ] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with all ledger checks (`check_invariants`, `ar_check`, `undeposited_check`, `ap_check`) empty after each step):
+- [x] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with all ledger checks (`check_invariants`, `ar_check`, `undeposited_check`, `ap_check`) empty after each step):
   - Import `checking.ofx` and `card.qfx`.
   - Match an ACH payment, a deposit, and a printed check.
   - Book a fee by rule.
   - A card payoff matched from both sides.
   - A loan payment.
   - Reconcile both accounts to 0.00.
-- [ ] **Step 3: Full suite** `uv run pytest -q` passes.
-- [ ] **Step 4: Final screenshots:** home with banking cards, inbox, a reconciliation, and the check PDF. Sent.
-- [ ] **Step 5: Commit** `test: phase 5a acceptance`
-- [ ] **Step 6: Open the PR** `Phase 5a: Banking` with a full body per `CLAUDE.md`. List the manual checks:
+- [x] **Step 3: Full suite** `uv run pytest -q` passes.
+- [x] **Step 4: Final screenshots:** home with banking cards, inbox, a reconciliation, and the check PDF. Sent.
+- [x] **Step 5: Commit** `test: phase 5a acceptance`
+- [x] **Step 6: Open the PR** `Phase 5a: Banking` with a full body per `CLAUDE.md`. List the manual checks:
   1. `./update.sh`.
   2. `generate_field_key` into `.env`, saved in the password manager.
   3. Plaid keys in `.env`; Production approval status checked.

@@ -1,8 +1,9 @@
 {% extends "core/base.html" %}
+{% load banking_tags %}
 {% block title %}{{ refund.number }}{% endblock %}
 {% block page_title %}{{ refund.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/customers/{{ refund.customer.pk }}/">{{ refund.customer.name }}</a> · {{ refund.date|date:"Y-m-d" }}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
-{% block page_actions %}{% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:refund-void' refund.number %}">Void</a>{% endif %}{% endblock %}
+{% block page_actions %}{% if refund|to_print %}<a class="btn primary" href="{% url 'banking:check-print' refund.number %}">Print check</a>{% endif %}{% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:refund-void' refund.number %}">Void</a>{% endif %}{% endblock %}
 {% block content %}
 {% if is_void %}<div class="banner error">Voided on {{ refund.voided_on|date:"Y-m-d" }}: {{ refund.void_reason }}</div>{% endif %}
 <div class="kpis"><div class="kpi"><div class="l">Amount</div><div class="v">{{ refund.amount|floatformat:"2g" }}</div></div></div>

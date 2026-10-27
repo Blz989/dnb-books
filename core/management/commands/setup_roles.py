@@ -18,8 +18,18 @@ STANDARD_PERMISSIONS = {
     "items.inventorysettings": ("view",),
     "contacts.customer": ("add", "change", "view"),
     "contacts.vendor": ("add", "change", "view"),
+    "banking.banktransaction": ("add", "change", "view"),
+    "banking.match": ("add", "change", "view"),
+    "banking.rule": ("add", "change", "view"),
+    "banking.transfer": ("add", "change", "view"),
+    "banking.checknumber": ("add", "change", "view"),
+    "banking.bankaccount": ("view",),
+    "banking.plaiditem": ("view",),
+    "banking.reconciliation": ("view",),
+    "banking.reconciliationitem": ("view",),
+    "banking.checklayout": ("view",),
 }
-ADMIN_APPS = ("ledger", "backup", "items", "contacts", "sales", "purchasing")
+ADMIN_APPS = ("ledger", "backup", "items", "contacts", "sales", "purchasing", "banking")
 
 
 class Command(BaseCommand):

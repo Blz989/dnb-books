@@ -35,6 +35,12 @@
       <a href="/purchasing/bills/"{% if nav_active == "bills" %} class="on"{% endif %}>Bills</a>
       <a href="/purchasing/pay/"{% if nav_active == "pay-bills" %} class="on"{% endif %}>Pay bills</a>
       <a href="/purchasing/credits/"{% if nav_active == "vendor-credits" %} class="on"{% endif %}>Vendor credits</a>
+      <div class="sec">Banking</div>
+      <a href="/banking/"{% if nav_active == "bank-accounts" %} class="on"{% endif %}>Bank accounts</a>
+      <a href="/banking/inbox/"{% if nav_active == "inbox" %} class="on"{% endif %}>Inbox</a>
+      <a href="/banking/transfers/"{% if nav_active == "transfers" %} class="on"{% endif %}>Transfers</a>
+      <a href="/banking/reconcile/"{% if nav_active == "reconcile" %} class="on"{% endif %}>Reconcile</a>
+      <a href="/banking/checks/"{% if nav_active == "checks" %} class="on"{% endif %}>Checks to print</a>
       <div class="sec">Inventory</div>
       <a href="/items/"{% if nav_active == "items" %} class="on"{% endif %}>Items{% if negative_stock_count %} <span class="pill">{{ negative_stock_count }} below zero</span>{% endif %}</a>
       <a href="/items/adjustments/"{% if nav_active == "adjustments" %} class="on"{% endif %}>Adjustments</a>

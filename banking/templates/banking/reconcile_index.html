@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+{% block title %}Reconcile{% endblock %}
+{% block page_title %}Reconcile{% endblock %}
+{% block page_subtitle %}<div class="sub">Check each account against its statement. Finished months are locked.</div>{% endblock %}
+{% block content %}
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Account</th><th>Last reconciled</th><th class="num">Statement balance</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td><strong>{{ r.account.ledger_account.name }}</strong>{% if r.account.mask %} <span class="dash">···· {{ r.account.mask }}</span>{% endif %}</td>
+        <td>{% if r.last %}{{ r.last.statement_date|date:"Y-m-d" }}{% else %}<span class="dash">Never</span>{% endif %}</td>
+        <td class="num">{% if r.last %}{{ r.last.statement_balance|floatformat:"2g" }}{% endif %}</td>
+        <td>{% if r.progress %}<span class="tag">In progress</span>{% elif r.overdue %}<span class="tag overdue">Not reconciled in 40 days</span>{% else %}<span class="tag">Up to date</span>{% endif %}</td>
+        <td><a class="btn{% if not r.progress %} primary{% endif %}" href="{% url 'banking:reconcile-start' r.account.pk %}">{% if r.progress %}Continue{% else %}Reconcile{% endif %}</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">No bank accounts yet. <a href="{% url 'banking:accounts' %}">Add one</a>.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

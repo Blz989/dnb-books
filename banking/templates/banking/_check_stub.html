@@ -1,0 +1,11 @@
+<div class="stubtext" style="left:{{ at.left }}in;top:{{ at.top }}in;font-size:{{ at.size }}pt">
+  <h4><span>{{ c.stub.payee }}</span><span>{{ c.stub.summary }}</span></h4>
+  <table>
+    <thead><tr>{% for col in c.stub.columns %}<th{% if forloop.counter0 in c.stub.right_columns %} class="r"{% endif %}>{{ col }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in c.stub.rows %}<tr>{% for cell in row %}<td{% if forloop.counter0 in c.stub.right_columns %} class="r"{% endif %}>{{ cell }}</td>{% endfor %}</tr>{% endfor %}
+      {% if c.stub.more %}<tr><td colspan="{{ c.stub.columns|length }}">{{ c.stub.more }}</td></tr>{% endif %}
+    </tbody>
+  </table>
+  {% if show_paid_from %}<div class="paid-from">{{ c.stub.paid_from }}</div>{% endif %}
+</div>

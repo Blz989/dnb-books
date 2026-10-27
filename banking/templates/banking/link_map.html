@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+{% block title %}Choose accounts{% endblock %}
+{% block page_title %}Choose accounts at {{ item.institution_name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">Pick the ledger account and kind for each account you want to bring in. Leave the rest blank.</div>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+{% if rows %}
+<form method="post">{% csrf_token %}
+  <div class="card">
+    <table class="data">
+      <thead><tr><th>At the bank</th><th>Ledger account</th><th>Kind</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr><td><strong>{{ r.plaid.name }}</strong>{% if r.plaid.mask %} <span class="dash">···· {{ r.plaid.mask }}</span>{% endif %}<div class="on-hand">{{ r.plaid.subtype|default:r.plaid.type }}</div></td>
+          <td><select name="ledger-{{ r.plaid.account_id }}" aria-label="Ledger account for {{ r.plaid.name }}"><option value="">Don't bring in</option>
+            {% for a in ledger_accounts %}<option value="{{ a.pk }}"{% if r.ledger == a.pk|stringformat:"s" %} selected{% endif %}>{{ a }}</option>{% endfor %}</select></td>
+          <td><select name="kind-{{ r.plaid.account_id }}" aria-label="Kind for {{ r.plaid.name }}">
+            {% for value, label in kinds %}<option value="{{ value }}"{% if r.kind == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button type="submit" class="btn primary">Save and sync</button>
+  <a class="btn" href="{% url 'banking:accounts' %}">Cancel</a>
+</form>
+{% else %}
+<div class="card"><div class="body">No accounts to show. <a href="{% url 'banking:accounts' %}">Back to bank accounts</a></div></div>
+{% endif %}
+{% endblock %}

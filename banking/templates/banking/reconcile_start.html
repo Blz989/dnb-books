@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+{% block title %}Reconcile {{ account }}{% endblock %}
+{% block page_title %}Reconcile {{ account.ledger_account.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if last %}Last reconciled to {{ last.statement_date|date:"Y-m-d" }}, statement balance {{ last.statement_balance|floatformat:"2g" }}.{% else %}This account has not been reconciled yet.{% endif %}</div>{% endblock %}
+{% block content %}
+<form method="post">{% csrf_token %}
+  <div class="card"><div class="body form-grid">
+    <div class="form-row"><label for="{{ form.statement_date.id_for_label }}">{{ form.statement_date.label }}</label>{{ form.statement_date }}
+      {% for e in form.statement_date.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    <div class="form-row"><label for="{{ form.statement_balance.id_for_label }}">{{ form.statement_balance.label }}</label>{{ form.statement_balance }}
+      <span class="help">{% if account.is_liability %}Type the amount you owe, as a positive number, exactly as the statement shows it.{% else %}The ending balance printed on the statement.{% endif %}</span>
+      {% for e in form.statement_balance.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  </div></div>
+  <button type="submit" class="btn primary">Start reconciling</button>
+  <a class="btn" href="{% url 'banking:reconcile' %}">Cancel</a>
+</form>
+{% if history %}
+<h2>Earlier reconciliations</h2>
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Statement</th><th class="num">Balance</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for h in history %}
+      <tr><td>{{ h.statement_date|date:"Y-m-d" }}</td><td class="num">{{ h.statement_balance|floatformat:"2g" }}</td><td>{{ h.get_status_display }}</td>
+        <td>{% if h.status == "FINISHED" %}<a href="{% url 'banking:reconcile-work' account.pk h.pk %}">Open</a> · <a href="{% url 'banking:reconcile-report' account.pk h.pk %}">Report</a>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

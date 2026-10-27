@@ -12,6 +12,7 @@ from contacts.models import Terms, Vendor, due_date as terms_due_date
 from items.errors import SettingsMissingError
 from items.models import InventorySettings, Item, MovementKind
 from items.stock import StockLine, record_movements, void_movement
+from ledger.locks import lock_message
 from ledger.models import Account, AccountSubtype
 from ledger.periods import assert_open
 from ledger.posting import LineSpec, post_entry, void_entry
@@ -314,6 +315,11 @@ def edit_bill(
         new_vendor = vendor or current.vendor
         changed_vendor = new_vendor.pk != current.vendor_id
         applications = _active_applications(current)
+        for application in current.payment_applications.filter(removed=False).select_related("payment__journal_entry"):
+            entry = application.payment.journal_entry
+            locked = lock_message(entry) if entry is not None else None
+            if locked:
+                raise PurchasingError(locked)
         if changed_vendor and applications:
             raise PurchasingError("The vendor can't change after payments or credits are applied.")
         assert_open(current.date)

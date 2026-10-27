@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block title %}Print check{% endblock %}
+{% block page_title %}Print check for {{ party }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ doc.number }} · {{ doc.date|date:"Y-m-d" }} · {{ doc.amount|floatformat:"2g" }}{% if bank %} · from {{ bank.ledger_account.name }}{% endif %}</div>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+{% if bank %}
+<form method="get" class="card"><div class="body" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+  <div class="form-row" style="margin:0"><label for="check-number">Check number</label><input type="text" id="check-number" name="number" value="{{ number }}" maxlength="30" inputmode="numeric"></div>
+  <button type="submit" class="btn">Use this number</button>
+  <span class="help">The next number on {{ bank.ledger_account.name }}. Change it if the stock in the printer starts elsewhere.</span>
+</div></form>
+{% if ready %}
+<div class="card"><div class="body">
+  <div class="banner info" style="margin-bottom:12px">Print at 100% (actual size), not 'fit to page'.</div>
+  <p>Load the voucher stock, then open the PDF and print it.</p>
+  <a class="btn primary" href="{{ pdf_url }}" target="_blank" rel="noopener">Open check PDF</a>
+</div></div>
+<div class="card"><div class="body">
+  <h2 style="margin-top:0">Did check {{ number }} print correctly?</h2>
+  <p class="help">Yes records the number as used and puts it on {{ doc.number }}. If the paper jammed or the print missed the lines, choose spoiled: that number is never used again.</p>
+  <form method="post" action="{% url 'banking:check-confirm' doc.number %}" style="display:inline">{% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}"><input type="hidden" name="number" value="{{ number }}"><input type="hidden" name="result" value="yes">
+    <button type="submit" class="btn primary">Yes</button></form>
+  <form method="post" action="{% url 'banking:check-confirm' doc.number %}" style="display:inline">{% csrf_token %}
+    <input type="hidden" name="token" value="{{ token }}x"><input type="hidden" name="number" value="{{ number }}"><input type="hidden" name="result" value="no">
+    <button type="submit" class="btn">No, it was spoiled</button></form>
+</div></div>
+{% endif %}
+{% endif %}
+<a class="btn" href="{% url 'banking:checks' %}">Back to checks to print</a>
+{% endblock %}
