@@ -466,11 +466,11 @@ def test_invoice_void_releases_allocation(...):
 - Modify: `core/views.py`, `core/templates/core/home.html`, `README.md` (Status; What it does: Purchasing row)
 - Create: `tests/test_phase4_acceptance.py`
 
-- [ ] **Step 1: Home cards:** "Bills due in 7 days" (total, linking to Bills due) and "Overdue bills" (total). Test the values.
-- [ ] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with `ap_check`, `ar_check`, `undeposited_check`, and `items.stock.check_invariants` all empty after each step), plus the 1099 summary totals at the end.
-- [ ] **Step 3: Full suite** `uv run pytest -q` passes with no new warnings.
-- [ ] **Step 4: Final screenshots:** a tour (home, vendor, PO, bill, Pay bills, A/P aging, 1099 summary), light and dark, sent.
-- [ ] **Step 5: Commit** `test: phase 4 acceptance`
+- [x] **Step 1: Home cards:** "Bills due in 7 days" (total, linking to Bills due) and "Overdue bills" (total). Test the values.
+- [x] **Step 2: Acceptance test** (spec section 1, through the test client as an admin, with `ap_check`, `ar_check`, `undeposited_check`, and `items.stock.check_invariants` all empty after each step), plus the 1099 summary totals at the end.
+- [x] **Step 3: Full suite** `uv run pytest -q` passes with no new warnings.
+- [x] **Step 4: Final screenshots:** a tour (home, vendor, PO, bill, Pay bills, A/P aging, 1099 summary), light and dark, sent.
+- [x] **Step 5: Commit** `test: phase 4 acceptance`
 - [ ] **Step 6: Open the PR** `Phase 4: Purchasing`. **The body must be filled in** per `CLAUDE.md`: a task table, the test output, deviations, screenshot sets, and manual checks:
   - Run `./update.sh`.
   - Fill in Purchasing settings.

@@ -167,3 +167,27 @@ def summary_1099(year: int) -> Summary1099:
         for t in totals if money(t["total"]) != 0
     ]
     return Summary1099(year, threshold, sorted(rows, key=lambda r: r.vendor.name.lower()))
+
+
+@dataclass
+class BillsDueSummary:
+    upcoming_total: Decimal
+    upcoming_count: int
+    overdue_total: Decimal
+    overdue_count: int
+
+
+def bills_due_summary(today: date, days: int = 7) -> BillsDueSummary:
+    """For the home screen: open bills due from today through `days` days out, and bills already past due."""
+    from datetime import timedelta
+
+    upcoming = overdue = ZERO
+    upcoming_count = overdue_count = 0
+    for row in bills_due(today + timedelta(days=days), today):
+        if row.bill.due_date < today:
+            overdue += row.balance
+            overdue_count += 1
+        else:
+            upcoming += row.balance
+            upcoming_count += 1
+    return BillsDueSummary(money(upcoming), upcoming_count, money(overdue), overdue_count)
