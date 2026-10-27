@@ -233,7 +233,7 @@ Fixtures in `conftest.py`: `cash` (1000, ASSET/BANK), `revenue` (4000, INCOME/IN
   - `close_period(year: int, month: int, user) -> AccountingPeriod` (admin only; sets `closed_by`, `closed_at`).
   - `reopen_period(year: int, month: int, user, reason: str) -> AccountingPeriod` (admin only; `reason` required and stripped non-empty, else `ValueError("A reason is required to reopen a period.")`; stores `reopen_reason`).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```python
 def test_new_period_is_open(db):
@@ -257,10 +257,10 @@ def test_reopen_requires_reason(admin_user):
     assert not p.is_closed and p.reopen_reason == "Late vendor bill"
 ```
 
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement `ledger/periods.py`**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: monthly period close and admin-only reopen`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement `ledger/periods.py`**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: monthly period close and admin-only reopen`
 
 ---
 
