@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+{% block title %}{% if rule %}Edit rule{% else %}New rule{% endif %}{% endblock %}
+{% block page_title %}{% if rule %}Edit rule{% else %}New rule{% endif %}{% endblock %}
+{% block content %}
+<form method="post">{% csrf_token %}
+  <div class="card"><div class="body form-grid">
+    {% for field in form %}
+    <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+      {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    {% endfor %}
+  </div></div>
+  <button type="submit" class="btn primary">Save rule</button>
+  <a class="btn" href="{% url 'banking:rules' %}">Cancel</a>
+</form>
+{% endblock %}

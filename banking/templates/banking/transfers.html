@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+{% block title %}Transfers{% endblock %}
+{% block page_title %}Transfers{% endblock %}
+{% block page_subtitle %}<div class="sub">Money moved between your own accounts, card payoffs, and loan payments</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'banking:transfer-new' %}">+ New transfer</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Transfer</th><th>Date</th><th>Kind</th><th>From</th><th>To</th><th class="num">Amount</th><th class="num">Principal</th><th class="num">Interest</th><th></th></tr></thead>
+    <tbody>
+    {% for t in page %}
+      <tr{% if t.status == "VOID" %} style="text-decoration: line-through"{% endif %}>
+        <td><span class="sku">TR-{{ t.pk }}</span></td><td>{{ t.date|date:"Y-m-d" }}</td><td>{{ t.get_kind_display }}</td>
+        <td>{{ t.from_account.ledger_account.name }}</td><td>{{ t.to_account.ledger_account.name }}</td>
+        <td class="num">{{ t.amount|floatformat:"2g" }}</td>
+        <td class="num">{% if t.principal is not None %}{{ t.principal|floatformat:"2g" }}{% endif %}</td>
+        <td class="num">{% if t.interest is not None %}{{ t.interest|floatformat:"2g" }}{% endif %}</td>
+        <td>{% if t.status == "VOID" %}<span class="tag void">Void</span>{% elif is_admin %}<a class="btn" href="{% url 'banking:transfer-void' t.pk %}">Void</a>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="9" class="empty">No transfers yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %} ·
+      {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

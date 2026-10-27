@@ -3,9 +3,10 @@ import io
 
 from django import forms
 
-from ledger.models import Account, AccountSubtype
+from ledger.forms import date_field
+from ledger.models import Account, AccountSubtype, AccountType
 
-from .models import BankAccount
+from .models import BankAccount, Rule, TransferKind
 
 LEDGER_SUBTYPES = (
     AccountSubtype.BANK, AccountSubtype.CREDIT_CARD, AccountSubtype.OTHER_CURRENT_LIABILITY,
@@ -104,3 +105,59 @@ class CsvMappingForm(forms.Form):
         if not data.get("amount") and not data.get("debit") and not data.get("credit"):
             raise forms.ValidationError("Choose the amount column, or the debit and credit columns.")
         return data
+
+
+class RuleForm(forms.ModelForm):
+    class Meta:
+        model = Rule
+        fields = ["pattern", "pattern_type", "bank_account", "account", "memo", "is_active"]
+        labels = {
+            "pattern": "Bank description", "pattern_type": "Matches when the description",
+            "bank_account": "Only for this account", "account": "Book to", "memo": "Memo", "is_active": "Active",
+        }
+        help_texts = {
+            "pattern": "Capitals don't matter. The first active rule that matches suggests its account.",
+            "bank_account": "Leave blank to use it on every account.",
+            "memo": "Used as the journal entry memo. Blank uses the bank's description.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["bank_account"].required = False
+        self.fields["bank_account"].empty_label = "Every account"
+        self.fields["account"].queryset = Account.objects.filter(is_active=True).order_by("number")
+        self.fields["memo"].required = False
+        if not self.instance.pk:
+            self.fields["is_active"].initial = True
+
+    def clean_pattern(self):
+        pattern = self.cleaned_data["pattern"].strip()
+        if not pattern:
+            raise forms.ValidationError("Enter the text to look for.")
+        return pattern
+
+
+class TransferForm(forms.Form):
+    from_txn = forms.IntegerField(required=False, widget=forms.HiddenInput)
+    date = date_field("Date")
+    kind = forms.ChoiceField(label="Kind", choices=TransferKind.choices)
+    from_account = forms.ModelChoiceField(
+        BankAccount.objects.none(), label="From", empty_label="Choose an account",
+        error_messages={"required": "Choose the account the money comes from."})
+    to_account = forms.ModelChoiceField(
+        BankAccount.objects.none(), label="To", empty_label="Choose an account",
+        error_messages={"required": "Choose the account the money goes to."})
+    amount = forms.DecimalField(label="Amount", max_digits=14, decimal_places=2, min_value=0,
+                                error_messages={"required": "Enter an amount.", "invalid": "Enter an amount like 250.00."})
+    principal = forms.DecimalField(label="Principal", required=False, max_digits=14, decimal_places=2, min_value=0)
+    interest = forms.DecimalField(label="Interest", required=False, max_digits=14, decimal_places=2, min_value=0)
+    interest_account = forms.ModelChoiceField(
+        Account.objects.none(), label="Interest account", required=False, empty_label="Choose an account")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        accounts = BankAccount.objects.filter(is_active=True).select_related("ledger_account")
+        self.fields["from_account"].queryset = accounts
+        self.fields["to_account"].queryset = accounts
+        self.fields["interest_account"].queryset = Account.objects.filter(
+            is_active=True, type=AccountType.EXPENSE).order_by("number")

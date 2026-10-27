@@ -1,0 +1,13 @@
+{% extends "core/base.html" %}
+{% block title %}Void transfer{% endblock %}
+{% block page_title %}Void TR-{{ transfer.pk }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ transfer.date|date:"Y-m-d" }} · {{ transfer.from_account.ledger_account.name }} to {{ transfer.to_account.ledger_account.name }} · {{ transfer.amount|floatformat:"2g" }}</div>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+<div class="banner info">Voiding posts a reversing entry. Bank rows linked to this transfer go back to the inbox.</div>
+<form method="post">{% csrf_token %}
+  <div class="card"><div class="body"><div class="form-row"><label for="reason">Reason</label><input type="text" name="reason" id="reason" maxlength="200" required></div></div></div>
+  <button type="submit" class="btn primary">Void transfer</button>
+  <a class="btn" href="{% url 'banking:transfers' %}">Cancel</a>
+</form>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}New transfer{% endblock %}
+{% block page_title %}New transfer{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if txn %}From the bank row dated {{ txn.date|date:"Y-m-d" }}: {{ txn.description }} ({{ txn.amount|floatformat:"2g" }}). Saving links this row to the transfer.{% else %}Moves money between two of your accounts. The other side matches it later and books nothing new.{% endif %}</div>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+<form method="post" id="transfer-form" data-loan="{{ loan_kind }}">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">{{ form.from_txn }}
+  <div class="card"><div class="body form-grid">
+    {% for field in form.visible_fields %}
+    <div class="form-row{% if field.name == 'principal' or field.name == 'interest' or field.name == 'interest_account' %} loan-only{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    {% endfor %}
+  </div></div>
+  <button type="submit" class="btn primary">Save transfer</button>
+  <a class="btn" href="{% url 'banking:transfers' %}">Cancel</a>
+</form>
+<script src="{% static 'banking/transfer.js' %}" defer></script>
+{% endblock %}

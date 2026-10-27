@@ -262,3 +262,22 @@ def release_matches(entry: JournalEntry) -> None:
         match.delete()
         txn.status = TxnStatus.NEW
         txn.save()
+
+
+def candidate_key(candidate: Candidate) -> str:
+    """A stable id for a suggestion, so a posted choice can be matched against the current list."""
+    return f"{candidate.kind}:{candidate.target._meta.label_lower}:{candidate.target.pk}"
+
+
+def match_label(match: Match) -> str:
+    """What a matched or booked bank row was linked to, for the inbox."""
+    if match.sales_payment_id:
+        return f"Payment {match.sales_payment.number}"
+    if match.deposit_id:
+        return f"Deposit {match.deposit.number}"
+    if match.refund_id:
+        return f"Refund {match.refund.number}"
+    if match.vendor_payment_id:
+        return f"Payment {match.vendor_payment.number}"
+    entry = match.journal_entry
+    return entry.source_id or entry.display_number

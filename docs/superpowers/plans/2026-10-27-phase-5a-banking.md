@@ -420,7 +420,7 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
 - **Rules:** list (ordered; move up and down), add, edit, toggle.
 - **Transfers:** list and new form. Kind, accounts, amount, principal, interest, and interest account show for loans.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Confirm through the view.
   - Change to another candidate.
   - New entry with an account.
@@ -429,11 +429,11 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - The rule order is used.
   - A transfer from an inbox row pre-fills it.
   - A double submit posts once (token).
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the inbox (with suggestions), Change, the rules list and form, the transfer form (loan), and the transfer list. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: inbox, rules, and transfer screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the inbox (with suggestions), Change, the rules list and form, the transfer form (loan), and the transfer list. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: inbox, rules, and transfer screens`
 
 ---
 
