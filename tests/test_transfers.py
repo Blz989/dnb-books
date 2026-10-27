@@ -189,3 +189,12 @@ def test_from_txn_must_be_on_one_of_the_accounts(admin_user, checking, savings, 
         create_transfer(date=d(1, 5), from_account=checking, to_account=savings, amount=D("50.00"),
                         kind=TransferKind.TRANSFER, user=admin_user, from_txn=stray)
     assert not BankTransaction.objects.filter(status=TxnStatus.MATCHED).exists()
+
+
+def test_void_date_cannot_be_before_the_transfer(admin_user, checking, savings):
+    t = create_transfer(date=d(1, 5), from_account=checking, to_account=savings, amount=D("50.00"),
+                        kind=TransferKind.TRANSFER, user=admin_user)
+    with pytest.raises(TransferError, match="The void date can't be before the transfer date."):
+        void_transfer(t, user=admin_user, reason="x", date=d(1, 4))
+    t.refresh_from_db()
+    assert t.status == TransferStatus.POSTED

@@ -309,3 +309,46 @@ def test_reconciled_lines_only_counts_cleared_lines_of_finished_reconciliations(
     assert reconcile.reconciled_lines().count() == 0
     reconcile.finish(rec, user=admin_user)
     assert reconcile.reconciled_lines().count() == 2
+
+
+def test_statement_date_must_be_after_the_last_finished_one(jan, checking, admin_user, customer, bank):
+    """A statement before the last finished one would leave every later reconciliation off by its lines."""
+    rec = start(checking, d(1, 31), "700.00", admin_user)
+    clear_all(rec)
+    reconcile.finish(rec, user=admin_user)
+    for on in (d(1, 15), d(1, 31)):
+        with pytest.raises(ReconcileError, match="The statement date must be after Jan 31, 2026, "
+                                                 "the date of the last finished reconciliation."):
+            start(checking, on, "700.00", admin_user)
+    start(checking, d(2, 28), "700.00", admin_user)
+
+
+def test_entries_booked_while_in_progress_join_the_reconciliation(jan, checking, admin_user, bank, expense):
+    """The usual flow: spot a bank fee on the statement, book it from the inbox, then finish."""
+    pay, check = jan
+    rec = start(checking, d(1, 31), "690.00", admin_user)
+    clear_all(rec)
+    fee = BankTransaction.objects.create(
+        bank_account=checking, external_id="fee", date=d(1, 28), description="Service fee", amount=D("-10.00"),
+        source=TxnSource.FILE)
+    inbox.new_entry(fee, account=expense, user=admin_user)
+    later = post_entry(date=d(2, 3), user=admin_user, lines=[
+        LineSpec(expense, debit=D("5.00")), LineSpec(bank, credit=D("5.00"))])
+    reconcile.refresh(rec)
+    assert rec.items.count() == 3  # the fee joins, ticked because its bank row matched; February's entry doesn't
+    assert not rec.items.filter(journal_line__entry=later).exists()
+    assert reconcile.difference(rec) == D("0.00")
+    reconcile.refresh(rec)
+    assert rec.items.count() == 3
+    reconcile.finish(rec, user=admin_user)
+
+
+def test_finish_picks_up_entries_booked_since_the_page_loaded(jan, checking, admin_user, bank, expense):
+    rec = start(checking, d(1, 31), "700.00", admin_user)
+    clear_all(rec)
+    post_entry(date=d(1, 28), user=admin_user, lines=[
+        LineSpec(expense, debit=D("10.00")), LineSpec(bank, credit=D("10.00"))])
+    reconcile.finish(rec, user=admin_user)  # the new line joins uncleared, so the difference is still 0.00
+    rec.refresh_from_db()
+    assert rec.status == ReconStatus.FINISHED and rec.items.count() == 3
+    assert rec.items.filter(cleared=False).count() == 1
