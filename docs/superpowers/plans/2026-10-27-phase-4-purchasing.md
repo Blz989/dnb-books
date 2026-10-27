@@ -419,18 +419,18 @@ def test_invoice_void_releases_allocation(...):
 - The drop-ship PO page lists the vendor names. Unresolved ones get a vendor select (Review Focus 2) before "Create POs".
 - Bill detail shows drop-ship allocations linking to invoices.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - Create a PO and bill it partially through the views.
   - Over-receiving shows the message.
   - The duplicate confirm flow.
   - A drop-ship PO with an unmatched vendor, then choosing one.
   - A double submit posts once.
   - Edit creates a revision; void is admin only.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (demo: 2 POs, 3 bills including a drop-ship and an expense bill)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of the PO list, PO form, PO detail, the drop-ship PO page (with an unmatched vendor), the sales order with the new button, bill form (from a PO, with an expense line), duplicate confirm, bill detail with allocations, and a bill revision. Light and dark, sent.
-- [ ] **Step 6: Commit** `feat: purchase order and bill screens`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (demo: 2 POs, 3 bills including a drop-ship and an expense bill)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of the PO list, PO form, PO detail, the drop-ship PO page (with an unmatched vendor), the sales order with the new button, bill form (from a PO, with an expense line), duplicate confirm, bill detail with allocations, and a bill revision. Light and dark, sent.
+- [x] **Step 6: Commit** `feat: purchase order and bill screens`
 
 ---
 

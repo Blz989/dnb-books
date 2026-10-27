@@ -8,7 +8,9 @@ from django.utils import timezone
 from contacts.models import Terms, Vendor
 from items.models import Item
 from ledger.models import Account
-from sales.models import SalesOrder
+from contacts.models import Customer
+from sales.models import Fulfillment, SalesOrder
+from sales.posting.orders import OrderLineSpec, create_order
 
 from .models import PurchasingSettings, VendorPaymentMethod as M
 from .posting.bills import BillExpenseSpec, BillItemSpec, bill_from_po, create_bill, edit_bill
@@ -64,6 +66,13 @@ def seed_purchasing(user, items) -> None:
         (po_drop,) = create_drop_ship_pos(order, user=user, date=day(11))
         bill_from_po(po_drop, date=day(9), vendor_invoice_number="DF-77120",
                      quantities={l.pk: l.quantity for l in po_drop.lines.all()}, user=user)
+
+    # A newer order with two drop-ship lines, not on a PO yet. One vendor is on file; "Moen Fixtures" is not.
+    create_order(customer=Customer.objects.get(name="Harbor Plumbing"), date=day(2), user=user, lines=[
+        OrderLineSpec(item("FAUCET-KIT"), 4, D("69.00"), fulfillment=Fulfillment.DROP_SHIP,
+                      drop_ship_vendor="delta faucet  supply"),
+        OrderLineSpec(item("VALVE-BALL-12"), 6, D("11.49"), fulfillment=Fulfillment.DROP_SHIP,
+                      drop_ship_vendor="Moen Fixtures")])
 
     # Expense bills: rent twice, and delivery services.
     rent1 = create_bill(vendor=landlord, date=day(55), vendor_invoice_number="RENT-SEP", user=user,

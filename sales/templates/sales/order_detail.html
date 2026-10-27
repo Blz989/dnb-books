@@ -1,9 +1,11 @@
 {% extends "core/base.html" %}
+{% load purchasing_tags %}
 {% block title %}{{ order.number }}{% endblock %}
 {% block page_title %}{{ order.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/customers/{{ order.customer.pk }}/">{{ order.customer.name }}</a> · {{ order.date|date:"Y-m-d" }} · <span class="tag{% if order.status == 'CLOSED' %} ns{% endif %}">{{ order.get_status_display }}</span></div>{% endblock %}
 {% block page_actions %}
   {% if order.status == "OPEN" %}<a class="btn" href="{% url 'sales:order-edit' order.number %}">Edit</a>{% endif %}
+  {% drop_ship_po_button order %}
   {% if can_invoice %}<a class="btn primary" href="{% url 'sales:order-invoice' order.number %}">Invoice a shipment</a>{% endif %}
   <form method="post" action="{% url 'sales:order-close' order.number %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">{% if order.status == "OPEN" %}Close order{% else %}Reopen order{% endif %}</button></form>
 {% endblock %}
@@ -29,6 +31,7 @@
   </tbody>
 </table>
 </div>
+{% drop_ship_po_list order %}
 <h2>Invoices</h2>
 <div class="card">
 <table class="data">

@@ -78,3 +78,47 @@ class PurchasingSettingsForm(forms.ModelForm):
         field.required = True
         field.error_messages["required"] = "Choose an account."
         field.error_messages["invalid_choice"] = "Choose an account."
+
+
+# ---- purchase orders and bills ----
+from contacts.models import Terms  # noqa: E402
+from ledger.forms import date_field  # noqa: E402
+
+
+class PurchaseOrderHeaderForm(forms.Form):
+    vendor = forms.ModelChoiceField(
+        Vendor.objects.none(), error_messages={"required": "Choose a vendor.", "invalid_choice": "Choose a vendor."})
+    date = date_field("Date")
+    expected_date = forms.DateField(
+        label="Expected", required=False, input_formats=["%Y-%m-%d"],
+        error_messages={"invalid": "Enter a date like 2026-01-31."},
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+    notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+
+    def __init__(self, *args, all_vendors: bool = False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vendor"].queryset = Vendor.objects.all() if all_vendors else Vendor.objects.filter(is_active=True)
+
+
+class BillHeaderForm(forms.Form):
+    vendor = forms.ModelChoiceField(
+        Vendor.objects.none(), error_messages={"required": "Choose a vendor.", "invalid_choice": "Choose a vendor."})
+    vendor_invoice_number = forms.CharField(label="Vendor invoice #", required=False, max_length=100)
+    date = date_field("Bill date")
+    terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Vendor's default")] + list(Terms.choices))
+    notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    reason = forms.CharField(label="Reason for the change", required=False, max_length=200)
+    field_order = ["vendor", "vendor_invoice_number", "date", "terms", "notes", "reason"]
+
+    def __init__(self, *args, editing: bool = False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vendor"].queryset = Vendor.objects.all() if editing else Vendor.objects.filter(is_active=True)
+        if not editing:
+            del self.fields["reason"]
+
+
+class BillFromPOForm(forms.Form):
+    vendor_invoice_number = forms.CharField(label="Vendor invoice #", required=False, max_length=100)
+    date = date_field("Bill date")
+    terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Vendor's default")] + list(Terms.choices))
+    notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
