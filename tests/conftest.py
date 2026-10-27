@@ -258,3 +258,11 @@ def sales_settings(db, ar):
     s.company_name = "DNB Supply"
     s.save()
     return s
+
+
+# ---- purchasing fixtures (Phase 4, Task 1) ----
+@pytest.fixture
+def vendor(db):
+    from contacts.models import Terms, Vendor
+
+    return Vendor.objects.create(name="Acme Supply", terms=Terms.NET_30, is_1099=False)

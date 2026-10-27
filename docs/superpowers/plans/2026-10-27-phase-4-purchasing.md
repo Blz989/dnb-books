@@ -81,15 +81,15 @@ tests/ test_vendors.py, test_purchasing_models.py, test_purchase_orders.py, test
 - Roles: Standard gets add, change, and view on `contacts.vendor`. `ADMIN_APPS` gains `purchasing`.
 - Fixture: `vendor` ("Acme Supply", NET_30, `is_1099=False`).
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A duplicate name in different case is rejected.
   - `find_by_name("  acme   supply ")` returns the vendor.
   - `mask_tax_id("12-3456789") == "•••-••-6789"`.
   - An income account as the default expense account is rejected.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: vendors`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: vendors`
 
 ---
 
