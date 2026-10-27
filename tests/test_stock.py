@@ -269,7 +269,7 @@ class RandomOperationsKeepInvariants(HypothesisTestCase):
                 else:
                     m = StockMovement.objects.filter(item=item, voided=False).order_by("-id").first()
                     if m:
-                        void_movement(m, user=self.user, reason="r", date=d(10, 28))
+                        void_movement(m, user=self.user, reason="r", date=d(10, 28), allow_negative=True)
             except (CostingError, ItemStateError):
                 continue
             assert check_invariants() == []

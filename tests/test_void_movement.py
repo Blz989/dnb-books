@@ -42,7 +42,7 @@ def test_void_negative_estimate_inflow(inv_settings, admin_user, make_item):
     record_movements(kind=ADJ, date=d(10, 2), lines=[StockLine(item, -5)], user=admin_user, allow_negative=True)
     fill, = record_movements(kind=ADJ, date=d(10, 20), lines=[StockLine(item, 10, unit_cost=D("1.20"))], user=admin_user)
     assert [r.delta for r in CostRevision.objects.all()] == [D("-0.60")]
-    void_movement(fill, user=admin_user, reason="Duplicate receipt", date=d(10, 21))
+    void_movement(fill, user=admin_user, reason="Duplicate receipt", date=d(10, 21), allow_negative=True)
     assert [r.delta for r in CostRevision.objects.order_by("id")] == [D("-0.60"), D("0.60")]
     assert on_hand(item) == -3 and stock_value(item) == D("-3.00")
     assert check_invariants() == []
