@@ -246,14 +246,14 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Card payoff needs `to_account.kind == CARD`: "A card payoff goes to a credit card account."
 - Transfer candidate (spec 5.2): a transfer whose other account is this account, the same absolute amount, ±5 days, and no match yet on this account's side, scored 75 − days apart.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The entries for each kind.
   - The loan sum message.
   - A card payoff seen from the checking side creates the transfer. The card account's row then suggests that transfer, and confirming books nothing new: the trial balance is unchanged by the second confirm.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement.** Review against `finance:journal-entry` and record findings.
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: transfers and loan payments`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement.** Review against `finance:journal-entry` and record findings.
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: transfers and loan payments`
 
 ---
 

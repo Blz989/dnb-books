@@ -13,7 +13,7 @@ from purchasing.models import VendorPayment, VendorPaymentMethod
 from sales.models import Deposit, DocStatus, Payment, PaymentMethod, Refund
 
 from .checknumbers import normalize
-from .models import BankTransaction, Match, Rule, TxnStatus
+from .models import BankTransaction, Match, Rule, Transfer, TransferStatus, TxnStatus
 
 ZERO = Decimal("0.00")
 DOCUMENT_WINDOW_DAYS = 10
@@ -41,7 +41,11 @@ def _number(target) -> str:
     return getattr(target, "number", None) or f"{getattr(target, 'pk', 0):012d}"
 
 
-def _is_matched(target) -> bool:
+def _is_matched(target, txn: BankTransaction | None = None) -> bool:
+    if isinstance(target, JournalEntry):
+        # A transfer's entry is matched once per bank account, so each side can link to it.
+        rows = Match.objects.filter(journal_entry=target)
+        return (rows.filter(bank_transaction__bank_account=txn.bank_account) if txn else rows).exists()
     if isinstance(target, Payment):
         return Match.objects.filter(sales_payment=target).exists()
     if isinstance(target, Deposit):
@@ -114,8 +118,25 @@ def candidates(txn: BankTransaction) -> list[Candidate]:
     return sorted(found, key=lambda c: (-c.score, _days(txn, getattr(c.target, "date", txn.date)), _number(c.target)))
 
 
+TRANSFER_WINDOW_DAYS = 5
+
+
 def _transfer_candidates(txn: BankTransaction) -> list[Candidate]:
-    return []  # transfers are added in the transfers task
+    """A transfer posted from the other account's row, seen from this account: same amount, right direction."""
+    account = txn.bank_account
+    found = []
+    if txn.amount < 0:
+        sides = Transfer.objects.filter(from_account=account)
+    else:
+        sides = Transfer.objects.filter(to_account=account)
+    for t in sides.filter(
+        status=TransferStatus.POSTED, amount=abs(txn.amount), **_window(txn, TRANSFER_WINDOW_DAYS),
+    ).select_related("from_account__ledger_account", "to_account__ledger_account"):
+        if Match.objects.filter(journal_entry=t.journal_entry, bank_transaction__bank_account=account).exists():
+            continue
+        found.append(Candidate(
+            "transfer", t, 75 - _days(txn, t.date), f"Transfer {t.from_account} to {t.to_account} on {t.date:%b} {t.date.day}"))
+    return found
 
 
 def suggest(txn: BankTransaction) -> Candidate | None:
@@ -148,7 +169,7 @@ def link(txn: BankTransaction, target, *, user, status: str = TxnStatus.MATCHED)
     """Record that `txn` is the bank's view of `target`. Posts nothing."""
     with transaction.atomic():
         current = _lock(txn)
-        if _is_matched(target):
+        if _is_matched(target, current):
             raise InboxError(ALREADY_MATCHED)
         match = Match.objects.create(bank_transaction=current, confirmed_by=user, **_match_kwargs(target))
         current.status = status
@@ -188,7 +209,7 @@ def confirm(txn: BankTransaction, candidate: Candidate, *, user) -> Match:
 
 
 def _confirm_transfer(txn: BankTransaction, candidate: Candidate, *, user) -> Match:
-    raise InboxError("That can't be matched to a bank transaction.")
+    return link(txn, candidate.target.journal_entry, user=user)
 
 
 def exclude(txn: BankTransaction, *, reason: str, user) -> None:
