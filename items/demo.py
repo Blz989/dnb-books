@@ -101,6 +101,6 @@ def seed_items(user):
     record_movements(kind=adj, date=first - timedelta(days=5), user=user, allow_negative=True,
                      lines=[StockLine(items["PNT-RED-QT"], -11, reason="Correction")])
     # Backdated inflow after later outflows, so one cost revision shows in the history.
-    record_movements(kind=adj, date=first - timedelta(days=30), user=user, lines=[
+    record_movements(kind=adj, date=opening_day - timedelta(days=5), user=user, lines=[
         StockLine(items["TAPE-BL-2"], 40, reason="Late-entered receipt", unit_cost=D("2.9000"))])
     return items

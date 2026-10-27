@@ -105,3 +105,26 @@ def negative_stock() -> list[NegativeRow]:
     rows = [NegativeRow(items[pk], q, stock_value(items[pk])) for pk, q in quantities.items()]
     rows.sort(key=lambda r: r.item.sku.lower())
     return rows
+
+
+def item_totals(item_ids=None) -> dict[int, tuple[int, Decimal]]:
+    """Quantity and effective value (movement cost plus revisions) per item, live movements only."""
+    movements = StockMovement.objects.filter(voided=False)
+    revisions = CostRevision.objects.filter(movement__voided=False)
+    if item_ids is not None:
+        movements = movements.filter(item_id__in=item_ids)
+        revisions = revisions.filter(movement__item_id__in=item_ids)
+    totals: dict[int, tuple[int, Decimal]] = {}
+    for r in movements.values("item_id").annotate(q=Sum("quantity"), v=Sum("total_cost")):
+        totals[r["item_id"]] = (r["q"], money(r["v"]))
+    for r in revisions.values("movement__item_id").annotate(v=Sum("delta")):
+        q, v = totals.get(r["movement__item_id"], (0, ZERO))
+        totals[r["movement__item_id"]] = (q, v + money(r["v"]))
+    return totals
+
+
+def negative_item_count() -> int:
+    return (
+        StockMovement.objects.filter(voided=False).values("item_id").annotate(q=Sum("quantity"))
+        .filter(q__lt=0).count()
+    )

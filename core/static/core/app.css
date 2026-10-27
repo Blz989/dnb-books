@@ -113,3 +113,8 @@ table.data tr.total td { font-weight: 600; border-top: 2px solid var(--text); }
 .foot { display: flex; justify-content: space-between; padding: 10px 14px; color: var(--muted); font-size: 13px; }
 .links { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; margin: 0; list-style: none; }
 .empty { padding: 28px 14px; text-align: center; color: var(--muted); }
+.facts { display: grid; grid-template-columns: 150px 1fr 150px 1fr; gap: 10px 16px; margin: 0; }
+.facts dt { color: var(--muted); font-size: 12px; padding-top: 2px; }
+.facts dd { margin: 0; }
+@media (max-width: 800px) { .facts { grid-template-columns: 120px 1fr; } }
+.form-row input[type=checkbox] { align-self: flex-start; width: 18px; height: 18px; }

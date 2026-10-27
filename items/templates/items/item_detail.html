@@ -1,0 +1,74 @@
+{% extends "core/base.html" %}
+{% block title %}{{ item.sku }}{% endblock %}
+{% block page_title %}<span class="sku" style="font-size:inherit">{{ item.sku }}</span> {{ item.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if item.is_stock %}<span class="tag">{{ item.get_costing_method_display }}</span>{% else %}<span class="tag ns">Non-stock</span>{% endif %}
+  {% if not item.is_active %}<span class="tag ns">Inactive</span>{% endif %}
+  {% if item.category %}· {{ item.category.name }}{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  <a class="btn" href="{% url 'items:edit' item.sku %}">Edit</a>
+  {% if item.is_stock and item.is_active %}<a class="btn" href="/items/adjust/?item={{ item.sku }}">Adjust</a>{% endif %}
+  {% if is_admin and item.is_stock and item.is_active %}<a class="btn" href="/items/{{ item.sku }}/value-adjust/">Value adjust</a>{% endif %}
+  {% if item.is_active %}
+  <form method="post" action="{% url 'items:deactivate' item.sku %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Deactivate</button></form>
+  {% endif %}
+{% endblock %}
+{% block content %}
+{% if item.is_stock %}
+<div class="kpis">
+  <div class="kpi{% if quantity < 0 %} warn{% endif %}"><div class="l">On hand</div><div class="v">{{ quantity }}{% if item.unit %} <span class="dash" style="font-size:13px;font-weight:400">{{ item.unit }}</span>{% endif %}</div></div>
+  <div class="kpi"><div class="l">Unit cost</div><div class="v">{{ unit_cost|floatformat:4 }}</div></div>
+  <div class="kpi{% if value < 0 %} warn{% endif %}"><div class="l">Value</div><div class="v">{{ value|floatformat:"2g" }}</div></div>
+</div>
+{% if quantity < 0 %}<div class="banner warning">{{ item.sku }} is below zero. Its cost is estimated until stock is received or counted.</div>{% endif %}
+{% endif %}
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Description</dt><dd>{{ item.description|default:"—" }}</dd>
+    <dt>Vendor part #</dt><dd>{{ item.vendor_part_number|default:"—" }}</dd>
+    <dt>Sale price</dt><dd>{{ item.sale_price|floatformat:4 }}</dd>
+    <dt>Purchase cost</dt><dd>{{ item.purchase_cost|floatformat:4 }}</dd>
+    <dt>Income account</dt><dd>{{ item.income_account }}</dd>
+    {% if item.is_stock %}
+    <dt>Inventory account</dt><dd>{{ item.inventory_account }}</dd>
+    <dt>Cost of goods sold</dt><dd>{{ item.cogs_account }}</dd>
+    <dt>Unit</dt><dd>{{ item.unit|default:"—" }}</dd>
+    {% endif %}
+  </dl>
+</div></div>
+
+{% if item.is_stock %}
+<h2>Stock history</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Date</th><th>Kind</th><th class="num">Quantity</th><th class="num">Unit cost</th><th class="num">Value</th><th class="num">Balance</th><th>Entry</th><th>User</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for h in history %}
+    {% with m=h.movement %}
+    <tr{% if m.voided %} style="text-decoration: line-through"{% endif %}>
+      <td>{{ m.date|date:"Y-m-d" }}</td>
+      <td>{{ m.get_kind_display }}{% if m.voided %} <span class="tag ns">Voided</span>{% endif %}</td>
+      <td class="num{% if m.quantity < 0 %} neg{% endif %}">{{ m.quantity }}</td>
+      <td class="num">{{ m.unit_cost|floatformat:4 }}</td>
+      <td class="num{% if h.value < 0 %} neg{% endif %}">{{ h.value|floatformat:"2g" }}</td>
+      <td class="num{% if h.running < 0 %} neg{% endif %}">{{ h.running }}</td>
+      <td>{% if m.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' m.journal_entry.pk %}">{{ m.journal_entry.display_number }}</a>{% else %}<span class="dash">—</span>{% endif %}</td>
+      <td>{{ m.created_by.get_username }}</td>
+      <td>{{ m.reason }}</td>
+    </tr>
+    {% for r in h.revisions %}
+    <tr>
+      <td>{{ r.date|date:"Y-m-d" }}</td>
+      <td colspan="3" style="padding-left: 32px" class="dash">↳ Cost correction</td>
+      <td class="num{% if r.delta < 0 %} neg{% endif %}">{{ r.delta|floatformat:"2g" }}</td><td></td>
+      <td>{% if r.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' r.journal_entry.pk %}">{{ r.journal_entry.display_number }}</a>{% endif %}</td>
+      <td></td><td></td>
+    </tr>
+    {% endfor %}
+    {% endwith %}
+  {% empty %}<tr><td colspan="9" class="empty">No stock history yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

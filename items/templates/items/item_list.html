@@ -1,0 +1,63 @@
+{% extends "core/base.html" %}
+{% block title %}Items{% endblock %}
+{% block page_title %}Items{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ active_count }} active item{{ active_count|pluralize }} · stock valued as of today</div>{% endblock %}
+{% block page_actions %}
+  {% if is_admin %}<a class="btn" href="/items/import/">Import CSV</a>{% endif %}
+  <a class="btn primary" href="{% url 'items:new' %}">+ New item</a>
+{% endblock %}
+{% block content %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Stock value</div><div class="v">{{ stock_value|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Stock items</div><div class="v">{{ stock_count }}</div></div>
+  <div class="kpi"><div class="l">Non-stock items</div><div class="v">{{ non_stock_count }}</div></div>
+  <div class="kpi{% if below_zero %} warn{% endif %}"><div class="l">Below zero</div><div class="v">{{ below_zero }}</div></div>
+</div>
+{% if below_zero %}
+<div class="banner warning">{{ below_zero }} item{{ below_zero|pluralize }} {{ below_zero|pluralize:"is,are" }} below zero. Their cost is estimated until stock is received or counted. <a href="/reports/negative-stock/">Review →</a></div>
+{% endif %}
+<div class="card">
+  <form method="get" class="filters">
+    <label class="grow">Search<input type="search" name="q" value="{{ q }}" placeholder="Search SKU, name, or vendor part #"></label>
+    <label>Category
+      <select name="category"><option value="">All categories</option>
+      {% for c in categories %}<option value="{{ c.pk }}"{% if category == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select></label>
+    <label>Type
+      <select name="type"><option value="">All types</option>
+        <option value="stock"{% if type == "stock" %} selected{% endif %}>Stock</option>
+        <option value="non-stock"{% if type == "non-stock" %} selected{% endif %}>Non-stock</option></select></label>
+    <label><span><input type="checkbox" name="inactive" value="1"{% if show_inactive %} checked{% endif %}> Show inactive</span></label>
+    <button type="submit" class="btn primary">Search</button>
+  </form>
+  <table class="data">
+    <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Type</th><th class="num">On hand</th><th class="num">Unit cost</th><th class="num">Value</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a class="sku" href="{% url 'items:detail' r.item.sku %}">{{ r.item.sku }}</a></td>
+        <td>{{ r.item.name }}{% if not r.item.is_active %} <span class="tag ns">Inactive</span>{% endif %}</td>
+        <td>{% if r.item.category %}{{ r.item.category.name }}{% else %}<span class="dash">—</span>{% endif %}</td>
+        <td>{% if r.item.is_stock %}<span class="tag">{% if r.item.costing_method == "FIFO" %}FIFO{% else %}Avg{% endif %}</span>{% else %}<span class="tag ns">Non-stock</span>{% endif %}</td>
+        {% if r.item.is_stock %}
+        <td class="num{% if r.quantity < 0 %} neg{% endif %}">{{ r.quantity }}</td>
+        <td class="num">{{ r.unit_cost|floatformat:4 }}</td>
+        <td class="num{% if r.value < 0 %} neg{% endif %}">{{ r.value|floatformat:"2g" }}</td>
+        {% else %}
+        <td class="num dash">—</td><td class="num dash">—</td><td class="num dash">—</td>
+        {% endif %}
+      </tr>
+    {% empty %}<tr><td colspan="7" class="empty">No items match.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="foot">
+    <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <span>
+      {% if page.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">← Prev</a>{% else %}← Prev{% endif %}
+      ·
+      {% if page.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Next →</a>{% else %}Next →{% endif %}
+    </span>
+  </div>
+</div>
+{% endblock %}

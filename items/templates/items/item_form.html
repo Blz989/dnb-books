@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+{% block title %}{% if item %}Edit {{ item.sku }}{% else %}New item{% endif %}{% endblock %}
+{% block page_title %}{% if item %}Edit {{ item.sku }}{% else %}New item{% endif %}{% endblock %}
+{% block content %}
+{% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  {% for field in form %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.name == "costing_method" and form.locked %}<span class="help">Locked: this item has stock history.</span>{% endif %}
+    {% if field.name == "item_type" and form.locked %}<span class="help">Locked: this item has stock history.</span>{% endif %}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn primary">Save</button>
+  <a class="btn" href="{% if item %}{% url 'items:detail' item.sku %}{% else %}{% url 'items:list' %}{% endif %}">Cancel</a>
+</form>
+</div></div>
+{% endblock %}

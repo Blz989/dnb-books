@@ -12,6 +12,8 @@ from .errors import ItemStateError
 
 SKU_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$"
 SKU_MESSAGE = "SKU can use letters, numbers, dots, dashes, and underscores (up to 50)."
+RESERVED_SKUS = {"new", "adjust", "adjustments", "counts", "import", "settings", "movements"}  # URL words
+RESERVED_MESSAGE = "That SKU is reserved."
 IMMUTABLE_MESSAGE = "Stock movements can't be changed. Void the movement instead."
 
 
@@ -86,6 +88,8 @@ class Item(models.Model):
         errors = {}
         if not re.match(SKU_PATTERN, self.sku or ""):
             errors["sku"] = SKU_MESSAGE
+        elif self.sku.lower() in RESERVED_SKUS:
+            errors["sku"] = RESERVED_MESSAGE
         if self.is_stock:
             if self.cogs_account_id is None or self.cogs_account.subtype != AccountSubtype.COST_OF_GOODS_SOLD:
                 errors["cogs_account"] = "Stock items need a cost of goods sold account."

@@ -482,12 +482,12 @@ def test_bom_and_mixed_case_values(): ...
 - `ItemForm`: account fields default from settings; `item_type` and `costing_method` disabled after first movement; method change attempt → "The costing method can't change after an item has stock history."
 - Deactivate with stock → "{sku} still has {on_hand} on hand. Adjust it to zero before deactivating."
 
-- [ ] **Step 1: Write failing tests** (search matches vendor part #; pagination; case-insensitive SKU URL; non-stock em dashes; method lock message; deactivate message; standard user can create and edit; history lists revisions)
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement** (extend `seed_demo` with items, categories, history)
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Screenshots** of item list (default, searched, filtered to a category), item detail (FIFO item with history, item below zero, non-stock item), new item form, edit form with locked method; light and dark; compare item list against `docs/design/items-mockup.html`; send.
-- [ ] **Step 6: Commit** `feat: item list, detail, and edit screens`
+- [x] **Step 1: Write failing tests** (search matches vendor part #; pagination; case-insensitive SKU URL; non-stock em dashes; method lock message; deactivate message; standard user can create and edit; history lists revisions)
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement** (extend `seed_demo` with items, categories, history)
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Screenshots** of item list (default, searched, filtered to a category), item detail (FIFO item with history, item below zero, non-stock item), new item form, edit form with locked method; light and dark; compare item list against `docs/design/items-mockup.html`; send.
+- [x] **Step 6: Commit** `feat: item list, detail, and edit screens`
 
 ---
 
