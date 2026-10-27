@@ -280,7 +280,7 @@ def test_invoice_void_releases_allocation(...):
   - "The date can't be before {number}'s date." (Review Focus 5)
   - "{bill} belongs to a different vendor."
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - A batch of three bills from two vendors makes two payments with the correct applications.
   - A partial payment.
   - A card payment credits the card account.
@@ -288,10 +288,10 @@ def test_invoice_void_releases_allocation(...):
   - A payment dated before a bill is refused.
   - A single payment over the bills keeps the extra as unapplied, and it's applied later.
   - A void reopens the bills.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: vendor payments and pay bills`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: vendor payments and pay bills`
 
 ---
 
