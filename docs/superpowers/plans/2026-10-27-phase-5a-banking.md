@@ -282,17 +282,17 @@ tests/ test_locks.py, test_banking_models.py, test_importers.py, test_plaid_sync
   - Lock check `entry_lock(entry) -> str | None`: any line of the entry is reconciled → "{number} is part of the {Month YYYY} reconciliation for {account}. An admin must undo that reconciliation first." Here `{number}` is the entry's `source_id`, or `display_number` when it has none.
   - `purchasing.edit_bill`: before editing, any applied payment whose entry `lock_message` returns a message raises `PurchasingError` with that message.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - The difference math for checking and for the card (positive amount owed).
   - Finish only at 0.00.
   - The opening balance carries to the next month.
   - Locks block a void of a sales payment, a deposit, a vendor payment, a transfer, and an inbox entry, plus `edit_bill` with a locked payment, each with the message.
   - Undo of the latest unlocks; undo of an older one is refused.
   - The report PDF renders and lists outstanding checks.
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run full suite, expect PASS**
-- [ ] **Step 5: Commit** `feat: reconciliation with locks`
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run full suite, expect PASS**
+- [x] **Step 5: Commit** `feat: reconciliation with locks`
 
 ---
 
