@@ -391,11 +391,11 @@ def test_void_in_closed_month_needs_open_date(...): ...
   - `cancel_count(count, user) -> None`.
 - `moved_since_start`: any non-voided movement for the item with `created_at > count.started_at` that is not this count's own.
 
-- [ ] **Step 1: Write failing tests** (snapshot taken at start; partial entry across two calls; uncounted lines ignored; flagged items require confirm; posting creates COUNT movements with shrinkage entries; posting twice raises "This count is already posted.")
-- [ ] **Step 2: Run, expect FAIL**
-- [ ] **Step 3: Implement**
-- [ ] **Step 4: Run, expect PASS**
-- [ ] **Step 5: Commit** `feat: physical count workflow`
+- [x] **Step 1: Write failing tests** (snapshot taken at start; partial entry across two calls; uncounted lines ignored; flagged items require confirm; posting creates COUNT movements with shrinkage entries; posting twice raises "This count is already posted.")
+- [x] **Step 2: Run, expect FAIL**
+- [x] **Step 3: Implement**
+- [x] **Step 4: Run, expect PASS**
+- [x] **Step 5: Commit** `feat: physical count workflow`
 
 ---
 

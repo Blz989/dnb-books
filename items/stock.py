@@ -31,6 +31,7 @@ class StockLine:
     reason: str = ""
     account: Account | None = None
     unit_cost: Decimal | None = None
+    count_line: object | None = None  # StockCountLine, set by the count workflow
 
 
 # ---- reads ----
@@ -177,7 +178,7 @@ def record_movements(
             movement = StockMovement.objects.create(
                 pk=pk, item=item, date=date, kind=kind, quantity=line.quantity, unit_cost=unit_cost,
                 total_cost=total, offset_account=offset, reason=line.reason, source_type=source_type,
-                source_id=source_id, journal_entry=entry, created_by=user)
+                source_id=source_id, journal_entry=entry, count_line=line.count_line, created_by=user)
             movements.append(movement)
             touched[item.pk] = item
         for item in touched.values():
