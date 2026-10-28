@@ -443,17 +443,17 @@ The HTML follows "Ledger paper", in this order:
 - warnings
 - the account number map
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_matching_reports_pass`: generate the CSVs from the replayed sample's own figures; everything passes.
   - `test_wrong_trial_balance_account_fails_and_is_named`
   - `test_missing_report_not_provided`
   - `test_inventory_value_listed_not_failed`
   - `test_pdf_renders` (`%PDF`)
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_tieout.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_tieout.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots.** The tie-out HTML (one passing, one failing) and the PDF page 1. Send them.
-- [ ] **Step 6:** Commit with `feat: Zoho tie-out report`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_tieout.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_tieout.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots.** The tie-out HTML (one passing, one failing) and the PDF page 1. Send them.
+- [x] **Step 6:** Commit with `feat: Zoho tie-out report`.
 
 ### Task 9: The import_zoho command
 

@@ -1,0 +1,171 @@
+{% load tieout_extras %}<!doctype html>
+<html lang="en"{% if pdf %} data-theme="light"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoho tie-out</title>
+{% if not pdf %}<script>
+  (function () {
+    try { var t = localStorage.getItem("dnb-theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) { /* Auto */ }
+  })();
+</script>{% endif %}
+<style>
+@font-face { font-family: "Inter"; font-weight: 100 900; src: url("{{ font_uri }}/inter-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-weight: 600; src: url("{{ font_uri }}/source-serif-4-latin-600-normal.woff2") format("woff2"); }
+{{ css|safe }}
+</style>
+</head>
+<body>
+<main>
+<div class="top">
+  <div>
+    <h1>Zoho tie-out</h1>
+    <div class="sub">DNB Books compared with Zoho's own reports{% if t.as_of %}, as of {{ t.as_of|date:"M j, Y" }}{% endif %}</div>
+  </div>
+  {% if not pdf %}<div class="toggle" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="auto" aria-pressed="true">Auto</button>
+    <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+    <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+  </div>{% endif %}
+</div>
+
+<h2>Summary</h2>
+{% if t.passed %}<div class="banner ok">Passed. Every report ties out.</div>
+{% else %}<div class="banner error">Failed. {{ t.failed_checks }} of {{ t.checks|length }} checks did not tie out.</div>{% endif %}
+<div class="kpis">
+  <div class="kpi{% if t.failed_checks %} warn{% endif %}"><div class="l">Checks passed</div><div class="v">{{ t.checks|passed_count }} of {{ t.checks|length }}</div></div>
+  <div class="kpi{% if t.count_differences %} warn{% endif %}"><div class="l">Document count differences</div><div class="v">{{ t.count_differences }}</div></div>
+  <div class="kpi"><div class="l">Inventory value differences</div><div class="v">{% if t.inventory_value_provided %}{{ t.inventory_value|differing|length }}{% else %}Not provided{% endif %}</div></div>
+  <div class="kpi"><div class="l">Warnings</div><div class="v">{{ t.warnings|length }}</div></div>
+</div>
+<div class="card">
+  <div class="card-head"><h3>Documents imported, compared with the export</h3></div>
+  <table class="data">
+    <thead><tr><th>Type</th><th class="num">DNB</th><th class="num">Zoho</th><th class="num">Difference</th></tr></thead>
+    <tbody>
+    {% for d in t.counts %}
+      <tr{% if not d.matches %} class="bad"{% endif %}><td>{{ d.label }}</td>
+        <td class="num">{% if ": count" in d.label %}{{ d.ours|floatformat:"0g" }}{% else %}{{ d.ours|floatformat:"2g" }}{% endif %}</td>
+        <td class="num">{% if ": count" in d.label %}{{ d.zoho|floatformat:"0g" }}{% else %}{{ d.zoho|floatformat:"2g" }}{% endif %}</td>
+        <td class="num">{% if d.matches %}&mdash;{% elif ": count" in d.label %}{{ d.difference|floatformat:"0g" }}{% else %}{{ d.difference|floatformat:"2g" }}{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Checks</h2>
+{% for c in t.checks %}
+<div class="card">
+  <div class="card-head"><h3>{{ c.name }}</h3>
+    {% if not c.provided %}<span class="tag na">Not provided</span>
+    {% elif c.passed %}<span class="tag">Passed</span>
+    {% else %}<span class="tag bad">{{ c.failing }} differ</span>{% endif %}</div>
+  {% if not c.provided %}<div class="empty">Not provided. This check counts as not passed.</div>
+  {% else %}
+  <table class="data">
+    <thead><tr><th>Line</th><th class="num">DNB</th><th class="num">Zoho</th><th class="num">Difference</th></tr></thead>
+    <tbody>
+    {% for r in c.rows %}
+      <tr{% if not r.matches %} class="bad"{% endif %}><td>{{ r.label }}{% if r.note %} <span class="tag flag">{{ r.note }}</span>{% endif %}</td>
+        <td class="num">{{ r.ours|floatformat:"2g" }}</td><td class="num">{{ r.zoho|floatformat:"2g" }}</td>
+        <td class="num">{% if r.matches %}&mdash;{% else %}{{ r.difference|floatformat:"2g" }}{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4" class="muted">Nothing to compare.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endfor %}
+
+<h2>Inventory value</h2>
+<div class="card">
+  <div class="note-line">Listed for review. Differences here never fail the tie-out.</div>
+  {% if not t.inventory_value_provided %}<div class="empty">Not provided.</div>
+  {% else %}
+  <table class="data">
+    <thead><tr><th>SKU</th><th class="num">DNB</th><th class="num">Zoho</th><th class="num">Difference</th></tr></thead>
+    <tbody>
+    {% for r in t.inventory_value %}
+      <tr><td>{{ r.label }}{% if r.note %} <span class="tag flag">{{ r.note }}</span>{% endif %}</td>
+        <td class="num">{{ r.ours|floatformat:"2g" }}</td><td class="num">{{ r.zoho|floatformat:"2g" }}</td>
+        <td class="num{% if not r.matches %} neg{% endif %}">{% if r.matches %}&mdash;{% else %}{{ r.difference|floatformat:"2g" }}{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4" class="muted">No stock items.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+
+<h2>Negative items</h2>
+<div class="card">
+  {% if t.after.negative_items %}
+  <table class="data">
+    <thead><tr><th>Item</th><th class="num">On hand</th></tr></thead>
+    <tbody>{% for item, qty in t.after.negative_items %}
+      <tr><td>{{ item.sku }} <span class="muted">{{ item.name }}</span></td><td class="num neg">{{ qty }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty">No item is below zero now.</div>{% endif %}
+</div>
+
+<h2>Undeposited by year</h2>
+<div class="card">
+  {% if t.after.undeposited_by_year %}
+  <table class="data">
+    <thead><tr><th>Year</th><th class="num">Payments</th><th class="num">Total</th></tr></thead>
+    <tbody>{% for year, row in t.after.undeposited_by_year|dict_items %}
+      <tr><td>{{ year }}</td><td class="num">{{ row.0 }}</td><td class="num">{{ row.1|floatformat:"2g" }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty">Nothing is waiting in Undeposited Funds.</div>{% endif %}
+</div>
+
+<h2>Unbilled orders</h2>
+<div class="card">
+  {% if t.after.unbilled_orders %}
+  <table class="data">
+    <thead><tr><th>Order</th><th>Date</th><th class="num">Profit</th><th class="num">Handling at 50%</th><th class="num">Handling at 55%</th></tr></thead>
+    <tbody>{% for order, profit, at_50, at_55 in t.after.unbilled_orders %}
+      <tr><td>{{ order.number }}</td><td>{{ order.date|date:"M j, Y" }}</td><td class="num">{{ profit|floatformat:"2g" }}</td>
+        <td class="num">{{ at_50|floatformat:"2g" }}</td><td class="num">{{ at_55|floatformat:"2g" }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty">Every order has a handling bill.</div>{% endif %}
+</div>
+
+<h2>Warnings</h2>
+<div class="card">
+  {% if t.warnings %}<ul class="warnings">{% for w in t.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  {% else %}<div class="empty">No warnings.</div>{% endif %}
+</div>
+
+<h2>Account number map</h2>
+<div class="card">
+  <table class="data">
+    <thead><tr><th>Zoho account</th><th>DNB number</th><th>Type</th><th>Status</th></tr></thead>
+    <tbody>{% for p in t.account_map %}
+      <tr><td>{{ p.name }}</td><td>{{ p.number }}</td><td>{{ p.subtype.label }}</td><td>{% if p.is_active %}Active{% else %}<span class="muted">Inactive</span>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+</div>
+</main>
+{% if not pdf %}<script>
+(function () {
+  var KEY = "dnb-theme", root = document.documentElement;
+  function apply(choice) {
+    if (choice === "light" || choice === "dark") root.setAttribute("data-theme", choice); else root.removeAttribute("data-theme");
+    var b = document.querySelectorAll("[data-theme-choice]");
+    for (var i = 0; i < b.length; i++) b[i].setAttribute("aria-pressed", String(b[i].getAttribute("data-theme-choice") === (choice || "auto")));
+  }
+  function stored() { try { return localStorage.getItem(KEY) || "auto"; } catch (e) { return "auto"; } }
+  apply(stored());
+  var buttons = document.querySelectorAll("[data-theme-choice]");
+  for (var i = 0; i < buttons.length; i++) buttons[i].addEventListener("click", function (ev) {
+    var choice = ev.currentTarget.getAttribute("data-theme-choice");
+    try { localStorage.setItem(KEY, choice); } catch (e) { /* Auto next time */ }
+    apply(choice);
+  });
+})();
+</script>{% endif %}
+</body>
+</html>
