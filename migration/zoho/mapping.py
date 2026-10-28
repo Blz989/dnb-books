@@ -53,7 +53,13 @@ class AccountPlan:
 
 
 def money(text: str) -> Decimal:
+    """Zoho amounts: "1,234.5", "0.000", and on items "USD 2.99". Only US dollars are supported."""
     cleaned = (text or "").replace(",", "").strip()
+    currency = re.match(r"^([A-Za-z]{3})\s+", cleaned)
+    if currency:
+        if currency.group(1).upper() != "USD":
+            raise ValueError(f"Only US dollar amounts can be imported, not '{text}'.")
+        cleaned = cleaned[currency.end():]
     if not cleaned:
         return Decimal("0.00")
     return Decimal(cleaned).quantize(CENT, rounding=ROUND_HALF_UP)
