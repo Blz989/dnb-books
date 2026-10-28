@@ -252,3 +252,25 @@ def test_vendor_credit_with_no_bill_owing_more_is_warned(db, admin_user, tmp_pat
     credit = VendorCredit.objects.get(number="VC-0001")
     assert not credit.applications.exists()
     assert "VC-0001: 120.00 of the credit matched no bill." in r.warnings
+
+
+def test_payment_before_its_invoice_applies_on_the_invoice_date(db, admin_user, tmp_path):
+    """Online orders: Zoho records the payment days before the invoice."""
+    rows = sample_rows()
+    inv = next(r for r in rows["invoices"] if r["Invoice Number"] == "INV-000006")
+    early = dict(next(r for r in rows["customer_payments"] if r["Invoice Number"] == "INV-000006"))
+    paid_on = date.fromisoformat(inv["Invoice Date"]).replace(day=1).isoformat()
+    for r in rows["customer_payments"]:
+        if r["CustomerPayment ID"] == early["CustomerPayment ID"]:
+            r.update({"Date": paid_on, "Invoice Payment Applied Date": ""})
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    r.finish()
+    payment = Payment.objects.get(number=early["Payment Number"])
+    app = payment.applications.get(invoice__number="INV-000006")
+    assert payment.date == date.fromisoformat(paid_on) < app.applied_on
+    assert app.applied_on == date.fromisoformat(inv["Invoice Date"])
+    assert not r.pending_applications
+    assert ar_check() == [] and undeposited_check() == []

@@ -115,6 +115,8 @@ class Replay(MoneyReplay):
         # Zoho's inactive accounts, items, and contacts still have history. They stay active while it replays,
         # since posting refuses inactive ones, and are switched off in finish().
         self.inactive: list = []
+        # Invoice number -> [(payment, amount, Zoho applied date)] for payments made before the invoice existed.
+        self.pending_applications: dict[str, list] = {}
         self.vendors: dict[str, Vendor] = {}
         self.bank_accounts: dict[str, BankAccount] = {}
         self.warnings: list[str] = []
@@ -557,6 +559,7 @@ class Replay(MoneyReplay):
                 user=self.user, sales_order=order, terms=mapping.terms(first["Payment Terms Label"], first["Invoice Date"], first["Due Date"]),
                 notes=first["Notes"], allow_negative=True, allow_negative_adjustment=True)
             self.record("invoice", event.zoho_id, invoice)
+            self.apply_pending(invoice)
             if first["Invoice Status"].strip().lower() == "void":
                 # Created, then voided on the same date: the number stays used and the ledger nets to zero.
                 void_invoice(invoice, user=self.user, reason="Void in Zoho", date=event.date)
@@ -567,6 +570,9 @@ class Replay(MoneyReplay):
 
     # ---- after the replay (Task 7) ----
     def finish(self) -> AfterSummary:
+        for number, waiting in self.pending_applications.items():
+            for payment, amount, _ in waiting:
+                self.warnings.append(f"Payment {payment.number}: {amount:,.2f} for {number} was never applied.")
         self.apply_vendor_credits()
         with transaction.atomic():
             for obj in self.inactive:

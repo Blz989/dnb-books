@@ -125,10 +125,16 @@ class MoneyReplay:
             # Unused Amount is simply what is not applied here; it stays on the payment.
             for row in rows:
                 applied = mapping.money(row["Amount Applied to Invoice"])
-                if applied > 0:
-                    apply_payment(
-                        payment, self._invoice(row["Invoice Number"]), applied,
-                        date=_date(row["Invoice Payment Applied Date"], event.date), user=self.user)
+                if applied <= 0:
+                    continue
+                when = _date(row["Invoice Payment Applied Date"], event.date)
+                number = row["Invoice Number"].strip()
+                if Invoice.objects.filter(number=number).exists():
+                    invoice = self._invoice(number)
+                    apply_payment(payment, invoice, applied, date=max(when, invoice.date), user=self.user)
+                else:
+                    # Paid before the invoice existed (online orders): applied when the invoice posts.
+                    self.pending_applications.setdefault(number, []).append((payment, applied, when))
             charges = mapping.money(first["Bank Charges"])
             if charges > 0 and not to_bank:
                 # No payment backs a charge taken out of Undeposited Funds, so posting it would break
@@ -301,6 +307,11 @@ class MoneyReplay:
                     wanted -= take
             if wanted > 0:
                 self.warnings.append(f"{credit.number}: {wanted:,.2f} of the credit matched no bill.")
+
+    def apply_pending(self, invoice) -> None:
+        """Payments Zoho received before this invoice existed, applied on the invoice date at the earliest."""
+        for payment, amount, when in self.pending_applications.pop(invoice.number, []):
+            apply_payment(payment, invoice, amount, date=max(when, invoice.date), user=self.user)
 
     # ---- entries ----
     def _post(self, event, source_type: str, lines: list[LineSpec], *, memo: str, reference: str = "") -> None:
