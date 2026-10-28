@@ -147,6 +147,8 @@ table.data tr.total td { font-weight: 600; border-top: 2px solid var(--text); }
 .recon-bar .v, .recon-bar .difference { display: block; font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .recon-bar .difference.warn { color: var(--warn-text-strong); }
 .recon-bar .difference.ok { color: var(--accent-text); }
+.recon-bar .balance-form { display: flex; gap: 6px; align-items: center; }
+.recon-bar .balance-form input { width: 9rem; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; }
 .recon-actions { margin: 4px 0 24px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 button.btn:disabled { opacity: .5; cursor: not-allowed; }
 #order-profitability th, #order-profitability td { padding-left: 10px; padding-right: 10px; }

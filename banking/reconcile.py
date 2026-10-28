@@ -120,8 +120,21 @@ def cleared_total(rec: Reconciliation) -> Decimal:
     return sum((_signed(rec.bank_account, i.journal_line) for i in items), ZERO)
 
 
-def difference(rec: Reconciliation) -> Decimal:
+def difference(rec: Reconciliation) -> Decimal | None:
+    """None while the statement balance is blank (a reconciliation the Zoho import left to be filled in)."""
+    if rec.statement_balance is None:
+        return None
     return rec.statement_balance - (opening_balance(rec) + cleared_total(rec))
+
+
+def set_statement_balance(rec: Reconciliation, balance: Decimal, user) -> None:
+    with transaction.atomic():
+        current = Reconciliation.objects.get(pk=rec.pk)
+        if current.status != ReconStatus.IN_PROGRESS:
+            raise ReconcileError("This reconciliation is no longer in progress.")
+        current.statement_balance = balance
+        current.save(update_fields=["statement_balance"])
+    rec.statement_balance = balance
 
 
 def rows_for(rec: Reconciliation) -> list[dict]:
@@ -140,7 +153,7 @@ def rows_for(rec: Reconciliation) -> list[dict]:
 
 def summary(rec: Reconciliation) -> dict:
     cleared = cleared_total(rec)
-    diff = rec.statement_balance - (opening_balance(rec) + cleared)
+    diff = difference(rec)
     return {"opening": opening_balance(rec), "cleared_total": cleared, "difference": diff,
             "cleared_balance": opening_balance(rec) + cleared}
 
@@ -183,6 +196,8 @@ def finish(rec: Reconciliation, *, user) -> Reconciliation:
         if current.status != ReconStatus.IN_PROGRESS:
             raise ReconcileError("This reconciliation is no longer in progress.")
         _add_items(current)
+        if current.statement_balance is None:
+            raise ReconcileError("Enter the statement balance.")
         if difference(current) != ZERO:
             raise ReconcileError("The difference must be 0.00 to finish.")
         current.status, current.finished_by, current.finished_at = ReconStatus.FINISHED, user, timezone.now()

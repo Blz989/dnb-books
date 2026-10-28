@@ -9,29 +9,42 @@ credits, deposits, entries, and stock adjustments in `replay_money.MoneyReplay`.
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
-from banking.models import BankAccount
+from banking.models import BankAccount, Reconciliation, ReconciliationItem, ReconStatus
 from contacts.models import Customer, Vendor
 from items.costing import unit_4dp
 from items.models import Category, CostingMethod, InventorySettings, Item, ItemType
 from items.stock import StockLine, on_hand, record_opening_batch
-from ledger.models import Account, AccountSubtype
+from handling.profit import order_profit
+from ledger.models import Account, AccountSubtype, JournalLine
 from migration.models import ZohoRecord
 from migration.zoho import mapping
 from migration.zoho.reader import ID_COLUMNS, ZohoExport
 from migration.zoho.replay_money import OPENING_DATE, MoneyReplay, _quantity
-from purchasing.models import PurchasingSettings
+from purchasing.models import Bill, PurchaseOrder, PurchasingSettings
 from purchasing.posting.bills import BillExpenseSpec, BillItemSpec, create_bill
 from purchasing.posting.orders import POLineSpec, close_po, create_po
 from sales.balances import invoice_total
-from sales.models import DocType, Fulfillment, OrderStatus, SalesOrder, SalesSettings
-from sales.numbering import use_number
+from sales.models import (
+    CreditNote, DocType, Fulfillment, Invoice, OrderStatus, SalesOrder, SalesSettings,
+)
+from sales.numbering import set_sequence, use_number
+from sales.posting.deposits import undeposited_payments
 from sales.posting.invoices import InvoiceLineSpec, create_invoice, void_invoice
 from sales.posting.orders import OrderLineSpec, close_order, create_order, remaining
+
+RECONCILE_DATE = date(2025, 12, 31)
+UNBILLED_FROM = date(2024, 3, 29)  # Zoho's handling bills start with the orders of this date
+HANDLING_PAYEE = "Cordon"
+# Zoho prefix -> the model whose numbers carry it
+ZOHO_SEQUENCES = (
+    (DocType.SO, "SO-", SalesOrder), (DocType.INV, "INV-", Invoice),
+    (DocType.CN, "CN-", CreditNote), (DocType.PO, "PO-", PurchaseOrder),
+)
 
 FEED_START = date(2026, 1, 1)  # becomes BankAccount.feed_starts in Task 10; the field does not exist yet
 
@@ -41,6 +54,17 @@ SERVICE_ITEMS = (
     ("ADJ", "Adjustment", "Sales"),
     ("TAX", "Sales tax (Zoho)", "Tax Payable"),
 )
+
+
+def _handling(profit: Decimal, rate: str) -> Decimal:
+    return max(Decimal("0.00"), (profit * Decimal(rate)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+@dataclass
+class AfterSummary:
+    unbilled_orders: list  # (SalesOrder, profit, at_50, at_55)
+    undeposited_by_year: dict  # year -> (count, total)
+    negative_items: list  # (Item, on_hand)
 
 
 @dataclass(frozen=True)
@@ -476,3 +500,76 @@ class Replay(MoneyReplay):
         if ours != theirs:
             self.warnings.append(f"{event.number}: total {ours} vs Zoho {theirs}")
         self._note_negative([s.item for s in lines], event)
+
+    # ---- after the replay (Task 7) ----
+    def finish(self) -> AfterSummary:
+        with transaction.atomic():
+            self._open_reconciliations()
+            self._set_sequences()
+        return AfterSummary(
+            unbilled_orders=self._unbilled_orders(),
+            undeposited_by_year=self._undeposited_by_year(),
+            negative_items=self._negative_items(),
+        )
+
+    def _open_reconciliations(self) -> None:
+        """One open reconciliation per bank account, all ticked; the owner types in the Dec 31 statement balance."""
+        for bank in self.bank_accounts.values():
+            lines = list(
+                JournalLine.objects.in_ledger()
+                .filter(account=bank.ledger_account, entry__date__lte=RECONCILE_DATE))
+            if not lines:
+                continue
+            rec = Reconciliation.objects.create(
+                bank_account=bank, statement_date=RECONCILE_DATE, statement_balance=None,
+                status=ReconStatus.IN_PROGRESS, started_by=self.user)
+            ReconciliationItem.objects.bulk_create(
+                [ReconciliationItem(reconciliation=rec, journal_line=line, cleared=True) for line in lines])
+
+    def _set_sequences(self) -> None:
+        """Next number continues after Zoho's highest. PMT, VP, VC, and BILL keep our own prefixes."""
+        for doc_type, prefix, model in ZOHO_SEQUENCES:
+            highest = 0
+            for number in model.objects.filter(number__startswith=prefix).values_list("number", flat=True):
+                tail = number[len(prefix):]
+                if tail.isdigit():
+                    highest = max(highest, int(tail))
+            if highest:
+                set_sequence(doc_type, prefix=prefix, next_number=highest + 1, user=self.user)
+
+    def _unbilled_orders(self) -> list:
+        """Sales orders with no Cordon bill, each with its profit and the handling it would earn at 50% and 55%."""
+        billed = set()
+        bills = Bill.objects.filter(vendor__name__icontains=HANDLING_PAYEE).prefetch_related("expense_lines")
+        for bill in bills:
+            for line in bill.notes.splitlines():
+                if line.startswith("Sales order "):
+                    billed.add(line[len("Sales order "):].strip())
+            # The Zoho handling bill names its order in the expense line ("Shipping for Order SO-0006").
+            for expense in bill.expense_lines.all():
+                if "Order " in expense.description:
+                    billed.add(expense.description.rsplit("Order ", 1)[1].strip())
+        today = date.today()
+        result = []
+        for order in SalesOrder.objects.filter(date__gte=UNBILLED_FROM).order_by("date", "number"):
+            if order.number in billed:
+                continue
+            profit = order_profit(order.number, as_of=today).profit
+            result.append((order, profit, _handling(profit, "0.50"),
+                           _handling(profit, "0.55")))
+        return result
+
+    def _undeposited_by_year(self) -> dict:
+        years: dict[int, tuple[int, Decimal]] = {}
+        for payment in undeposited_payments():
+            count, total = years.get(payment.date.year, (0, Decimal("0.00")))
+            years[payment.date.year] = (count + 1, total + payment.amount)
+        return dict(sorted(years.items()))
+
+    def _negative_items(self) -> list:
+        found = []
+        for item in Item.objects.filter(item_type=ItemType.STOCK).order_by("sku"):
+            quantity = on_hand(item)
+            if quantity < 0:
+                found.append((item, quantity))
+        return found

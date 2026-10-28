@@ -38,6 +38,7 @@ urlpatterns = [
     path("reconcile/<int:account_id>/<int:pk>/", reconcile.reconcile_work, name="reconcile-work"),
     path("reconcile/<int:account_id>/<int:pk>/toggle/<int:item_id>/", reconcile.reconcile_toggle, name="reconcile-toggle"),
     path("reconcile/<int:account_id>/<int:pk>/ticks/", reconcile.reconcile_ticks, name="reconcile-ticks"),
+    path("reconcile/<int:account_id>/<int:pk>/balance/", reconcile.reconcile_balance, name="reconcile-balance"),
     path("reconcile/<int:account_id>/<int:pk>/finish/", reconcile.reconcile_finish, name="reconcile-finish"),
     path("reconcile/<int:account_id>/<int:pk>/cancel/", reconcile.reconcile_cancel, name="reconcile-cancel"),
     path("reconcile/<int:account_id>/<int:pk>/undo/", reconcile.reconcile_undo, name="reconcile-undo"),

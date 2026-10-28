@@ -237,7 +237,7 @@ class Transfer(models.Model):
 class Reconciliation(models.Model):
     bank_account = models.ForeignKey(BankAccount, on_delete=models.PROTECT, related_name="reconciliations")
     statement_date = models.DateField()
-    statement_balance = models.DecimalField(max_digits=14, decimal_places=2)
+    statement_balance = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=12, choices=ReconStatus.choices, default=ReconStatus.IN_PROGRESS)
     started_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     finished_by = models.ForeignKey(USER, null=True, blank=True, on_delete=models.PROTECT, related_name="+")

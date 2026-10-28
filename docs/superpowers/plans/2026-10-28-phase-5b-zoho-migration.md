@@ -393,7 +393,7 @@ Rules:
   - `AfterSummary(unbilled_orders: list[(SalesOrder, profit, at_50, at_55)], undeposited_by_year: dict[int, (count, total)], negative_items: list[(Item, on_hand)])`.
     - `unbilled_orders`: sales orders dated 2024-03-29 or later that have no Cordon bill note `Sales order {number}`. Profit comes from `handling.profit.order_profit(key, as_of=today)`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_dec31_reconciliation_created_in_progress_all_ticked_blank_balance`
   - `test_finish_requires_statement_balance`
   - `test_set_statement_balance_then_finish_at_zero`
@@ -401,11 +401,11 @@ Rules:
   - `test_unbilled_orders_listed`
   - `test_undeposited_by_year`
   - `test_existing_reconciliations_unaffected` (run the Phase 5a reconcile tests)
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_after.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_after.py tests/test_reconcile.py tests/test_reconcile_views.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots.** The working page with a blank statement balance (difference `—`), and after typing the balance. Light and dark. Send them.
-- [ ] **Step 6:** Commit with `feat: Dec 31 reconciliations, sequences, and post-import lists`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_after.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_after.py tests/test_reconcile.py tests/test_reconcile_views.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots.** The working page with a blank statement balance (difference `—`), and after typing the balance. Light and dark. Send them.
+- [x] **Step 6:** Commit with `feat: Dec 31 reconciliations, sequences, and post-import lists`.
 
 ### Task 8: Tie-out report
 
