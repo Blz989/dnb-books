@@ -17,6 +17,7 @@ from django.utils import timezone
 
 from core.roles import require_admin
 from ledger.errors import PostingError
+from ledger.periods import assert_open
 from purchasing.errors import PurchasingError
 from purchasing.posting.bills import BillExpenseSpec, create_bill, void_bill
 from purchasing.posting.credits import AllowanceLineSpec, create_allowance_credit, void_vendor_credit
@@ -66,7 +67,8 @@ def preview(period: Period) -> Preview:
         this_bill = o.owed - o.billed
         if this_bill != ZERO:
             rows.append(RunRow(order=o, owed_to_date=o.owed, billed_before=o.billed, this_bill=this_bill))
-    rows.sort(key=lambda r: (r.order.date, r.order.key))
+    # By order key, as the run detail and the statement list them.
+    rows.sort(key=lambda r: r.order.key)
     return Preview(period=period, rows=rows, total=sum((r.this_bill for r in rows), ZERO))
 
 
@@ -155,6 +157,9 @@ def void_run(run: HandlingRun, *, user, reason: str) -> HandlingRun:
                 void_bill(current.bill, user=user, reason=reason)
             elif current.vendor_credit is not None:
                 void_vendor_credit(current.vendor_credit, user=user, reason=reason)
+            else:
+                # A 0.00 run has no document whose void would check the month, so check it here.
+                assert_open(current.period_end)
         except (PurchasingError, PostingError) as exc:
             raise HandlingError(str(exc)) from exc
     run.refresh_from_db()
@@ -187,7 +192,6 @@ def render_statement_html(run: HandlingRun) -> str:
             "owed_to_date": sum((l.owed_to_date for l in lines), ZERO),
             "billed_before": sum((l.billed_before for l in lines), ZERO),
         },
-        "total_abs": abs(run.total),
         "period_end": long_date(run.period_end),
         "is_void": run.status == RunStatus.VOID,
     }

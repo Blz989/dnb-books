@@ -1,4 +1,5 @@
 import importlib
+import re
 import threading
 from datetime import date
 from decimal import Decimal
@@ -347,3 +348,26 @@ def test_statement_pdf_lists_rows(customer, admin_user, stocked, part):
     assert "30.53" in html and "Acme Builders" in html
     pdf = statement_pdf(run)
     assert pdf.startswith(b"%PDF")
+
+
+def test_preview_rows_sorted_by_order_key_like_run_and_statement(customer, admin_user, stocked):
+    later, _ = stock_sale(customer, admin_user, stocked, d(10, 5), d(10, 6))  # SO-00001, dated after the next
+    earlier, _ = stock_sale(customer, admin_user, stocked, d(10, 2), d(10, 6))  # SO-00002
+    assert later.number < earlier.number
+    assert [r.order.key for r in preview(OCT_1).rows] == [later.number, earlier.number]
+    run = create_run(OCT_1, user=admin_user, today=LATER)
+    assert [l.order_key for l in run.lines.order_by("order_key")] == [later.number, earlier.number]
+    html = render_statement_html(run)
+    assert html.index(later.number) < html.index(earlier.number)
+
+
+def test_statement_total_signed_like_rows(customer, admin_user, stocked):
+    so, inv = stock_sale(customer, admin_user, stocked, d(10, 1), d(10, 5))  # owed 9.08
+    create_run(OCT_1, user=admin_user, today=LATER)
+    apply_credit(credit_note(customer, admin_user, d(10, 20), "10.00"), inv, D("10.00"), date=d(10, 20),
+                 user=admin_user)  # owed 3.58, this bill -5.50
+    run = create_run(OCT_2, user=admin_user, today=LATER)
+    html = render_statement_html(run)
+    total_row = re.search(r'<tr class="total">.*?</tr>', html, re.S).group(0)
+    assert re.search(r'>-5\.50</td>\s*</tr>$', total_row), total_row
+    assert "−" not in total_row and "$" not in total_row

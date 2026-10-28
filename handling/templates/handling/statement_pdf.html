@@ -43,7 +43,7 @@
     <tr class="total"><td colspan="2">Total</td>
       <td class="num">{{ totals.sales|floatformat:"2g" }}</td><td class="num">{{ totals.cost|floatformat:"2g" }}</td>
       <td class="num">{{ totals.profit|floatformat:"2g" }}</td><td class="num">{{ totals.owed_to_date|floatformat:"2g" }}</td>
-      <td class="num">{{ totals.billed_before|floatformat:"2g" }}</td><td class="num">{% if run.total < 0 %}−{% endif %}${{ total_abs|floatformat:"2g" }}</td></tr>
+      <td class="num">{{ totals.billed_before|floatformat:"2g" }}</td><td class="num">{{ run.total|floatformat:"2g" }}</td></tr>
   </tfoot>
 </table>
 

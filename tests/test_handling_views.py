@@ -544,3 +544,14 @@ def test_standard_user_can_create_run(client, standard_user, customer, stocked, 
     s.save()
     html = page(client.get(PREVIEW_2))
     assert "Set up handling in Purchasing settings first." in html and f'href="{SETTINGS}"' not in html
+
+
+def test_statement_redrawn_when_file_missing(client, admin_user, customer, stocked):
+    # Backups copy the database, not media: after a restore the saved PDF can be gone. The rows are in the database.
+    stock_sale(customer, admin_user, stocked, d(10, 2), d(10, 3))
+    run = create_run(OCT_1, user=admin_user, today=LATER)
+    run.statement_pdf.storage.delete(run.statement_pdf.name)
+    client.force_login(admin_user)
+    r = client.get(f"/handling/runs/{run.pk}/statement.pdf")
+    assert r.status_code == 200 and r["Content-Type"] == "application/pdf"
+    assert r.content.startswith(b"%PDF")

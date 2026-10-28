@@ -323,3 +323,16 @@ def test_stock_cost_copy_matches_effective_total(customer, admin_user, gadget, v
     receive(gadget, 10, "3.00", d(10, 2), vendor, admin_user)  # adds a cost revision to the sale
     assert line.stock_movement.revisions.exists()
     assert _stock_cost(line, d(10, 31)) == -effective_total(line.stock_movement) == D("9.00")
+
+
+def test_drop_ship_line_on_direct_invoice_stays_pending(customer, admin_user, gadget):
+    # Accepted behavior: a drop-ship line with no sales order line can't be allocated a drop-ship bill, so it never
+    # gets cost, stays flagged, and handling is owed on the full sale. Drop-ships must be entered through a sales
+    # order.
+    inv = create_invoice(customer=customer, date=d(10, 6), user=admin_user,
+                         lines=[InvoiceLineSpec(gadget, 3, D("9.50"), **DS)])
+    p = order_profit(inv.number, d(10, 31))
+    assert (p.sales, p.cost, p.profit, p.owed) == (D("28.50"), D("0.00"), D("28.50"), D("15.68"))  # 28.50 x 0.55
+    assert p.flags == ["Drop-ship bill not entered"]
+    (lc,) = p.invoices[0].lines
+    assert (lc.kind, lc.cost, lc.pending) == ("drop_ship", D("0.00"), True)

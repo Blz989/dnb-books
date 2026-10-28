@@ -220,10 +220,15 @@ def run_void(request, pk):
 def run_statement(request, pk):
     run = get_object_or_404(HandlingRun, pk=pk)
     # A POSTED run serves the statement saved with it. A void run is drawn again from its saved rows, marked VOID.
+    # Backups copy the database, not media, so after a restore the saved file can be missing: draw it again.
+    content = None
     if run.status == RunStatus.POSTED and run.statement_pdf:
-        with run.statement_pdf.open("rb") as f:
-            content = f.read()
-    else:
+        try:
+            with run.statement_pdf.open("rb") as f:
+                content = f.read()
+        except (FileNotFoundError, ValueError):
+            content = None
+    if content is None:
         content = statement_pdf(run)
     response = HttpResponse(content, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="handling-{run.period_end.isoformat()}.pdf"'

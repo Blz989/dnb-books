@@ -289,3 +289,15 @@ def test_months_before_start_not_checked(setup, admin_user):
 
 def test_close_check_quiet_when_not_set_up(db):
     assert close_check(2026, 10) == []
+
+
+def test_void_zero_run_refused_in_closed_month(setup, admin_user):
+    create_run(OCT_1, user=admin_user, today=LATER)
+    run = create_run(OCT_2, user=admin_user, today=LATER)
+    assert (run.total, run.bill, run.vendor_credit) == (D("0.00"), None, None)
+    close_period(2026, 10, admin_user)
+    with pytest.raises(HandlingError) as e:
+        void_run(run, user=admin_user, reason="Redo")
+    assert str(e.value) == ("October 2026 is closed. Choose a date in an open month or ask an admin to reopen it.")
+    run.refresh_from_db()
+    assert run.status == RunStatus.POSTED
