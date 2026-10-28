@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -292,3 +292,22 @@ def test_check_payment_without_a_number_is_not_left_to_print(db, admin_user, tmp
     payment = VendorPayment.objects.get(number=number)
     assert payment.check_number == f"none-{number}" and not is_to_print(payment)
     assert any("has no check number" in w for w in r.warnings)
+
+
+def test_vendor_payment_before_its_bill_applies_on_the_bill_date(db, admin_user, tmp_path):
+    from purchasing.models import VendorPayment
+
+    rows = sample_rows()
+    vp = next(r for r in rows["vendor_payments"] if r["Bill Number"] == "BILL-002")
+    bill_date = next(r for r in rows["bills"] if r["Bill Number"] == "BILL-002")["Bill Date"]
+    paid_on = (date.fromisoformat(bill_date) - timedelta(days=3)).isoformat()
+    vp.update({"Date": paid_on, "Bill Payment Applied Date": paid_on})
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    r.finish()
+    payment = VendorPayment.objects.get(number=vp["Payment Number"])
+    app = payment.applications.get()
+    assert payment.date == date.fromisoformat(paid_on) < app.applied_on == date.fromisoformat(bill_date)
+    assert not r.pending_bill_applications and ap_check() == []

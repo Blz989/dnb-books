@@ -117,6 +117,8 @@ class Replay(MoneyReplay):
         self.inactive: list = []
         # Invoice number -> [(payment, amount, Zoho applied date)] for payments made before the invoice existed.
         self.pending_applications: dict[str, list] = {}
+        # (vendor pk, Zoho bill number) -> [(vendor payment, amount)] for payments made before the bill's date.
+        self.pending_bill_applications: dict[tuple, list] = {}
         self.vendors: dict[str, Vendor] = {}
         self.bank_accounts: dict[str, BankAccount] = {}
         self.warnings: list[str] = []
@@ -489,6 +491,7 @@ class Replay(MoneyReplay):
             terms=mapping.terms(first["Payment Terms Label"], first["Bill Date"], first["Due Date"]), notes=notes,
             allow_duplicate=True, allow_negative=True, allow_negative_adjustment=True)
         self.record("bill", event.zoho_id, bill)
+        self.apply_pending_bill(bill)
         ours = sum((l.amount for l in [*bill.item_lines.all(), *bill.expense_lines.all()]), Decimal("0.00"))
         theirs = mapping.money(first["Total"])
         if ours != theirs:
@@ -584,6 +587,9 @@ class Replay(MoneyReplay):
 
     # ---- after the replay (Task 7) ----
     def finish(self) -> AfterSummary:
+        for (_, number), waiting in self.pending_bill_applications.items():
+            for payment, amount in waiting:
+                self.warnings.append(f"Vendor payment {payment.number}: {amount:,.2f} for bill {number} was never applied.")
         for number, waiting in self.pending_applications.items():
             for payment, amount, _ in waiting:
                 self.warnings.append(f"Payment {payment.number}: {amount:,.2f} for {number} was never applied.")

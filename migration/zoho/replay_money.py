@@ -28,7 +28,7 @@ from purchasing.posting.credits import (
     create_allowance_credit,
     create_return_credit,
 )
-from purchasing.posting.payments import pay_vendor
+from purchasing.posting.payments import apply_vendor_payment, pay_vendor
 from sales.models import CreditNote, DocType, Invoice, Payment
 from sales.numbering import use_number
 from sales.posting.deposits import make_deposit, undeposited_payments
@@ -218,11 +218,16 @@ class MoneyReplay:
         paid_from = self.account(first["Paid Through"])
         method = mapping.vendor_method(first["Mode"], paid_from.subtype)
         ref = first["Reference Number"].strip()
-        applications = []
+        applications, later = [], []
         for row in rows:
             amount = mapping.money(row["Bill Amount"])
-            if row["Bill Number"].strip() and amount > 0:
-                applications.append((self._bill(vendor, row["Bill Number"], amount), amount))
+            number = row["Bill Number"].strip()
+            if not number or amount <= 0:
+                continue
+            if self._bill_imported(vendor, number):
+                applications.append((self._bill(vendor, number, amount), amount))
+            else:
+                later.append((number, amount))  # paid before the bill's date: applied when the bill posts
         is_check = method == VendorPaymentMethod.CHECK
         if is_check and not ref:
             # A check with no number is "waiting to be printed" in DNB Books; these were written long ago.
@@ -236,6 +241,8 @@ class MoneyReplay:
                     paid_from=paid_from, user=self.user, check_number=ref if is_check else "",
                     reference="" if is_check else ref, applications=applications)
             self.record("vendor_payment", event.zoho_id, payment)
+            for number, amount in later:
+                self.pending_bill_applications.setdefault((vendor.pk, number), []).append((payment, amount))
 
     def post_vendor_credit(self, event) -> None:
         rows = self.doc_rows(event.kind, event.zoho_id)
@@ -311,6 +318,16 @@ class MoneyReplay:
                     wanted -= take
             if wanted > 0:
                 self.warnings.append(f"{credit.number}: {wanted:,.2f} of the credit matched no bill.")
+
+    def _bill_imported(self, vendor, number: str) -> bool:
+        imported = ZohoRecord.objects.filter(
+            kind="bill", content_type=ContentType.objects.get_for_model(Bill)).values("object_id")
+        return Bill.objects.filter(pk__in=imported, vendor=vendor, vendor_invoice_number=number).exists()
+
+    def apply_pending_bill(self, bill) -> None:
+        """Vendor payments Zoho made before this bill's date, applied on the bill date at the earliest."""
+        for payment, amount in self.pending_bill_applications.pop((bill.vendor_id, bill.vendor_invoice_number), []):
+            apply_vendor_payment(payment, bill, amount, date=max(payment.date, bill.date), user=self.user)
 
     def apply_pending(self, invoice) -> None:
         """Payments Zoho received before this invoice existed, applied on the invoice date at the earliest."""
