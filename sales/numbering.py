@@ -1,4 +1,7 @@
 """Document numbers. A number is taken inside the saving transaction, so a failed save gives it back."""
+import threading
+from contextlib import contextmanager
+
 from django.core.exceptions import PermissionDenied
 from django.db import connection
 
@@ -50,10 +53,35 @@ def _used_numbers(doc_type: DocType, prefix: str) -> list[int]:
     return used
 
 
+_forced = threading.local()
+
+
+@contextmanager
+def use_number(doc_type: DocType, number: str):
+    """Makes the next next_number(doc_type) call return `number` exactly, leaving the sequence alone.
+
+    The override is for one call only, belongs to this thread, and is gone when the block exits.
+    Used by the Zoho import to keep Zoho's document numbers.
+    """
+    previous = getattr(_forced, "value", None)
+    _forced.value = (DocType(doc_type), number)
+    try:
+        yield
+    finally:
+        _forced.value = previous
+
+
 def next_number(doc_type: DocType) -> str:
     """Call inside the caller's transaction.atomic(). Reads and increments the sequence."""
     if not connection.in_atomic_block:
         raise RuntimeError("next_number must be called inside transaction.atomic().")
+    forced = getattr(_forced, "value", None)
+    if forced is not None and forced[0] == DocType(doc_type):
+        _forced.value = None  # consumed by this call, even if it is refused
+        number = forced[1]
+        if MODELS[DocType(doc_type)].objects.filter(number=number).exists():
+            raise SalesError(f"{number} is already used.")
+        return number
     seq = _sequence(doc_type)
     model = MODELS[DocType(doc_type)]
     n = seq.next_number

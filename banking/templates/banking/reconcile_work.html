@@ -5,10 +5,13 @@
 {% block page_subtitle %}<div class="sub">Statement dated {{ rec.statement_date|date:"Y-m-d" }}. Tick what appears on the statement. Finish when the difference is 0.00.</div>{% endblock %}
 {% block content %}
 <div class="recon-bar" id="recon-bar" data-url-prefix="{% url 'banking:reconcile-work' account.pk rec.pk %}">
-  <div><span class="l">Statement balance{% if is_liability %} (amount owed){% endif %}</span><span class="v">{{ rec.statement_balance|floatformat:"2g" }}</span></div>
+  <div><label class="l" for="statement-balance">Statement balance{% if is_liability %} (amount owed){% endif %}</label>
+    <form method="post" action="{% url 'banking:reconcile-balance' account.pk rec.pk %}" class="balance-form">{% csrf_token %}
+      <input type="text" inputmode="decimal" name="statement_balance" id="statement-balance" value="{% if rec.statement_balance is not None %}{{ rec.statement_balance|floatformat:'2' }}{% endif %}" placeholder="0.00" autocomplete="off">
+      <button type="submit" class="btn">Save</button></form></div>
   <div><span class="l">Beginning balance</span><span class="v">{{ opening|floatformat:"2g" }}</span></div>
   <div><span class="l">Cleared balance</span><span class="v" id="cleared-balance">{{ cleared_balance|floatformat:"2g" }}</span></div>
-  <div><span class="l">Difference</span><span class="difference {% if balanced %}ok{% else %}warn{% endif %}" id="difference">{{ difference|floatformat:"2g" }}</span></div>
+  <div><span class="l">Difference</span><span class="difference {% if balanced %}ok{% else %}warn{% endif %}" id="difference">{% if difference is None %}&mdash;{% else %}{{ difference|floatformat:"2g" }}{% endif %}</span></div>
 </div>
 <form method="post" action="{% url 'banking:reconcile-ticks' account.pk rec.pk %}" id="ticks-form">{% csrf_token %}
   <h2>{% if is_liability %}Payments and credits{% else %}Deposits and credits{% endif %}</h2>

@@ -1,0 +1,8 @@
+{% extends "core/base.html" %}
+{% block title %}Pay bills{% endblock %}
+{% block page_title %}Pay bills{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ txn.date|date:"Y-m-d" }} · {{ txn.description }}{% if txn.check_number %} · check {{ txn.check_number }}{% endif %} · <strong>{{ txn.amount|floatformat:"2g" }}</strong> · {{ txn.bank_account.ledger_account.name }}. The bills you pay must add up to the bank amount.</div>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+{% include "banking/_catchup_form.html" with kind="vendor" %}
+{% endblock %}

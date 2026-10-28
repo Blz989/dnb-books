@@ -1,0 +1,46 @@
+{% load static %}
+<div class="card"><div class="body">
+  <form method="get" class="filters" id="pick">
+    <label>{% if kind == "vendor" %}Vendor{% else %}Customer{% endif %}
+      <select name="{{ kind }}"><option value="">Choose a {{ kind }}</option>
+        {% for p in parties %}<option value="{{ p.pk }}"{% if party and party.pk == p.pk %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></label>
+    {% if kind == "customer" %}<input type="hidden" name="method" value="{{ method }}" id="pick-method">{% endif %}
+    <button type="submit" class="btn">Show open {% if kind == "vendor" %}bills{% else %}invoices{% endif %}</button>
+    {% if rows %}<button type="submit" name="fill" value="1" class="btn">Fill oldest first</button>{% endif %}
+  </form>
+</div></div>
+<form method="post" id="catchup-form" data-bank="{{ bank_amount }}">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="{{ kind }}" value="{{ party.pk|default:'' }}">
+  <div class="card">
+    <table class="data">
+      <thead><tr><th>{% if kind == "vendor" %}Bill{% else %}Invoice{% endif %}</th><th>Date</th><th>{% if kind == "vendor" %}Vendor invoice no.{% else %}Invoice date{% endif %}</th><th class="num">Balance</th><th class="num">Amount</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr><td>{{ r.number }}</td><td style="white-space:nowrap">{{ r.date|date:"Y-m-d" }}</td>
+          <td>{% if kind == "vendor" %}{{ r.ref|default:"" }}{% else %}{{ r.ref|date:"Y-m-d" }}{% endif %}</td>
+          <td class="num">{{ r.balance|floatformat:"2g" }}</td>
+          <td class="num"><input type="text" inputmode="decimal" class="amt" name="amt-{{ r.doc.pk }}" value="{{ r.value }}" aria-label="Amount for {{ r.number }}"></td></tr>
+      {% empty %}
+        <tr><td colspan="5" class="empty">{% if party %}{{ party.name }} has no open {% if kind == "vendor" %}bills{% else %}invoices{% endif %}.{% else %}Choose a {{ kind }} to see {% if kind == "vendor" %}their open bills{% else %}their open invoices{% endif %}.{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div class="foot">
+      <span class="live-total {% if balanced %}balanced{% else %}off{% endif %}">Total <span data-sum>{{ total|floatformat:"2g" }}</span> of {{ bank_amount|floatformat:"2g" }}</span>
+      <span>
+        {% if kind == "customer" %}<label class="inline-label">Method <select name="method">{% for value, label in methods %}<option value="{{ value }}"{% if method == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>{% endif %}
+        <button type="submit" class="btn primary">Save</button>
+        <a class="btn" href="{% url 'banking:inbox' %}">Cancel</a>
+      </span>
+    </div>
+  </div>
+</form>
+<style>
+  .live-total { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .live-total.balanced { color: var(--ok-text); }
+  .live-total.off { color: var(--error-text); }
+  .inline-label { margin-right: 10px; }
+  input.amt { width: 9rem; text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+<script src="{% static 'banking/catchup.js' %}" defer></script>

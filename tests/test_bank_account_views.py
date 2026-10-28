@@ -107,7 +107,7 @@ def test_standard_user_sees_list_but_no_admin_buttons(std, checking):
 def test_admin_adds_a_bank_account_and_standard_cannot(adm, std, bank):
     assert std.get("/banking/new/").status_code == 403
     r = adm.post("/banking/new/", {"ledger_account": bank.pk, "kind": "CHECKING", "mask": "4321",
-                                   "next_check_number": "3001", "is_active": "on"})
+                                   "next_check_number": "3001", "feed_starts": "2026-01-01", "is_active": "on"})
     assert r.status_code == 302
     acct = BankAccount.objects.get()
     assert (acct.ledger_account, acct.kind, acct.mask, acct.next_check_number) == (bank, "CHECKING", "4321", 3001)
@@ -122,7 +122,7 @@ def test_kind_must_fit_the_ledger_account(adm, bank):
 def test_admin_edits_next_check_number(adm, checking):
     r = adm.post(f"/banking/{checking.pk}/edit/", {
         "ledger_account": checking.ledger_account_id, "kind": "CHECKING", "mask": "1234",
-        "next_check_number": "3100", "is_active": "on"})
+        "next_check_number": "3100", "feed_starts": "2026-01-01", "is_active": "on"})
     assert r.status_code == 302
     checking.refresh_from_db()
     assert checking.next_check_number == 3100

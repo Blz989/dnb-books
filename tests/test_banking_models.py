@@ -72,12 +72,15 @@ def test_audit_log_excludes_access_token(db, field_key):
     (AccountKind.CARD, AccountSubtype.CREDIT_CARD, True),
     (AccountKind.LOAN, AccountSubtype.OTHER_CURRENT_LIABILITY, True),
     (AccountKind.LOAN, AccountSubtype.LONG_TERM_LIABILITY, True),
+    (AccountKind.LOAN, AccountSubtype.CREDIT_CARD, True),
+    (AccountKind.LOAN, AccountSubtype.EXPENSE, False),
     (AccountKind.CHECKING, AccountSubtype.CREDIT_CARD, False),
     (AccountKind.CARD, AccountSubtype.BANK, False),
     (AccountKind.LOAN, AccountSubtype.BANK, False),
 ])
 def test_kind_must_fit_ledger_subtype(db, kind, subtype, ok):
-    type_ = AccountType.ASSET if subtype == AccountSubtype.BANK else AccountType.LIABILITY
+    type_ = {AccountSubtype.BANK: AccountType.ASSET, AccountSubtype.EXPENSE: AccountType.EXPENSE}.get(
+        subtype, AccountType.LIABILITY)
     acct = Account.objects.create(number="1900", name="Test", type=type_, subtype=subtype)
     ba = BankAccount(ledger_account=acct, kind=kind)
     if ok:

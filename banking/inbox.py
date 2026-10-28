@@ -7,13 +7,14 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
 
+from contacts.models import Customer, Vendor
 from ledger.models import Account, JournalEntry
 from ledger.posting import LineSpec, post_entry
 from purchasing.models import VendorPayment, VendorPaymentMethod
 from sales.models import Deposit, DocStatus, Payment, PaymentMethod, Refund
 
 from .checknumbers import normalize
-from .models import BankTransaction, Match, Rule, Transfer, TransferStatus, TxnStatus
+from .models import AccountKind, BankTransaction, Match, Rule, Transfer, TransferStatus, TxnStatus
 
 ZERO = Decimal("0.00")
 DOCUMENT_WINDOW_DAYS = 10
@@ -281,3 +282,115 @@ def match_label(match: Match) -> str:
         return f"Payment {match.vendor_payment.number}"
     entry = match.journal_entry
     return entry.source_id or entry.display_number
+
+
+def _money(value: Decimal) -> str:
+    return f"{value:,.2f}"
+
+
+def _clean_amounts(amounts: dict[int, Decimal]) -> dict[int, Decimal]:
+    """Blank (zero) entries are dropped; a negative one is an error."""
+    cleaned = {}
+    for pk, value in amounts.items():
+        value = Decimal(value)
+        if value < 0:
+            raise InboxError("Amounts must be above zero.")
+        if value > 0:
+            cleaned[pk] = value
+    if not cleaned:
+        raise InboxError("Enter an amount on at least one line.")
+    return cleaned
+
+
+def fill_oldest_first(open_docs: list[tuple[int, Decimal]], total: Decimal) -> dict[int, Decimal]:
+    """Spread `total` over documents given oldest first as (pk, balance); the last one used may be partial."""
+    filled: dict[int, Decimal] = {}
+    left = Decimal(total)
+    for pk, balance in open_docs:
+        if left <= 0:
+            break
+        if balance <= 0:
+            continue
+        take = min(balance, left)
+        filled[pk] = take
+        left -= take
+    return filled
+
+
+def pay_bills_from_row(txn: BankTransaction, *, vendor: Vendor, amounts: dict[int, Decimal], user) -> VendorPayment:
+    """One vendor payment for the bills chosen, matched to the bank row. All or nothing."""
+    from purchasing.errors import PurchasingError
+    from purchasing.models import Bill
+    from purchasing.posting.payments import pay_vendor
+
+    with transaction.atomic():
+        current = _lock(txn)
+        if current.amount >= 0:
+            raise InboxError("Pay bills is for money going out.")
+        amounts = _clean_amounts(amounts)
+        total = sum(amounts.values(), ZERO)
+        if total != -current.amount:
+            raise InboxError(f"The bills you chose add up to {_money(total)}. The bank shows {_money(-current.amount)}.")
+        account = current.bank_account
+        check_number = (current.check_number or "").strip()
+        if check_number:
+            method = VendorPaymentMethod.CHECK
+        elif account.kind == AccountKind.CARD:
+            method = VendorPaymentMethod.CARD
+        else:
+            method = VendorPaymentMethod.ACH
+        bills = {b.pk: b for b in Bill.objects.filter(pk__in=amounts)}
+        if len(bills) != len(amounts):
+            raise InboxError("One of those bills no longer exists.")
+        try:
+            payment = pay_vendor(
+                vendor=vendor, date=current.date, method=method, amount=total, paid_from=account.ledger_account,
+                user=user, check_number=check_number,
+                applications=[(bills[pk], amount) for pk, amount in amounts.items()])
+        except PurchasingError as error:
+            raise InboxError(str(error)) from error
+        link(current, payment, user=user)
+    txn.status = TxnStatus.MATCHED
+    return payment
+
+
+def receive_payment_from_row(
+    txn: BankTransaction, *, customer: Customer, amounts: dict[int, Decimal], method: PaymentMethod, user,
+) -> Payment:
+    """One customer payment for the invoices chosen. A check goes through Undeposited Funds and a one-payment deposit."""
+    from sales.errors import SalesError
+    from sales.models import Invoice
+    from sales.posting.deposits import make_deposit
+    from sales.posting.receipts import receive_payment
+
+    with transaction.atomic():
+        current = _lock(txn)
+        ledger = current.bank_account.ledger_account
+        if current.amount <= 0 or current.bank_account.kind not in (AccountKind.CHECKING, AccountKind.SAVINGS):
+            raise InboxError("Receive payment is for money coming in.")
+        if method not in (PaymentMethod.ACH, PaymentMethod.WIRE, PaymentMethod.CHECK):
+            raise InboxError("Choose check, ACH, or wire.")
+        amounts = _clean_amounts(amounts)
+        total = sum(amounts.values(), ZERO)
+        if total != current.amount:
+            raise InboxError(f"The invoices you chose add up to {_money(total)}. The bank shows {_money(current.amount)}.")
+        invoices = {i.pk: i for i in Invoice.objects.filter(pk__in=amounts)}
+        if len(invoices) != len(amounts):
+            raise InboxError("One of those invoices no longer exists.")
+        applications = [(invoices[pk], amount) for pk, amount in amounts.items()]
+        try:
+            if method == PaymentMethod.CHECK:
+                payment = receive_payment(
+                    customer=customer, date=current.date, method=method, amount=total, user=user,
+                    reference=current.check_number, applications=applications)
+                deposit = make_deposit(payments=[payment], bank_account=ledger, date=current.date, user=user)
+                link(current, deposit, user=user)
+            else:
+                payment = receive_payment(
+                    customer=customer, date=current.date, method=method, amount=total, user=user,
+                    reference=current.check_number, bank_account=ledger, applications=applications)
+                link(current, payment, user=user)
+        except SalesError as error:
+            raise InboxError(str(error)) from error
+    txn.status = TxnStatus.MATCHED
+    return payment

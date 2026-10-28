@@ -129,6 +129,7 @@ class PlaidClient:
         from plaid.model.country_code import CountryCode
         from plaid.model.link_token_create_request import LinkTokenCreateRequest
         from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
+        from plaid.model.link_token_transactions import LinkTokenTransactions
         from plaid.model.products import Products
 
         fields = dict(
@@ -139,6 +140,7 @@ class PlaidClient:
             fields["access_token"] = access_token  # update mode: no products
         else:
             fields["products"] = [Products("transactions")]
+            fields["transactions"] = LinkTokenTransactions(days_requested=365)  # a year of history on first link
         data = self._call(self._api.link_token_create, LinkTokenCreateRequest(**fields), access_token or "")
         return data["link_token"]
 

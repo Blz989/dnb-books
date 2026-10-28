@@ -143,16 +143,16 @@ The column names for `Credit_Note.csv`, `Creditnotes_Invoice.csv`, and `Vendor_C
 - 2 expenses, 1 journal, 3 transfers (one `Card Payment`, one from `Undeposited Funds` whose amount equals exactly two cash payments, one `Funds Transfer` from `Line Of Credit - Chase`), 2 other deposits (`Capital Introduced`, `Expense Refund`), and 2 inventory adjustments (quantity, value)
 - one item that goes negative
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_zoho_reader.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_zoho_reader.py`:
   - `test_reads_nested_zips_in_name_order`: `len(export.files["invoices"])` equals the line count the sample wrote across the two inner files.
   - `test_strips_bom_and_reads_quoted_commas`: an Item Desc containing `"Box, 12 ct"` reads intact.
   - `test_missing_column_reports_file_and_column`: with `drop_column=("bills", "Rate")`, it raises `ExportError`, and `problems == ['Bill.csv: column "Rate" is missing.']`.
   - `test_missing_file_is_empty_list_except_core`: an absent `Vendor_Credits.csv` reads as `[]`. An absent `Chart_of_Accounts.csv` raises `Chart_of_Accounts.csv: column "Account Name" is missing.`
   - `test_models_unique_zoho_record`
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_reader.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement the models, migration, read-only admin, reader, and sample builder.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_reader.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: migration app and Zoho export reader`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_reader.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement the models, migration, read-only admin, reader, and sample builder.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_reader.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: migration app and Zoho export reader`.
 
 ### Task 2: Mapping (pure functions)
 
@@ -177,7 +177,7 @@ The column names for `Credit_Note.csv`, `Creditnotes_Invoice.csv`, and `Vendor_C
   - `customer_method(mode: str, deposit_to: str) -> PaymentMethod`: deposit to `Undeposited Funds` gives CHECK when Mode is `Check`, otherwise CASH. Any other `Deposit To` gives ACH.
   - `vendor_method(mode: str, paid_through_subtype) -> VendorPaymentMethod`: a credit card subtype gives CARD. Mode `Check` gives CHECK. Anything else gives ACH. The Zoho Mode is kept in the reference.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_zoho_mapping.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_zoho_mapping.py`:
   - `test_money_parses_zoho_forms`: `"1,234.5"` → `Decimal("1234.50")`, `"0.000"` → `Decimal("0.00")`, `""` → `Decimal("0.00")`.
   - `test_account_plan_numbers_by_type_and_name`: two Bank accounts get `1000` and `1010` in name order. A/R gets `1100`, A/P `2000`, Credit Card `2100`, Income `4000`, Expense `6000`. Inactive stays inactive.
   - `test_bank_kind` (each case above)
@@ -185,10 +185,10 @@ The column names for `Credit_Note.csv`, `Creditnotes_Invoice.csv`, and `Vendor_C
   - `test_line_price_discount`: `line_price(Decimal("10.00"), 3) == (Decimal("3.3333"), Decimal("0.00"))`, `line_price(Decimal("1000.00"), 300) == (Decimal("3.3333"), Decimal("0.01"))`, and `line_price(Decimal("0.00"), 2) == (Decimal("0.0000"), Decimal("0.00"))`.
   - `test_customer_method`
   - `test_vendor_method`
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_mapping.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_mapping.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: Zoho field mapping`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_mapping.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_mapping.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: Zoho field mapping`.
 
 ### Task 3: Validation
 
@@ -210,7 +210,7 @@ Checks:
 - `Sales Order Number` on invoices is in `sales_orders`.
 - No duplicate `SalesOrder Number`, `Invoice Number`, Customer `Payment Number`, Vendor `Payment Number`, `Credit Note Number`, or `Purchase Order Number`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_clean_sample_has_no_problems`
   - `test_unknown_customer`: `extra_rows` adds an invoice for "Nobody Inc". The problem is `Invoice00.csv row {n}: customer "Nobody Inc" is not in the export.`
   - `test_unknown_item_sku_then_name`
@@ -219,10 +219,10 @@ Checks:
   - `test_bill_of_other_vendor_on_payment`
   - `test_duplicate_invoice_number`
   - `test_all_problems_listed_at_once` (three injected, three returned)
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_validate.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_validate.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: Zoho export validation`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_validate.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_validate.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: Zoho export validation`.
 
 ### Task 4: Replay master data and keeping Zoho numbers
 
@@ -256,17 +256,17 @@ Checks:
     - creates a `ZohoRecord` for every object
   - `Replay.record(kind: str, zoho_id: str, obj) -> None`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_use_number_forces_one_number`: inside `use_number(DocType.PMT, "CP-1002")`, `next_number(DocType.PMT) == "CP-1002"`, and the next call falls back to the sequence (`PMT-00001`).
   - `test_use_number_refuses_used` (`{number} is already used.`)
   - `test_master_accounts_numbered_and_settings_configured`: all three settings report `is_configured`.
   - `test_bank_accounts_created_by_kind`: `BUS COMPLETE CHK` CHECKING, `Chase Ink Unlimited` CARD, `Line Of Credit - Chase` LOAN, `Line Of Credit - Headway` LOAN, and none for Petty Cash or Undeposited Funds.
   - `test_items_customers_vendors_and_zoho_records`
   - `test_opening_stock_posted_at_2020_02_01`
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_replay_master.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_replay_master.py tests/test_numbering.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: replay Zoho master data; keep Zoho numbers`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_replay_master.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_replay_master.py tests/test_numbering.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: replay Zoho master data; keep Zoho numbers`.
 
 ### Task 5: Replay orders, purchase orders, bills, and invoices
 
@@ -306,7 +306,7 @@ Rules:
   - The invoice must total Zoho's `Total`. If not, record a warning `"{number}: total {ours} vs Zoho {theirs}"` and continue.
 - Every document gets a `ZohoRecord`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_orders_keep_zoho_numbers_and_void_closed`
   - `test_invoice_totals_equal_zoho` (every sample invoice)
   - `test_discount_leftover_goes_on_adjustment_line` (Review Focus 1)
@@ -317,10 +317,10 @@ Rules:
   - `test_negative_stock_allowed_and_warned`
   - `test_event_order_within_a_day`: a bill and an invoice on the same date; the bill posts first.
   - `test_ledger_checks_zero_after_docs`: `ar_check`, `ap_check`, and `check_invariants` are all empty.
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_replay_docs.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_replay_docs.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: replay Zoho orders, bills, and invoices`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_replay_docs.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_replay_docs.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: replay Zoho orders, bills, and invoices`.
 
 ### Task 6: Replay payments, credits, deposits, expenses, journals, transfers, and adjustments
 
@@ -355,7 +355,7 @@ Rules:
   - Value: `record_value_adjustment(item, amount=Value Adjusted, reason, account)`.
 - **Opening balances CSV** (`account,debit,credit`): one `post_entry` dated 2020-02-01 (`migration.opening`), balanced against "Opening Balance Offset" if the rows don't balance.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_payments_to_undeposited_and_to_bank`
   - `test_mixed_payment_numbers_kept` (Review Focus 2): `1001`, `CP-1002`, and `57` exist exactly.
   - `test_unused_amount_stays_unapplied`
@@ -369,10 +369,10 @@ Rules:
   - `test_quantity_and_value_adjustments`
   - `test_opening_balances_csv`
   - `test_all_ledger_checks_zero_after_full_replay`: after every event, `ar_check`, `ap_check`, `undeposited_check`, and `check_invariants` are empty.
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_replay_money.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_replay_money.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: replay Zoho payments, credits, deposits, and entries`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_replay_money.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_replay_money.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: replay Zoho payments, credits, deposits, and entries`.
 
 ### Task 7: After the replay: Dec 31 reconciliations, sequences, and lists
 
@@ -393,7 +393,7 @@ Rules:
   - `AfterSummary(unbilled_orders: list[(SalesOrder, profit, at_50, at_55)], undeposited_by_year: dict[int, (count, total)], negative_items: list[(Item, on_hand)])`.
     - `unbilled_orders`: sales orders dated 2024-03-29 or later that have no Cordon bill note `Sales order {number}`. Profit comes from `handling.profit.order_profit(key, as_of=today)`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_dec31_reconciliation_created_in_progress_all_ticked_blank_balance`
   - `test_finish_requires_statement_balance`
   - `test_set_statement_balance_then_finish_at_zero`
@@ -401,11 +401,11 @@ Rules:
   - `test_unbilled_orders_listed`
   - `test_undeposited_by_year`
   - `test_existing_reconciliations_unaffected` (run the Phase 5a reconcile tests)
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_after.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_after.py tests/test_reconcile.py tests/test_reconcile_views.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots.** The working page with a blank statement balance (difference `—`), and after typing the balance. Light and dark. Send them.
-- [ ] **Step 6:** Commit with `feat: Dec 31 reconciliations, sequences, and post-import lists`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_after.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_after.py tests/test_reconcile.py tests/test_reconcile_views.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots.** The working page with a blank statement balance (difference `—`), and after typing the balance. Light and dark. Send them.
+- [x] **Step 6:** Commit with `feat: Dec 31 reconciliations, sequences, and post-import lists`.
 
 ### Task 8: Tie-out report
 
@@ -443,17 +443,17 @@ The HTML follows "Ledger paper", in this order:
 - warnings
 - the account number map
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_matching_reports_pass`: generate the CSVs from the replayed sample's own figures; everything passes.
   - `test_wrong_trial_balance_account_fails_and_is_named`
   - `test_missing_report_not_provided`
   - `test_inventory_value_listed_not_failed`
   - `test_pdf_renders` (`%PDF`)
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_tieout.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_tieout.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots.** The tie-out HTML (one passing, one failing) and the PDF page 1. Send them.
-- [ ] **Step 6:** Commit with `feat: Zoho tie-out report`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_tieout.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_tieout.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots.** The tie-out HTML (one passing, one failing) and the PDF page 1. Send them.
+- [x] **Step 6:** Commit with `feat: Zoho tie-out report`.
 
 ### Task 9: The import_zoho command
 
@@ -485,7 +485,7 @@ Flow:
 
 Document in the README that the app and scheduler are stopped first (`docker compose stop app scheduler`) and the command runs with `docker compose run --rm -u dnb app python manage.py import_zoho ...`.
 
-- [ ] **Step 1: Write the failing tests** (the `file_db_with_entries`-style fixture from `tests/conftest.py` gives a real database file):
+- [x] **Step 1: Write the failing tests** (the `file_db_with_entries`-style fixture from `tests/conftest.py` gives a real database file):
   - `test_refuses_non_empty_database`
   - `test_validation_problems_exit_2`
   - `test_dry_run_leaves_database_untouched`: no documents afterwards, and the report files exist.
@@ -493,10 +493,10 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - `test_real_run_swaps_in_copy_after_backup`: documents exist, a backup file exists, and `ImportRun.succeeded`.
   - `test_real_run_refuses_failed_tieout_without_accept`
   - `test_numbers_after_real_run` (Review Focus 2): next PMT `PMT-00001`, and a new invoice gets the highest INV + 1.
-- [ ] **Step 2:** Run `uv run pytest tests/test_import_zoho_command.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_import_zoho_command.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: import_zoho command with dry run and safe swap`.
+- [x] **Step 2:** Run `uv run pytest tests/test_import_zoho_command.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_import_zoho_command.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: import_zoho command with dry run and safe swap`.
 
 ### Task 10: Feed start date and Plaid history
 
@@ -510,17 +510,17 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - `create_link_token` adds `transactions=LinkTokenTransactions(days_requested=365)` when not in update mode.
   - The bank account form shows "Feed starts", with the help text `Bank rows dated before this are set aside.`
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_rows_before_feed_start_excluded_with_reason`
   - `test_feed_start_beats_duplicate_reason` (Review Focus 4): a file row before the feed start that duplicates a Plaid row gets the feed reason and is counted once, in `before_feed_start`.
   - `test_restore_feed_excluded_row`
   - `test_link_token_requests_365_days`: the recorded fake client sees `days_requested == 365`. Update mode sends no `transactions`.
   - `test_bank_account_form_feed_starts`
-- [ ] **Step 2:** Run `uv run pytest tests/test_feed_starts.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_feed_starts.py tests/test_imports.py tests/test_plaid_sync.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots.** The bank account form with Feed starts. Send them.
-- [ ] **Step 6:** Commit with `feat: feed start date and a year of Plaid history`.
+- [x] **Step 2:** Run `uv run pytest tests/test_feed_starts.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_feed_starts.py tests/test_imports.py tests/test_plaid_sync.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots.** The bank account form with Feed starts. Send them.
+- [x] **Step 6:** Commit with `feat: feed start date and a year of Plaid history`.
 
 ### Task 11: Pay bills and Receive payment from a bank row (services)
 
@@ -544,7 +544,7 @@ Document in the README that the app and scheduler are stopped first (`docker com
     - CHECK: `receive_payment(method=CHECK)`, then `make_deposit([payment], bank_account=row ledger, date=txn.date)`, then link the deposit.
   - `fill_oldest_first(open_docs: list[tuple[int, Decimal]], total: Decimal) -> dict[int, Decimal]`, a pure function used by the views.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_pay_bills_exact_total_required` (mismatch message with `1,234.56` formatting)
   - `test_pay_bills_check_number_used`
   - `test_pay_bills_card_and_ach`
@@ -556,10 +556,10 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - `test_receive_payment_total_mismatch`
   - `test_fill_oldest_first`
   - `test_ledger_checks_zero`
-- [ ] **Step 2:** Run `uv run pytest tests/test_inbox_catchup.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_inbox_catchup.py tests/test_inbox.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: pay bills and receive payment from a bank row`.
+- [x] **Step 2:** Run `uv run pytest tests/test_inbox_catchup.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_inbox_catchup.py tests/test_inbox.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: pay bills and receive payment from a bank row`.
 
 ### Task 12: Catch-up screens
 
@@ -585,23 +585,23 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - Save
 - Errors show in the banner and the inputs are kept.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_pay_bills_flow`
   - `test_receive_payment_flow_check`
   - `test_mismatch_keeps_inputs`
   - `test_double_post_same_token_one_payment`
   - `test_actions_shown_by_sign`
   - `test_standard_user_can_use_both`
-- [ ] **Step 2:** Run `uv run pytest tests/test_inbox_catchup_views.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement. Match "Ledger paper".
-- [ ] **Step 4:** Run `uv run pytest tests/test_inbox_catchup_views.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots** in light and dark:
+- [x] **Step 2:** Run `uv run pytest tests/test_inbox_catchup_views.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement. Match "Ledger paper".
+- [x] **Step 4:** Run `uv run pytest tests/test_inbox_catchup_views.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots** in light and dark:
   - the inbox with both actions
   - Pay bills: empty, then a vendor chosen, then filled, then the mismatch error
   - Receive payment with Check chosen
 
   Send each.
-- [ ] **Step 6:** Commit with `feat: catch-up screens in the bank inbox`.
+- [x] **Step 6:** Commit with `feat: catch-up screens in the bank inbox`.
 
 ### Task 13: Acceptance, README, and PR
 
@@ -609,7 +609,7 @@ Document in the README that the app and scheduler are stopped first (`docker com
 - Create: `tests/test_phase5b_acceptance.py`
 - Modify: `README.md` (the spec section 10 catch-up guide, the import commands from Task 9, and the Status line), `CLAUDE.md` (Done list)
 
-- [ ] **Step 1: Write `test_import_and_catch_up`:**
+- [x] **Step 1: Write `test_import_and_catch_up`:**
   - Build the sample and generate matching normalized reports.
   - Run `import_zoho --dry-run` and confirm exit 0, then the real run.
   - Finish the Dec 31 reconciliation after setting its balance.
@@ -617,9 +617,9 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - Use Pay bills on one row and Receive payment (check) on another, and book a fee by rule.
   - Reconcile January 2026 at 0.00.
   - Every ledger check stays at 0.00 throughout.
-- [ ] **Step 2:** Run `uv run pytest tests/test_phase5b_acceptance.py -v`. Expect PASS.
-- [ ] **Step 3:** Run `uv run pytest -q`. Every test passes.
-- [ ] **Step 4:** Commit with `test: phase 5b acceptance; docs`.
+- [x] **Step 2:** Run `uv run pytest tests/test_phase5b_acceptance.py -v`. Expect PASS.
+- [x] **Step 3:** Run `uv run pytest -q`. Every test passes.
+- [x] **Step 4:** Commit with `test: phase 5b acceptance; docs`.
 - [ ] **Step 5:** Open the PR `Phase 5b: Zoho migration and catch-up`. The body follows `CLAUDE.md`, and also says:
   - The importer was built against made-up samples only.
   - Claude will run dry runs against the owner's real export in the owner's session, and fix gaps (column names, unexpected values) in a follow-up branch, before the owner runs it on the server.

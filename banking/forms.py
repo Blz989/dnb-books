@@ -28,18 +28,21 @@ def ledger_choices(exclude_used: bool = True):
 class BankAccountForm(forms.ModelForm):
     class Meta:
         model = BankAccount
-        fields = ["ledger_account", "kind", "mask", "next_check_number", "is_active"]
+        fields = ["ledger_account", "kind", "mask", "next_check_number", "feed_starts", "is_active"]
         labels = {
             "ledger_account": "Ledger account", "kind": "Kind", "mask": "Last 4 digits",
-            "next_check_number": "Next check number", "is_active": "Active",
+            "next_check_number": "Next check number", "feed_starts": "Feed starts", "is_active": "Active",
         }
         help_texts = {
             "ledger_account": "The account in the chart of accounts that this bank, card, or loan posts to.",
             "next_check_number": "For checking accounts you print checks on.",
+            "feed_starts": "Bank rows dated before this are set aside.",
         }
+        widgets = {"feed_starts": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["feed_starts"].input_formats = ["%Y-%m-%d"]
         editing = bool(self.instance.pk)
         self.fields["ledger_account"].queryset = ledger_choices(exclude_used=not editing)
         self.fields["ledger_account"].empty_label = "Choose an account"

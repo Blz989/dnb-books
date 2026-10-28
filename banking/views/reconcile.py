@@ -18,8 +18,8 @@ from ..models import BankAccount, Reconciliation, ReconciliationItem, ReconStatu
 from ..reconcile import ReconcileError
 
 
-def _money(x: Decimal) -> str:
-    return f"{x:,.2f}"
+def _money(x: Decimal | None) -> str:
+    return "\u2014" if x is None else f"{x:,.2f}"
 
 
 def _rec(account_id: int, pk: int) -> Reconciliation:
@@ -70,7 +70,7 @@ def reconcile_start(request, account_id):
 
 def _summary_context(rec: Reconciliation) -> dict:
     s = reconcile.summary(rec)
-    return {**s, "balanced": s["difference"] == 0}
+    return {**s, "balanced": s["difference"] is not None and s["difference"] == 0}
 
 
 @login_required
@@ -125,6 +125,25 @@ def reconcile_ticks(request, account_id, pk):
         for item in _items(rec):
             if item.cleared != (item.pk in ticked):
                 reconcile.toggle(item, item.pk in ticked)
+    except ReconcileError as exc:
+        messages.error(request, str(exc))
+    return redirect(_work_url(rec))
+
+
+@login_required
+@require_POST
+def reconcile_balance(request, account_id, pk):
+    rec = _rec(account_id, pk)
+    raw = request.POST.get("statement_balance", "").strip().replace(",", "")
+    try:
+        balance = Decimal(raw).quantize(Decimal("0.01"))
+        if not balance.is_finite() or abs(balance) >= Decimal("10") ** 12:
+            raise ArithmeticError
+    except (ArithmeticError, ValueError):
+        messages.error(request, "Enter the balance like 1250.00.")
+        return redirect(_work_url(rec))
+    try:
+        reconcile.set_statement_balance(rec, balance, request.user)
     except ReconcileError as exc:
         messages.error(request, str(exc))
     return redirect(_work_url(rec))

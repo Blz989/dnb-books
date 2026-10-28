@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import (Phase 5b) is next. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested, and Phase 5b is ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -152,7 +152,7 @@ Always run commands inside the container with `-u dnb`, as shown, so files in `.
 
 Backups are encrypted, then copied to Google Drive with [rclone](https://rclone.org/drive/).
 
-1. On the server, start rclone's setup: `docker compose run --rm -u dnb app rclone config`
+1. On the server, start rclone's setup: `docker compose run --rm app rclone config`
 2. Choose `n` (new remote), name it `gdrive`, storage type `drive`. Leave client id and secret blank, choose scope `1` (full access), and leave the rest at their defaults.
 3. When it asks "Use web browser to automatically authenticate?", answer `n`. The server has no browser, so rclone prints a command like `rclone authorize "drive" "..."`.
 4. On any computer with a browser, [install rclone](https://rclone.org/install/), run that exact command, sign in to the Google account that should hold the backups, and paste the token it prints back into the server prompt.
@@ -168,6 +168,44 @@ Do these once after `./update.sh`.
 3. **Try Plaid safely (with Sandbox keys only).** `docker compose exec -u dnb app python manage.py plaid_sandbox_check` links Plaid's test bank, syncs it, and prints the counts. It refuses to run against production.
 4. **Add the bank accounts** under Banking, Bank accounts, then link or import. Set each checking account's next check number.
 5. **Calibrate the check printing.** Open the layout page for the account, print the calibration page at 100% on plain paper, hold it against a voucher check in front of a light, and nudge the offsets until the boxes sit on the lines. Then print one real check on plain paper held against the stock before using the stock.
+
+### Import from Zoho (Phase 5b, once)
+
+The import replays the whole Zoho history into a new, empty database. It never writes to the live database file directly: it copies the database to `dnb.sqlite3.import-copy`, imports into the copy, and compares the result with Zoho's own reports (the tie-out). A real run replaces the database with the copy only when the tie-out passes, and only after a backup. If anything goes wrong, the copy is deleted and the database is left as it was. Expect it to take tens of minutes.
+
+1. Put the Zoho export zip in `./data/zoho/` (for example `./data/zoho/export.zip`) and Zoho's reports in `./data/zoho/reports/`: `trial_balance.csv`, `pl_2020.csv` to `pl_2026.csv`, `ar_aging.csv`, `ap_aging.csv`, `inventory_summary.csv`, and `inventory_valuation.csv`. Optional: `opening_balances.csv` and `deposit_pairs.csv`.
+2. Stop the app and the scheduler, so nothing writes to the database while it is swapped:
+
+```bash
+docker compose stop app scheduler
+```
+
+3. Dry run. It prints progress per month (`2021-03: 412 events`), writes `report.html` and `report.pdf` next to the export, and keeps nothing else. It exits 0 when the tie-out passes and 1 when it doesn't.
+
+```bash
+docker compose run --rm app python manage.py import_zoho /data/zoho/export.zip --reports /data/zoho/reports --user <admin username> --dry-run
+```
+
+   Add `--opening-balances /data/zoho/opening_balances.csv` and `--deposit-pairs /data/zoho/deposit_pairs.csv` when you have them. A transfer out of Undeposited Funds with no exact set of payments stops the run; list its payments in `deposit_pairs.csv` (`date,amount,payment_numbers`, numbers separated by `;`) and run again.
+4. Read the report. When it is clean, run the same command without `--dry-run`. It backs up the database, swaps in the import, and prints `Imported. Restart the app.` To import even though some differences remain, add `--accept-differences`.
+5. Start the app again: `docker compose up -d`.
+
+The command refuses a database that already has documents, and lists every problem in the export (one per line) before anything is imported.
+
+### Catch-up after the import
+
+The Zoho export ends before the cutover, so bring the books up to today in this order. Everything here is done in the app.
+
+1. Back up (`docker compose exec -u dnb app python manage.py backup_now`). Run the import as a dry run, read the tie-out, and run it for real when it is clean (see [Import from Zoho](#import-from-zoho-phase-5b-once)).
+2. Enter the purchase bills missing from February 2026 onward (Purchasing, Bills).
+3. Enter sales after August 20, 2026 (Sales, Invoices).
+4. Finish the Dec 31, 2025 reconciliation for each bank and card account. The import leaves each one in progress with every line ticked: open Banking, Reconcile, type the statement balance, and finish when the difference is 0.00.
+5. Link the banks with Plaid, or import statement files. Set each account's Feed starts date on its Bank accounts page if it isn't Jan 1, 2026. Rows dated before it arrive excluded, with the reason, and can be restored.
+6. Work the inbox oldest first: Pay bills (for money out) and Receive payment (for money in) on rows that settle bills and invoices, transfers and card payoffs, and expenses by rule.
+7. Reconcile each month of 2026.
+8. Set up handling (Cordon as the payee, a new Handling expense account, start date = go-live, 55%). Bill the listed unbilled orders by hand.
+9. Count stock and enter the count.
+10. Cancel Zoho once the owner is satisfied.
 
 ### Everyday use
 
@@ -190,9 +228,9 @@ If a backup or upload fails, the home screen shows a red warning, for example "B
 
 ```bash
 # 1. Copy the backup down from Google Drive (skip if it is still in ./data/backups)
-docker compose run --rm -u dnb app rclone copy gdrive:dnb-backups/<backup file> /data/backups/
+docker compose run --rm app rclone copy gdrive:dnb-backups/<backup file> /data/backups/
 # 2. Decrypt it to a new file (never overwrites)
-docker compose run --rm -u dnb app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3
+docker compose run --rm app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3
 # 3. Swap it in
 docker compose down
 mv data/dnb.sqlite3 data/dnb-before-restore.sqlite3 && rm -f data/dnb.sqlite3-wal data/dnb.sqlite3-shm

@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "handling",
     "banking",
     "backup",
+    "migration",
 ]
 
 MIDDLEWARE = [

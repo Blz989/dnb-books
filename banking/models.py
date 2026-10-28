@@ -1,3 +1,5 @@
+from datetime import date
+
 from auditlog.registry import auditlog
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -71,7 +73,10 @@ _SUBTYPES_FOR_KIND = {
     AccountKind.CHECKING: {AccountSubtype.BANK},
     AccountKind.SAVINGS: {AccountSubtype.BANK},
     AccountKind.CARD: {AccountSubtype.CREDIT_CARD},
-    AccountKind.LOAN: {AccountSubtype.OTHER_CURRENT_LIABILITY, AccountSubtype.LONG_TERM_LIABILITY},
+    AccountKind.LOAN: {
+        AccountSubtype.OTHER_CURRENT_LIABILITY, AccountSubtype.LONG_TERM_LIABILITY,
+        AccountSubtype.CREDIT_CARD,  # a line of credit may be kept on a credit card account
+    },
 }
 
 
@@ -102,6 +107,7 @@ class BankAccount(models.Model):
     mask = models.CharField(max_length=10, blank=True)
     csv_mapping = models.JSONField(default=dict, blank=True)
     next_check_number = models.PositiveIntegerField(default=1001)
+    feed_starts = models.DateField(default=date(2026, 1, 1))
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -237,7 +243,7 @@ class Transfer(models.Model):
 class Reconciliation(models.Model):
     bank_account = models.ForeignKey(BankAccount, on_delete=models.PROTECT, related_name="reconciliations")
     statement_date = models.DateField()
-    statement_balance = models.DecimalField(max_digits=14, decimal_places=2)
+    statement_balance = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=12, choices=ReconStatus.choices, default=ReconStatus.IN_PROGRESS)
     started_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     finished_by = models.ForeignKey(USER, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
