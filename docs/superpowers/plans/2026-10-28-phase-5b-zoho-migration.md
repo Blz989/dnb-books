@@ -143,16 +143,16 @@ The column names for `Credit_Note.csv`, `Creditnotes_Invoice.csv`, and `Vendor_C
 - 2 expenses, 1 journal, 3 transfers (one `Card Payment`, one from `Undeposited Funds` whose amount equals exactly two cash payments, one `Funds Transfer` from `Line Of Credit - Chase`), 2 other deposits (`Capital Introduced`, `Expense Refund`), and 2 inventory adjustments (quantity, value)
 - one item that goes negative
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_zoho_reader.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_zoho_reader.py`:
   - `test_reads_nested_zips_in_name_order`: `len(export.files["invoices"])` equals the line count the sample wrote across the two inner files.
   - `test_strips_bom_and_reads_quoted_commas`: an Item Desc containing `"Box, 12 ct"` reads intact.
   - `test_missing_column_reports_file_and_column`: with `drop_column=("bills", "Rate")`, it raises `ExportError`, and `problems == ['Bill.csv: column "Rate" is missing.']`.
   - `test_missing_file_is_empty_list_except_core`: an absent `Vendor_Credits.csv` reads as `[]`. An absent `Chart_of_Accounts.csv` raises `Chart_of_Accounts.csv: column "Account Name" is missing.`
   - `test_models_unique_zoho_record`
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_reader.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement the models, migration, read-only admin, reader, and sample builder.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_reader.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: migration app and Zoho export reader`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_reader.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement the models, migration, read-only admin, reader, and sample builder.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_reader.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: migration app and Zoho export reader`.
 
 ### Task 2: Mapping (pure functions)
 
