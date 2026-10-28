@@ -325,3 +325,21 @@ def loan(db):
 @pytest.fixture
 def interest_expense(db):
     return _account("6800", "Interest expense", AccountType.EXPENSE, AccountSubtype.EXPENSE)
+
+
+# ---- handling fixtures (order handling, Task 1) ----
+@pytest.fixture
+def handling_setup(db, admin_user):
+    from contacts.models import Terms, Vendor
+    from handling.models import HandlingSettings
+    from handling.rates import add_rate
+
+    handling_vendor = Vendor.objects.create(name="Harbor Handling LLC", terms=Terms.NET_30, is_1099=False)
+    account = _account("6400", "Handling", AccountType.EXPENSE, AccountSubtype.EXPENSE)
+    s = HandlingSettings.load()
+    s.vendor = handling_vendor
+    s.expense_account = account
+    s.start_date = date(2026, 10, 1)
+    s.save()
+    add_rate(effective_from=date(2026, 10, 1), percent=Decimal("55"), user=admin_user)
+    return s

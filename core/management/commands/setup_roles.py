@@ -28,8 +28,12 @@ STANDARD_PERMISSIONS = {
     "banking.reconciliation": ("view",),
     "banking.reconciliationitem": ("view",),
     "banking.checklayout": ("view",),
+    "handling.handlingsettings": ("view",),
+    "handling.handlingrate": ("view",),
+    "handling.handlingrun": ("add", "view"),
+    "handling.handlingrunline": ("add", "view"),
 }
-ADMIN_APPS = ("ledger", "backup", "items", "contacts", "sales", "purchasing", "banking")
+ADMIN_APPS = ("ledger", "backup", "items", "contacts", "sales", "purchasing", "banking", "handling")
 
 
 class Command(BaseCommand):

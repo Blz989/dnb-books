@@ -102,7 +102,7 @@ Test setup throughout: reuse the fixtures in `tests/conftest.py`: `admin_user`, 
     - `rate_for(day: date) -> Decimal | None`: the rate with the latest `effective_from <= day`.
     - `add_rate(*, effective_from: date, percent: Decimal, user) -> HandlingRate`: admin only. Refuses a percent outside 0 to 100 with `Enter a rate between 0 and 100%.` Refuses a date on or before the latest existing date with `The new rate must start after {long date}.` Stores `percent / 100` with 4 dp.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_models.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_models.py`:
   - `test_settings_not_configured_until_vendor_account_start_and_rate`
   - `test_rate_for_uses_latest_effective_on_or_before`: rates of 55% from Oct 1 and 50% from Nov 1. `rate_for(Oct 31) == Decimal("0.5500")`, `rate_for(Nov 1) == Decimal("0.5000")`, and `rate_for(Sep 30) is None`.
   - `test_add_rate_stores_fraction` (55 gives `0.5500`) and `test_add_rate_refuses_bad_percent` (−1 and 101).
@@ -110,10 +110,10 @@ Test setup throughout: reuse the fixtures in `tests/conftest.py`: `admin_user`, 
   - `test_add_rate_is_admin_only`: `PermissionDenied` for `standard_user`.
   - `test_only_one_posted_run_per_period`: a second POSTED run with the same `period_start` raises `IntegrityError`, but a VOID one plus a POSTED one is allowed.
   - `test_run_label`: Oct 16 to 31, 2026 gives `"Oct 16–31, 2026"`.
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_models.py -v`. Expect it to fail on the import of `handling`.
-- [ ] **Step 3:** Implement the models, `rates.py`, and the migration (`uv run python manage.py makemigrations handling`). Register `HandlingSettings`, `HandlingRate`, and `HandlingRun` with auditlog, as the other apps do.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_models.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: handling app, settings, and rates`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_models.py -v`. Expect it to fail on the import of `handling`.
+- [x] **Step 3:** Implement the models, `rates.py`, and the migration (`uv run python manage.py makemigrations handling`). Register `HandlingSettings`, `HandlingRate`, and `HandlingRun` with auditlog, as the other apps do.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_models.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: handling app, settings, and rates`.
 
 ### Task 2: Profit per order
 
