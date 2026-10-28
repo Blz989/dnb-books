@@ -24,14 +24,14 @@ ACCOUNT_COLUMNS = {
     "transfers": ("From Account", "To Account"),
     "adjustments": ("Account",),
 }
-# short -> (number column, label)
+# short -> number column
 UNIQUE_NUMBERS = {
-    "sales_orders": ("SalesOrder Number", "sales order"),
-    "invoices": ("Invoice Number", "invoice"),
-    "customer_payments": ("Payment Number", "customer payment"),
-    "vendor_payments": ("Payment Number", "vendor payment"),
-    "credit_notes": ("Credit Note Number", "credit note"),
-    "purchase_orders": ("Purchase Order Number", "purchase order"),
+    "sales_orders": "SalesOrder Number",
+    "invoices": "Invoice Number",
+    "customer_payments": "Payment Number",
+    "vendor_payments": "Payment Number",
+    "credit_notes": "Credit Note Number",
+    "purchase_orders": "Purchase Order Number",
 }
 TERMS_SHORTS = ("customers", "vendors", "invoices", "bills")
 
@@ -141,13 +141,13 @@ def validate(export: ZohoExport) -> list[str]:
             elif vendor not in bill_vendors[bill]:
                 report(short, row, f'bill "{bill}" is not a bill of vendor "{vendor}".')
 
-    for short, (col, label) in UNIQUE_NUMBERS.items():
+    for short, col in UNIQUE_NUMBERS.items():
         owner: dict[str, str] = {}
         for row in rows(short):
             number, doc = row[col], row[ID_COLUMNS[short]]
             if not number:
                 continue
             if owner.setdefault(number, doc) != doc:
-                report(short, row, f'{label} number "{number}" appears more than once.')
+                report(short, row, f"number {number} appears twice.")
 
     return problems

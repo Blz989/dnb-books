@@ -83,7 +83,7 @@ def test_duplicate_invoice_number(tmp_path):
     existing = sample_rows()["invoices"][0]["Invoice Number"]
     export, problems = _check(tmp_path, extra_rows={"invoices": [_invoice(**{"Invoice Number": existing})]})
     name, line = _last_line(export, "invoices")
-    assert problems == [f'{name} row {line}: invoice number "{existing}" appears more than once.']
+    assert problems == [f"{name} row {line}: number {existing} appears twice."]
 
 
 def test_unsupported_account_type(tmp_path):
