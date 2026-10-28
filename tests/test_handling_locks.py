@@ -15,9 +15,9 @@ from ledger.periods import close_period
 from purchasing.errors import PurchasingError
 from purchasing.models import VendorPaymentMethod
 from purchasing.posting.bills import BillExpenseSpec, bill_from_po, create_bill, edit_bill, void_bill
-from purchasing.posting.credits import void_vendor_credit
+from purchasing.posting.credits import apply_vendor_credit, void_vendor_credit
 from purchasing.posting.orders import POLineSpec, create_po
-from purchasing.posting.payments import PayLine, pay_bills
+from purchasing.posting.payments import PayLine, pay_bills, remove_bill_application
 from sales.models import DocStatus
 from sales.posting.invoices import invoice_from_order
 from sales.posting.orders import OrderLineSpec, create_order
@@ -136,6 +136,31 @@ def test_void_refused_when_bill_paid(billed, admin_user, bank):
     bill.refresh_from_db()
     assert billed.status == RunStatus.POSTED and billed.void_reason == ""
     assert bill.status != DocStatus.VOID
+
+
+def test_void_after_payment_removed_uses_removal_date(billed, admin_user, bank):
+    """A payment applied and later removed: void_bill refuses a date before the removal, so void_run lets
+    purchasing pick the earliest valid date instead of the bill date (else the run could never be voided)."""
+    bill = billed.bill
+    (payment,) = pay_bills(date=d(10, 20), method=VendorPaymentMethod.ACH, paid_from=bank, user=admin_user,
+                           lines=[PayLine(bill, D("9.08"))])
+    remove_bill_application(payment.applications.get(), date=d(10, 25), user=admin_user)
+    run = void_run(billed, user=admin_user, reason="Redo")
+    bill.refresh_from_db()
+    assert run.status == RunStatus.VOID
+    assert (bill.status, bill.voided_on) == (DocStatus.VOID, d(10, 25))
+
+
+def test_void_credit_after_application_removed_uses_removal_date(credit_run, admin_user, setup):
+    credit = credit_run.vendor_credit
+    other = create_bill(vendor=setup.vendor, date=d(11, 1), vendor_invoice_number="X-2", user=admin_user,
+                        expense_lines=[BillExpenseSpec(setup.expense_account, D("20.00"), "Extra")])
+    app = apply_vendor_credit(credit, other, D("5.50"), date=d(11, 2), user=admin_user)
+    remove_bill_application(app, date=d(11, 5), user=admin_user)
+    run = void_run(credit_run, user=admin_user, reason="Redo")
+    credit.refresh_from_db()
+    assert run.status == RunStatus.VOID
+    assert (credit.status, credit.voided_on) == (DocStatus.VOID, d(11, 5))
 
 
 def test_rebill_after_void(billed, admin_user):

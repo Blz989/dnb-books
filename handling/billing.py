@@ -148,11 +148,13 @@ def void_run(run: HandlingRun, *, user, reason: str) -> HandlingRun:
         current.voided_at = timezone.now()
         current.void_reason = reason
         current.save()
+        # No date: purchasing voids on the document's own date, or on the latest application removal when one came
+        # after it. An explicit document date would be refused in that case, leaving the run unvoidable.
         try:
             if current.bill is not None:
-                void_bill(current.bill, user=user, reason=reason, date=current.bill.date)
+                void_bill(current.bill, user=user, reason=reason)
             elif current.vendor_credit is not None:
-                void_vendor_credit(current.vendor_credit, user=user, reason=reason, date=current.vendor_credit.date)
+                void_vendor_credit(current.vendor_credit, user=user, reason=reason)
         except (PurchasingError, PostingError) as exc:
             raise HandlingError(str(exc)) from exc
     run.refresh_from_db()
