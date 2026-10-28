@@ -13,6 +13,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.utils import timezone
 
 from banking.models import BankAccount, Reconciliation, ReconciliationItem, ReconStatus
 from contacts.models import Customer, Vendor
@@ -45,8 +46,6 @@ ZOHO_SEQUENCES = (
     (DocType.SO, "SO-", SalesOrder), (DocType.INV, "INV-", Invoice),
     (DocType.CN, "CN-", CreditNote), (DocType.PO, "PO-", PurchaseOrder),
 )
-
-FEED_START = date(2026, 1, 1)  # becomes BankAccount.feed_starts in Task 10; the field does not exist yet
 
 # Non-stock items for the extra amounts on Zoho documents: sku, name, Zoho income account.
 SERVICE_ITEMS = (
@@ -232,7 +231,6 @@ class Replay(MoneyReplay):
             kind = mapping.bank_kind(name, row["Account Type"].strip())
             if kind is None:
                 continue
-            # feed_starts=FEED_START joins this call in Task 10, when the field exists.
             bank = BankAccount.objects.create(ledger_account=self.accounts[name], kind=kind)
             self.bank_accounts[name] = bank
             self.record("bank_account", row["Account ID"], bank)
@@ -549,9 +547,9 @@ class Replay(MoneyReplay):
             for expense in bill.expense_lines.all():
                 if "Order " in expense.description:
                     billed.add(expense.description.rsplit("Order ", 1)[1].strip())
-        today = date.today()
+        today = timezone.localdate()
         result = []
-        for order in SalesOrder.objects.filter(date__gte=UNBILLED_FROM).order_by("date", "number"):
+        for order in SalesOrder.objects.filter(date__gte=UNBILLED_FROM).exclude(notes__contains="Void in Zoho").order_by("date", "number"):
             if order.number in billed:
                 continue
             profit = order_profit(order.number, as_of=today).profit

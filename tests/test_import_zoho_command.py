@@ -154,6 +154,7 @@ def test_failure_midway_leaves_database_untouched(empty_file_db, tmp_path):
          "Description": ""},
     ]
     export = _export(tmp_path, extra_rows={"journals": unbalanced})
+    before = _fingerprint(empty_file_db)
     code, out, err = _run(export, "--reports", tmp_path / "none", "--user", "admin", "--accept-differences")
     assert code == 1
     assert "Journal.csv" in err and "59000000009" in err
@@ -161,6 +162,7 @@ def test_failure_midway_leaves_database_untouched(empty_file_db, tmp_path):
     assert _no_documents() and not ImportRun.objects.exists()
     assert not _leftovers(empty_file_db)
     assert not list(Path(empty_file_db).parent.glob("*.import-copy*"))
+    assert _fingerprint(empty_file_db) == before
 
 
 def test_real_run_swaps_in_copy_after_backup(empty_file_db, tmp_path, settings, admin_user):

@@ -74,8 +74,9 @@ def test_sequences_continue_after_zoho_numbers(replay, after):
 
 def test_unbilled_orders_listed(replay, after):
     numbers = [o.number for o, *_ in after.unbilled_orders]
-    # SO-0001/0002 predate 2024-03-29; SO-0006 has a Cordon bill; SO-0007's bill is not Cordon's.
-    assert numbers == ["SO-0003", "SO-0004", "SO-0005", "SO-0007", "SO-0008"]
+    # SO-0001/0002 predate 2024-03-29; SO-0006 has a Cordon bill; SO-0007's bill is not Cordon's;
+    # SO-0008 is void in Zoho.
+    assert numbers == ["SO-0003", "SO-0004", "SO-0005", "SO-0007"]
     order, profit, at_50, at_55 = after.unbilled_orders[0]
     assert at_50 == max(Decimal("0.00"), (profit * Decimal("0.50")).quantize(Decimal("0.01")))
     assert at_55 >= at_50

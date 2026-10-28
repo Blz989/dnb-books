@@ -81,6 +81,13 @@ def test_bank_accounts_created_by_kind(replay):
     assert "Petty Cash" not in kinds and UNDEPOSITED not in kinds
 
 
+def test_every_imported_bank_account_passes_full_clean(replay):
+    accounts = list(BankAccount.objects.select_related("ledger_account"))
+    assert LOC_CHASE in {b.ledger_account.name for b in accounts}
+    for bank in accounts:
+        bank.full_clean()
+
+
 def test_items_customers_vendors_and_zoho_records(replay):
     assert set(replay.items) >= {"WID-A", "WID-B", "GAD-C", "BOLT-D", "WRAP", "SHIP", "ADJ", "TAX"}
     gadget = replay.items["GAD-C"]

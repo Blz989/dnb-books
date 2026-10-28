@@ -73,7 +73,10 @@ _SUBTYPES_FOR_KIND = {
     AccountKind.CHECKING: {AccountSubtype.BANK},
     AccountKind.SAVINGS: {AccountSubtype.BANK},
     AccountKind.CARD: {AccountSubtype.CREDIT_CARD},
-    AccountKind.LOAN: {AccountSubtype.OTHER_CURRENT_LIABILITY, AccountSubtype.LONG_TERM_LIABILITY},
+    AccountKind.LOAN: {
+        AccountSubtype.OTHER_CURRENT_LIABILITY, AccountSubtype.LONG_TERM_LIABILITY,
+        AccountSubtype.CREDIT_CARD,  # a line of credit may be kept on a credit card account
+    },
 }
 
 

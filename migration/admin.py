@@ -14,5 +14,10 @@ class ReadOnlyAdmin(admin.ModelAdmin):
         return False
 
 
+class ImportRunAdmin(ReadOnlyAdmin):
+    list_display = ("started_at", "dry_run", "succeeded", "export_name")
+    readonly_fields = ("summary",)
+
+
 admin.site.register(ZohoRecord, ReadOnlyAdmin)
-admin.site.register(ImportRun, ReadOnlyAdmin)
+admin.site.register(ImportRun, ImportRunAdmin)

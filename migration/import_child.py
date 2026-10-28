@@ -41,7 +41,10 @@ def _message(exc: Exception) -> str:
 def _where(event) -> str:
     short = EVENT_SOURCES["transfer" if event.kind == "undeposited_transfer" else event.kind][0]
     number = "" if event.number == event.zoho_id else f"{event.number}, "
-    return f"{FILES[short]} ID {event.zoho_id} ({number}{event.date})"
+    file = FILES[short]
+    if event.zoho_id.startswith(f"{file}:"):  # file without an ID column: name the file line (header = line 1)
+        return f"{file} row {int(event.zoho_id.rsplit(':', 1)[1]) + 1} ({number}{event.date})"
+    return f"{file} ID {event.zoho_id} ({number}{event.date})"
 
 
 def _summary(t, replay, events: int, accepted: bool) -> dict:

@@ -152,7 +152,7 @@ Always run commands inside the container with `-u dnb`, as shown, so files in `.
 
 Backups are encrypted, then copied to Google Drive with [rclone](https://rclone.org/drive/).
 
-1. On the server, start rclone's setup: `docker compose run --rm -u dnb app rclone config`
+1. On the server, start rclone's setup: `docker compose run --rm app rclone config`
 2. Choose `n` (new remote), name it `gdrive`, storage type `drive`. Leave client id and secret blank, choose scope `1` (full access), and leave the rest at their defaults.
 3. When it asks "Use web browser to automatically authenticate?", answer `n`. The server has no browser, so rclone prints a command like `rclone authorize "drive" "..."`.
 4. On any computer with a browser, [install rclone](https://rclone.org/install/), run that exact command, sign in to the Google account that should hold the backups, and paste the token it prints back into the server prompt.
@@ -183,7 +183,7 @@ docker compose stop app scheduler
 3. Dry run. It prints progress per month (`2021-03: 412 events`), writes `report.html` and `report.pdf` next to the export, and keeps nothing else. It exits 0 when the tie-out passes and 1 when it doesn't.
 
 ```bash
-docker compose run --rm -u dnb app python manage.py import_zoho /data/zoho/export.zip --reports /data/zoho/reports --user <admin username> --dry-run
+docker compose run --rm app python manage.py import_zoho /data/zoho/export.zip --reports /data/zoho/reports --user <admin username> --dry-run
 ```
 
    Add `--opening-balances /data/zoho/opening_balances.csv` and `--deposit-pairs /data/zoho/deposit_pairs.csv` when you have them. A transfer out of Undeposited Funds with no exact set of payments stops the run; list its payments in `deposit_pairs.csv` (`date,amount,payment_numbers`, numbers separated by `;`) and run again.
@@ -228,9 +228,9 @@ If a backup or upload fails, the home screen shows a red warning, for example "B
 
 ```bash
 # 1. Copy the backup down from Google Drive (skip if it is still in ./data/backups)
-docker compose run --rm -u dnb app rclone copy gdrive:dnb-backups/<backup file> /data/backups/
+docker compose run --rm app rclone copy gdrive:dnb-backups/<backup file> /data/backups/
 # 2. Decrypt it to a new file (never overwrites)
-docker compose run --rm -u dnb app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3
+docker compose run --rm app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3
 # 3. Swap it in
 docker compose down
 mv data/dnb.sqlite3 data/dnb-before-restore.sqlite3 && rm -f data/dnb.sqlite3-wal data/dnb.sqlite3-shm
