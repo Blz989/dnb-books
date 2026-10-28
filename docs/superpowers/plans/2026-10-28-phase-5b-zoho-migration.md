@@ -210,7 +210,7 @@ Checks:
 - `Sales Order Number` on invoices is in `sales_orders`.
 - No duplicate `SalesOrder Number`, `Invoice Number`, Customer `Payment Number`, Vendor `Payment Number`, `Credit Note Number`, or `Purchase Order Number`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_clean_sample_has_no_problems`
   - `test_unknown_customer`: `extra_rows` adds an invoice for "Nobody Inc". The problem is `Invoice00.csv row {n}: customer "Nobody Inc" is not in the export.`
   - `test_unknown_item_sku_then_name`
@@ -219,10 +219,10 @@ Checks:
   - `test_bill_of_other_vendor_on_payment`
   - `test_duplicate_invoice_number`
   - `test_all_problems_listed_at_once` (three injected, three returned)
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_validate.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_validate.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: Zoho export validation`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_validate.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_validate.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: Zoho export validation`.
 
 ### Task 4: Replay master data and keeping Zoho numbers
 

@@ -148,6 +148,8 @@ class ExportError(Exception):
 @dataclass
 class ZohoExport:
     files: dict[str, list[dict[str, str]]] = field(default_factory=dict)
+    # short name -> [(file name, data rows in it)] in read order; lets row numbers be file lines.
+    origins: dict[str, list[tuple[str, int]]] = field(default_factory=dict)
 
 
 class _Source:
@@ -186,6 +188,7 @@ def _parse(data: bytes) -> tuple[list[str], list[dict[str, str]]]:
 def read_export(path: Path) -> ZohoExport:
     problems: list[str] = []
     result: dict[str, list[dict[str, str]]] = {}
+    origins: dict[str, list[tuple[str, int]]] = {}
     source = _Source(path)
     try:
         for short, filename in FILES.items():
@@ -208,6 +211,7 @@ def read_export(path: Path) -> ZohoExport:
                         missing.add(col)
                         problems.append(f'{inner_name}: column "{col}" is missing.')
                 rows.extend(part_rows)
+                origins.setdefault(short, []).append((inner_name, len(part_rows)))
             if missing:
                 result[short] = []
                 continue
@@ -223,4 +227,4 @@ def read_export(path: Path) -> ZohoExport:
         source.close()
     if problems:
         raise ExportError(problems)
-    return ZohoExport(files=result)
+    return ZohoExport(files=result, origins=origins)

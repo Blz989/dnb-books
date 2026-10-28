@@ -93,7 +93,7 @@ def _accounts():
         ("Cost of Goods Sold", "Cost Of Goods Sold"),
         ("Sales", "Income"),
         ("Discount", "Income"),
-        ("Other Charges", "Other Income"),
+        ("Other Charges", "Income"),
         ("Tax Payable", "Other Current Liability"),
         ("Bank Fees and Charges", "Expense"),
         ("Office Supplies", "Expense"),
