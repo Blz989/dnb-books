@@ -110,7 +110,8 @@ class Replay(MoneyReplay):
         self.user = user
         self.accounts: dict[str, Account] = {}
         self.items: dict[str, Item] = {}
-        self.customers: dict[str, Customer] = {}
+        self.customers: dict[str, Customer] = {}  # by Zoho contact ID
+        self.customers_by_name: dict[str, Customer] = {}
         self.vendors: dict[str, Vendor] = {}
         self.bank_accounts: dict[str, BankAccount] = {}
         self.warnings: list[str] = []
@@ -134,6 +135,13 @@ class Replay(MoneyReplay):
             return self.accounts[name]
         except KeyError:
             raise ValueError(f'The export has no account named "{name}".') from None
+
+    def customer_for(self, short: str, row: dict) -> Customer:
+        """By Zoho contact ID; by name only when the document has no ID."""
+        contact_id = row.get(mapping.CUSTOMER_ID_COLUMN[short], "").strip()
+        if contact_id:
+            return self.customers[contact_id]
+        return self.customers_by_name[row["Customer Name"]]
 
     def item_for(self, row: dict) -> Item:
         return self.items[row["SKU"].strip() or row["Item Name"]]
@@ -314,8 +322,16 @@ class Replay(MoneyReplay):
             self.items[sku] = item
 
     def _load_contacts(self) -> None:
+        taken: dict[str, int] = {}
+        renamed = 0
         for row in self.rows("customers"):
-            name = row["Display Name"].strip()
+            name = " ".join(row["Display Name"].split())
+            # The owner keeps Zoho's same-name contacts apart: the first keeps the name, the next is "Name (2)".
+            key = mapping.name_key(name)
+            taken[key] = taken.get(key, 0) + 1
+            if taken[key] > 1:
+                name = f"{name} ({taken[key]})"
+                renamed += 1
             company = row["Company Name"].strip()
             customer = Customer.objects.create(
                 name=name, contact_name=company if company != name else "",
@@ -325,8 +341,12 @@ class Replay(MoneyReplay):
                 terms=mapping.terms(row["Payment Terms Label"]), notes=row["Notes"],
                 is_active=row["Status"].strip().lower() != "inactive",
             )
-            self.customers[row["Display Name"]] = customer
+            self.customers[row["Contact ID"]] = customer
+            self.customers_by_name.setdefault(row["Display Name"], customer)
             self.record("customer", row["Contact ID"], customer)
+        if renamed:
+            self.warnings.append(f"{renamed} customers share a name with another Zoho contact and were "
+                                 "imported as \"Name (2)\" and so on.")
         for row in self.rows("vendors"):
             vendor = Vendor.objects.create(
                 name=row["Display Name"].strip(), email=row["EmailID"].strip(),
@@ -383,7 +403,7 @@ class Replay(MoneyReplay):
             notes = "\n".join(p for p in (notes, "Void in Zoho") if p)
         with transaction.atomic(), use_number(DocType.SO, event.number):
             order = create_order(
-                customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
+                customer=self.customer_for("sales_orders", first), date=event.date, lines=lines,
                 user=self.user, notes=notes)
             if void:
                 close_order(order, self.user)
@@ -503,7 +523,7 @@ class Replay(MoneyReplay):
                 lines.append(InvoiceLineSpec(item, 1, amount, description=item.name))
         with transaction.atomic(), use_number(DocType.INV, event.number):
             invoice = create_invoice(
-                customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
+                customer=self.customer_for("invoices", first), date=event.date, lines=lines,
                 user=self.user, sales_order=order, terms=mapping.terms(first["Payment Terms Label"], first["Invoice Date"], first["Due Date"]),
                 notes=first["Notes"], allow_negative=True, allow_negative_adjustment=True)
             self.record("invoice", event.zoho_id, invoice)

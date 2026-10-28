@@ -103,12 +103,13 @@ def test_items_customers_vendors_and_zoho_records(replay):
     assert (tax.name, tax.income_account.name) == ("Sales tax (Zoho)", "Tax Payable")
     assert not ship.is_stock and not adj.is_stock and not tax.is_stock
 
-    assert set(replay.customers) == {"Acme Hardware", "Birch Lane Supply", "Cedar Ridge Outfitters"}
-    acme = replay.customers["Acme Hardware"]
+    assert set(replay.customers_by_name) == {"Acme Hardware", "Birch Lane Supply", "Cedar Ridge Outfitters"}
+    assert len(replay.customers) == 3  # keyed by Zoho contact ID
+    acme = replay.customers_by_name["Acme Hardware"]
     assert acme.terms == Terms.NET_30 and acme.email == "ap@acme.example"
     assert acme.billing_address == "12 Main St\nAustin, TX 78701"
     assert "Dock 2" in acme.ship_to_address
-    assert replay.customers["Cedar Ridge Outfitters"].terms == Terms.DUE_ON_RECEIPT
+    assert replay.customers_by_name["Cedar Ridge Outfitters"].terms == Terms.DUE_ON_RECEIPT
     assert set(replay.vendors) == {"Mr. Joseph Cordon", "Pioneer Wholesale", "Summit Packaging"}
     assert replay.vendors["Mr. Joseph Cordon"].terms == Terms.DUE_ON_RECEIPT
     from handling.models import HandlingSettings

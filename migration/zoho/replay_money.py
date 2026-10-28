@@ -115,7 +115,7 @@ class MoneyReplay:
         with transaction.atomic():
             with use_number(DocType.PMT, event.number):
                 payment = receive_payment(
-                    customer=self.customers[first["Customer Name"]], date=event.date,
+                    customer=self.customer_for("customer_payments", first), date=event.date,
                     method=mapping.customer_method(mode, deposit_to), amount=mapping.money(first["Amount"]),
                     user=self.user,
                     # Straight to the bank it becomes ACH, so Zoho's Mode is kept in the reference (spec 4.2).
@@ -155,7 +155,7 @@ class MoneyReplay:
         with transaction.atomic():
             with use_number(DocType.CN, event.number):
                 note = create_credit_note(
-                    customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
+                    customer=self.customer_for("credit_notes", first), date=event.date, lines=lines,
                     reason=_credit_reason(first), user=self.user)
             self.record("credit_note", event.zoho_id, note)
 

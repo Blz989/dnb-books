@@ -78,6 +78,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "Order Date", "SalesOrder Number", "Status", "Customer Name", "Item Name", "SKU",
         "Item Desc", "QuantityOrdered", "Item Price", "Item Total", "Total",
         "Shipping Charge", "Adjustment", "Notes",
+     "Customer ID",
     ),
     "invoices": (
         "Invoice Date", "Invoice Number", "Invoice Status", "Customer Name",
@@ -85,6 +86,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "Item Total", "Total", "Shipping Charge", "Shipping Charge Account", "Adjustment",
         "Adjustment Account", "Item Tax Amount", "Notes", "Payment Terms Label",
      "Due Date",
+     "Customer ID",
     ),
     "purchase_orders": (
         "Purchase Order Date", "Purchase Order Number", "Vendor Name", "Item Name", "SKU",
@@ -102,6 +104,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "Payment Number", "Mode", "Date", "Amount", "Unused Amount", "Bank Charges",
         "Reference Number", "Customer Name", "Deposit To", "Invoice Number",
         "Amount Applied to Invoice", "Invoice Payment Applied Date",
+     "CustomerID",
     ),
     "vendor_payments": (
         "Payment Number", "Mode", "Date", "Amount", "Reference Number", "Vendor Name",
@@ -110,6 +113,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     "credit_notes": (
         "Credit Note Date", "Credit Note Number", "Customer Name", "Item Name", "Account",
         "Item Total", "Total", "Subject", "Notes",
+     "Customer ID",
     ),
     "credit_applications": ("Credit Note Number", "Invoice Number", "Amount", "Date"),
     "vendor_credits": (

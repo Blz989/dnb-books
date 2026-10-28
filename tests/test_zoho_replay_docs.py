@@ -276,7 +276,7 @@ def _one_line(r, sku, price):
 def test_negative_invoice_price_refused_by_default(master):
     from sales.errors import InvoiceError
     from sales.posting.invoices import InvoiceLineSpec, create_invoice
-    customer = master.customers["Acme Hardware"]
+    customer = master.customers_by_name["Acme Hardware"]
     with pytest.raises(InvoiceError, match=r"^Line 2: price can't be negative\.$"):
         create_invoice(customer=customer, date=date(2026, 3, 1), lines=_invoice_lines(master, Decimal("-1.00")),
                        user=master.user)
@@ -290,12 +290,12 @@ def test_negative_invoice_price_refused_by_default(master):
 def test_negative_invoice_price_allowed_with_flag(master):
     from sales.posting.invoices import create_invoice
     invoice = create_invoice(
-        customer=master.customers["Acme Hardware"], date=date(2026, 3, 1), user=master.user,
+        customer=master.customers_by_name["Acme Hardware"], date=date(2026, 3, 1), user=master.user,
         lines=_invoice_lines(master, Decimal("-1.00")), allow_negative_adjustment=True)
     assert invoice_total(invoice) == Decimal("9.00")
     assert _entry(invoice) == {"Accounts Receivable": Decimal("9.00"), "Sales": Decimal("-9.00")}
     other = create_invoice(
-        customer=master.customers["Acme Hardware"], date=date(2026, 3, 1), user=master.user,
+        customer=master.customers_by_name["Acme Hardware"], date=date(2026, 3, 1), user=master.user,
         lines=[*_invoice_lines(master, Decimal("0.00"))[:1],
                _one_line(master, "TAX", Decimal("1.00")),
                _one_line(master, "SHIP", Decimal("-2.00"))],
@@ -338,3 +338,18 @@ def test_free_text_bill_line_becomes_an_expense_line(db, admin_user, tmp_path):
     assert (expense.account.name, expense.description) == ("Shipping Expenses", "Shipping 2024-04-29 Kabayan Foods")
     assert not bill.item_lines.exists()
     assert bill.terms == "NET_30"
+
+
+def test_same_name_customers_stay_apart_and_invoices_follow_the_contact_id(db, admin_user, tmp_path):
+    from contacts.models import Customer
+    from tests.zoho_sample import sample_rows
+
+    twin = dict(sample_rows()["customers"][2])
+    twin.update({"Contact ID": "4800000009999", "Display Name": "cedar ridge  Outfitters", "EmailID": "x@y.example"})
+    invoice = _invoice_row("INV-T1", "61000000999", "Blue Widget", "WID-A", 1, "12.00", "12.00", "12.00")
+    invoice["Customer ID"] = "4800000009999"
+    r = _replay(admin_user, tmp_path, extra_rows={"customers": [twin], "invoices": [invoice]})
+    second = Customer.objects.get(name="cedar ridge Outfitters (2)")
+    assert Invoice.objects.get(number="INV-T1").customer == second
+    assert Customer.objects.filter(name="Cedar Ridge Outfitters").exists()
+    assert any("share a name" in w for w in r.warnings)

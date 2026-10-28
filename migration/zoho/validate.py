@@ -86,6 +86,7 @@ def validate(export: ZohoExport) -> list[str]:
                 report(short, row, f'payment terms "{label.strip()}" is not supported.')
 
     customers = {r["Display Name"] for r in rows("customers")}
+    customer_ids = {r["Contact ID"] for r in rows("customers")}
     vendors = {r["Display Name"] for r in rows("vendors")}
     accounts = {r["Account Name"] for r in rows("accounts")}
     skus = {r["SKU"] for r in rows("items") if r["SKU"]}
@@ -100,8 +101,13 @@ def validate(export: ZohoExport) -> list[str]:
         return f'{kind} "{value}" is not in the export.'
 
     for short, col in CUSTOMER_COLUMN.items():
+        id_col = mapping.CUSTOMER_ID_COLUMN[short]
         for row in rows(short):
-            if row[col] and row[col] not in customers:
+            contact_id = row.get(id_col, "").strip()
+            if contact_id:
+                if contact_id not in customer_ids:
+                    report(short, row, missing("customer", f"{row[col]} ({contact_id})"))
+            elif row[col] and row[col] not in customers:
                 report(short, row, missing("customer", row[col]))
     for short, col in VENDOR_COLUMN.items():
         for row in rows(short):

@@ -52,6 +52,17 @@ class AccountPlan:
     is_active: bool
 
 
+# Zoho has customers that share a name, so documents are linked to customers by contact ID.
+CUSTOMER_ID_COLUMN = {
+    "sales_orders": "Customer ID", "invoices": "Customer ID", "customer_payments": "CustomerID",
+    "credit_notes": "Customer ID",
+}
+
+
+def name_key(name: str) -> str:
+    return " ".join(name.split()).casefold()
+
+
 def clean_sku(text: str) -> str:
     """A Zoho SKU made to fit DNB Books' SKU rule: "&" becomes "and", any other character outside letters,
     numbers, dots, dashes, and underscores becomes "-", and it is cut to 50 characters."""
