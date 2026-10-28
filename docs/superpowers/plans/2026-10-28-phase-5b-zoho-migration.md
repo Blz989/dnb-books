@@ -609,7 +609,7 @@ Document in the README that the app and scheduler are stopped first (`docker com
 - Create: `tests/test_phase5b_acceptance.py`
 - Modify: `README.md` (the spec section 10 catch-up guide, the import commands from Task 9, and the Status line), `CLAUDE.md` (Done list)
 
-- [ ] **Step 1: Write `test_import_and_catch_up`:**
+- [x] **Step 1: Write `test_import_and_catch_up`:**
   - Build the sample and generate matching normalized reports.
   - Run `import_zoho --dry-run` and confirm exit 0, then the real run.
   - Finish the Dec 31 reconciliation after setting its balance.
@@ -617,9 +617,9 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - Use Pay bills on one row and Receive payment (check) on another, and book a fee by rule.
   - Reconcile January 2026 at 0.00.
   - Every ledger check stays at 0.00 throughout.
-- [ ] **Step 2:** Run `uv run pytest tests/test_phase5b_acceptance.py -v`. Expect PASS.
-- [ ] **Step 3:** Run `uv run pytest -q`. Every test passes.
-- [ ] **Step 4:** Commit with `test: phase 5b acceptance; docs`.
+- [x] **Step 2:** Run `uv run pytest tests/test_phase5b_acceptance.py -v`. Expect PASS.
+- [x] **Step 3:** Run `uv run pytest -q`. Every test passes.
+- [x] **Step 4:** Commit with `test: phase 5b acceptance; docs`.
 - [ ] **Step 5:** Open the PR `Phase 5b: Zoho migration and catch-up`. The body follows `CLAUDE.md`, and also says:
   - The importer was built against made-up samples only.
   - Claude will run dry runs against the owner's real export in the owner's session, and fix gaps (column names, unexpected values) in a follow-up branch, before the owner runs it on the server.

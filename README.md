@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import (Phase 5b) is next. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested, and Phase 5b is ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -191,6 +191,21 @@ docker compose run --rm -u dnb app python manage.py import_zoho /data/zoho/expor
 5. Start the app again: `docker compose up -d`.
 
 The command refuses a database that already has documents, and lists every problem in the export (one per line) before anything is imported.
+
+### Catch-up after the import
+
+The Zoho export ends before the cutover, so bring the books up to today in this order. Everything here is done in the app.
+
+1. Back up (`docker compose exec -u dnb app python manage.py backup_now`). Run the import as a dry run, read the tie-out, and run it for real when it is clean (see [Import from Zoho](#import-from-zoho-phase-5b-once)).
+2. Enter the purchase bills missing from February 2026 onward (Purchasing, Bills).
+3. Enter sales after August 20, 2026 (Sales, Invoices).
+4. Finish the Dec 31, 2025 reconciliation for each bank and card account. The import leaves each one in progress with every line ticked: open Banking, Reconcile, type the statement balance, and finish when the difference is 0.00.
+5. Link the banks with Plaid, or import statement files. Set each account's Feed starts date on its Bank accounts page if it isn't Jan 1, 2026. Rows dated before it arrive excluded, with the reason, and can be restored.
+6. Work the inbox oldest first: Pay bills (for money out) and Receive payment (for money in) on rows that settle bills and invoices, transfers and card payoffs, and expenses by rule.
+7. Reconcile each month of 2026.
+8. Set up handling (Cordon as the payee, a new Handling expense account, start date = go-live, 55%). Bill the listed unbilled orders by hand.
+9. Count stock and enter the count.
+10. Cancel Zoho once the owner is satisfied.
 
 ### Everyday use
 
