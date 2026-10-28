@@ -368,3 +368,23 @@ def test_item_less_lines_zero_skipped_and_shipping_kept(db, admin_user, tmp_path
     shipping = invoice.lines.get(description="Shipping Charges : Standard")
     assert (shipping.amount, shipping.item.income_account.name) == (Decimal("5.99"), "Sales")
     assert invoice.lines.count() == 2
+
+
+def test_free_goods_on_a_bill_become_a_zero_cost_adjustment(db, admin_user, tmp_path):
+    from items.models import StockMovement
+    from tests.zoho_sample import sample_rows
+
+    base = dict(next(r for r in sample_rows()["bills"] if r["Bill Number"] == "BILL-003"))
+    paid = {**base, "Bill ID": "53000000088", "Bill Number": "FREE-1", "Bill Date": "2025-04-02",
+            "Quantity": "5", "Rate": "12.00", "Item Total": "60.00", "Total": "60.00", "Balance": "60.00"}
+    free = {**paid, "Quantity": "40", "Rate": "0.00", "Item Total": "0.00"}
+    all_free = {**free, "Bill ID": "53000000089", "Bill Number": "FREE-2", "Total": "0.00", "Balance": "0.00"}
+    r = _replay(admin_user, tmp_path, extra_rows={"bills": [paid, free, all_free]})
+    bill = Bill.objects.get(vendor_invoice_number="FREE-1")
+    assert [l.quantity for l in bill.item_lines.all()] == [5]
+    moves = StockMovement.objects.filter(source_type="migration.free_goods")
+    assert sorted(m.quantity for m in moves) == [40, 40]
+    assert all(m.total_cost == 0 and m.journal_entry_id is None for m in moves)
+    assert not Bill.objects.filter(vendor_invoice_number="FREE-2").exists()
+    assert any("FREE-2" in w and "$0.00" in w for w in r.warnings)
+    assert check_invariants() == []

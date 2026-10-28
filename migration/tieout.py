@@ -224,14 +224,18 @@ def _inventory_value(rows, after, warnings) -> list[Diff]:
 
 
 # ---- document counts and totals ----
-def _export_docs(export, short, id_column, total_of) -> tuple[int, Decimal]:
+def _export_docs(export, short, id_column, total_of, *, skip_zero: bool = False) -> tuple[int, Decimal]:
     seen, total = set(), ZERO
     for row in export.files.get(short, []):
         key = row[id_column]
         if key not in seen:
             seen.add(key)
+            if skip_zero and not total_of(row):
+                seen.discard(key)
+                seen.add(("zero", key))
+                continue
             total += total_of(row)
-    return len(seen), total
+    return len([k for k in seen if not isinstance(k, tuple)]), total
 
 
 def _ours(kind, total_of) -> tuple[int, Decimal]:
@@ -259,8 +263,11 @@ def _counts(export) -> list[Diff]:
     diffs = []
     for label, kind, short, id_column, ours_total, zoho_total in types:
         count, total = _ours(kind, ours_total)
-        zoho_count, zoho_sum = _export_docs(export, short, id_column, zoho_total)
-        diffs.append(Diff(f"{label}: count", Decimal(count), Decimal(zoho_count)))
+        # A $0.00 Zoho bill becomes no bill (free goods arrive as a zero-cost adjustment), so it isn't counted.
+        skip_zero = kind == "bill"
+        zoho_count, zoho_sum = _export_docs(export, short, id_column, zoho_total, skip_zero=skip_zero)
+        name = f"{label}: count" + (" (not counting $0.00 bills)" if skip_zero else "")
+        diffs.append(Diff(name, Decimal(count), Decimal(zoho_count)))
         diffs.append(Diff(f"{label}: total", total, zoho_sum))
     return diffs
 

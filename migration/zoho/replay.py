@@ -18,8 +18,8 @@ from django.utils import timezone
 from banking.models import BankAccount, Reconciliation, ReconciliationItem, ReconStatus
 from contacts.models import Customer, Vendor
 from items.costing import unit_4dp
-from items.models import Category, CostingMethod, InventorySettings, Item, ItemType
-from items.stock import StockLine, on_hand, record_opening_batch
+from items.models import Category, CostingMethod, InventorySettings, Item, ItemType, MovementKind
+from items.stock import StockLine, on_hand, record_movements, record_opening_batch
 from handling.profit import order_profit
 from ledger.models import Account, AccountSubtype, JournalLine
 from migration.models import ZohoRecord
@@ -449,10 +449,17 @@ class Replay(MoneyReplay):
     def post_bill(self, event: Event) -> None:
         rows = self.doc_rows(event.kind, event.zoho_id)
         first = rows[0]
-        item_lines, expense_lines = [], []
+        item_lines, expense_lines, free = [], [], []
         leftover = Decimal("0.00")
         for row in rows:
             total = mapping.money(row["Item Total"])
+            if not total:
+                # Bills refuse $0.00 lines. Free goods still came in, so they become a zero-cost stock
+                # adjustment; a $0.00 line with no item moves nothing and is dropped.
+                if self.is_item_line(row) and self.item_for(row).is_stock:
+                    free.append(StockLine(self.item_for(row), _quantity(row["Quantity"]),
+                                          reason=f"Free goods on Zoho bill {event.number}", unit_cost=Decimal("0")))
+                continue
             if self.is_item_line(row):
                 quantity = _quantity(row["Quantity"])
                 price, cents = mapping.line_price(total, quantity)
@@ -466,6 +473,13 @@ class Replay(MoneyReplay):
         if extra:
             name = first["Adjustment Account"].strip() or "Cost of Goods Sold"
             expense_lines.append(BillExpenseSpec(self.account(name), extra, "Adjustment"))
+        if free:
+            record_movements(kind=MovementKind.ADJUSTMENT, date=event.date, lines=free, user=self.user,
+                             allow_negative=True, source_type="migration.free_goods", source_id=event.zoho_id)
+        if not item_lines and not expense_lines:
+            self.warnings.append(f"Bill {event.number} ({event.date}) is $0.00 in Zoho; no bill was created.")
+            self._note_negative([l.item for l in free], event)
+            return
         notes = f"Imported from Zoho (ID {event.zoho_id})"
         if first["CF.Sales Order"].strip():
             notes += f"\nSales order {first['CF.Sales Order'].strip()}"
