@@ -650,14 +650,16 @@ class Replay(MoneyReplay):
         Cordon's Zoho bills name the order three ways: the bill's CF.Sales Order (kept in its notes), an order
         number in a line ("Shipping for Order SO-0006"), or only the customer and the billing date
         ("Shipping 2024-04-29 Kabayan Foods"). The last kind is matched to that customer's orders dated on or
-        before the line and in the 31 days before it."""
+        before the line and in the 31 days before it, one order per line."""
         billed: set[str] = set()
         by_customer: list[tuple[date, str]] = []
         bills = Bill.objects.filter(vendor__name__icontains=HANDLING_PAYEE).prefetch_related("expense_lines")
         for bill in bills:
-            for line in bill.notes.splitlines():
-                if line.startswith("Sales order "):
-                    billed.add(line[len("Sales order "):].strip())
+            noted = [line[len("Sales order "):].strip() for line in bill.notes.splitlines()
+                     if line.startswith("Sales order ")]
+            if noted:
+                billed.update(noted)
+                continue  # the bill's own order field names its order; its lines only describe it
             for expense in bill.expense_lines.all():
                 numbers = re.findall(r"SO-\d+", expense.description)
                 if numbers:
@@ -669,11 +671,12 @@ class Replay(MoneyReplay):
                     by_customer.append((when, mapping.name_key(named.group(2))[:40]))
         orders = list(SalesOrder.objects.filter(date__gte=UNBILLED_FROM).exclude(notes__contains="Void in Zoho")
                       .select_related("customer").order_by("date", "number"))
-        for when, customer in by_customer:
-            for order in orders:
-                if (order.number not in billed and when - timedelta(days=31) <= order.date <= when
-                        and mapping.name_key(order.customer.name).startswith(customer)):
-                    billed.add(order.number)
+        for when, customer in sorted(by_customer):
+            # Each line pays for one order: that customer's latest order not yet accounted for.
+            hits = [o for o in orders if o.number not in billed and when - timedelta(days=31) <= o.date <= when
+                    and mapping.name_key(o.customer.name).startswith(customer)]
+            if hits:
+                billed.add(hits[-1].number)
         today = timezone.localdate()
         result = []
         for order in orders:

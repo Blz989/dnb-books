@@ -177,3 +177,21 @@ def test_cordon_lines_naming_the_customer_or_order_count_as_billed(db, admin_use
     numbers = [o.number for o, *_ in r.finish().unbilled_orders]
     # SO-0004 (Acme, 2024-11-20) is within 31 days before Acme's 2024-12-05 line; SO-0003 is named in a line.
     assert numbers == ["SO-0005", "SO-0007"]
+
+
+def test_one_customer_named_cordon_line_covers_one_order(db, admin_user, tmp_path):
+    from tests.zoho_sample import sample_rows
+
+    rows = sample_rows()
+    first = next(r for r in rows["sales_orders"] if r["SalesOrder Number"] == "SO-0004")
+    rows["sales_orders"].append({**first, "SalesOrder ID": "50000000099", "SalesOrder Number": "SO-0099",
+                                 "Order Date": "2024-11-25"})
+    cordon = dict(next(r for r in rows["bills"] if r["Bill Number"] == "BILL-005"))
+    rows["bills"].append({**cordon, "Bill ID": "53000000092", "Bill Number": "PW-92", "Bill Date": "2024-12-05",
+                          "Item Name": "Shipping 2024-12-05 Acme Hardware", "Description": "", "CF.Sales Order": ""})
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    numbers = [o.number for o, *_ in r.finish().unbilled_orders]
+    assert "SO-0099" not in numbers and "SO-0004" in numbers  # the line covers Acme's latest order only
