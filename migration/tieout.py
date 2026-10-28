@@ -224,18 +224,14 @@ def _inventory_value(rows, after, warnings) -> list[Diff]:
 
 
 # ---- document counts and totals ----
-def _export_docs(export, short, id_column, total_of, *, skip_zero: bool = False) -> tuple[int, Decimal]:
+def _export_docs(export, short, id_column, total_of, skipped=frozenset()) -> tuple[int, Decimal]:
     seen, total = set(), ZERO
     for row in export.files.get(short, []):
         key = row[id_column]
-        if key not in seen:
+        if key not in seen and key not in skipped:
             seen.add(key)
-            if skip_zero and not total_of(row):
-                seen.discard(key)
-                seen.add(("zero", key))
-                continue
             total += total_of(row)
-    return len([k for k in seen if not isinstance(k, tuple)]), total
+    return len(seen), total
 
 
 def _ours(kind, total_of) -> tuple[int, Decimal]:
@@ -247,7 +243,7 @@ def _ours(kind, total_of) -> tuple[int, Decimal]:
     return len(ids), total
 
 
-def _counts(export) -> list[Diff]:
+def _counts(export, skipped: dict) -> list[Diff]:
     money = mapping.money
     types = (
         ("Invoices", "invoice", "invoices", "Invoice ID", invoice_total, lambda r: money(r["Total"])),
@@ -263,10 +259,10 @@ def _counts(export) -> list[Diff]:
     diffs = []
     for label, kind, short, id_column, ours_total, zoho_total in types:
         count, total = _ours(kind, ours_total)
-        # A $0.00 Zoho bill becomes no bill (free goods arrive as a zero-cost adjustment), so it isn't counted.
-        skip_zero = kind == "bill"
-        zoho_count, zoho_sum = _export_docs(export, short, id_column, zoho_total, skip_zero=skip_zero)
-        name = f"{label}: count" + (" (not counting $0.00 bills)" if skip_zero else "")
+        # $0.00 Zoho documents with nothing to post were not created (listed in the warnings), so not counted.
+        left_out = skipped.get(short, set())
+        zoho_count, zoho_sum = _export_docs(export, short, id_column, zoho_total, left_out)
+        name = f"{label}: count" + (f" (not counting {len(left_out)} empty $0.00)" if left_out else "")
         diffs.append(Diff(name, Decimal(count), Decimal(zoho_count)))
         diffs.append(Diff(f"{label}: total", total, zoho_sum))
     return diffs
@@ -297,7 +293,7 @@ def compare(reports_dir: Path, as_of: date, after, plan, warnings, export) -> Ti
     checks.append(_check("Inventory quantities", None if rows is None else _quantities(rows)))
     value_rows = _read(folder / "inventory_valuation.csv")
     return TieOut(
-        checks=checks, inventory_value=_inventory_value(value_rows, after, warnings), counts=_counts(export),
+        checks=checks, inventory_value=_inventory_value(value_rows, after, warnings), counts=_counts(export, getattr(after, "skipped", {}) or {}),
         after=after, account_map=list(plan), warnings=list(warnings), as_of=as_of,
         inventory_value_provided=value_rows is not None)
 

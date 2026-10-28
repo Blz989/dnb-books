@@ -388,3 +388,12 @@ def test_free_goods_on_a_bill_become_a_zero_cost_adjustment(db, admin_user, tmp_
     assert not Bill.objects.filter(vendor_invoice_number="FREE-2").exists()
     assert any("FREE-2" in w and "$0.00" in w for w in r.warnings)
     assert check_invariants() == []
+
+
+def test_empty_zero_invoice_is_skipped_and_reported(db, admin_user, tmp_path):
+    base = _invoice_row("INV-E1", "61000000777", "", "", 1, "0.00", "0.00", "0.00")
+    r = _replay(admin_user, tmp_path, extra_rows={"invoices": [base]})
+    assert not Invoice.objects.filter(number="INV-E1").exists()
+    assert r.skipped["invoices"] == {"61000000777"}
+    assert any("INV-E1" in w for w in r.warnings)
+    assert r.finish().skipped["invoices"] == {"61000000777"}

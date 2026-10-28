@@ -88,7 +88,7 @@ def test_matching_reports_pass(run, tmp_path):
     # document counts and totals line up with the export
     assert t.counts and all(isinstance(d, Diff) for d in t.counts)
     labels = [d.label for d in t.counts]
-    for expected in ("Invoices: count", "Invoices: total", "Bills: count (not counting $0.00 bills)", "Payments: count",
+    for expected in ("Invoices: count", "Invoices: total", "Bills: count", "Payments: count",
                      "Vendor payments: count", "Credit notes: count", "Vendor credits: count"):
         assert expected in labels
     assert [d.label for d in t.counts if d.ours != d.zoho] == []

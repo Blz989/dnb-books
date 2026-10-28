@@ -7,7 +7,7 @@ credits, deposits, entries, and stock adjustments in `replay_money.MoneyReplay`.
 `ZohoRecord` through `Replay.record`, so any Zoho row can be traced to what it became.
 """
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -64,6 +64,7 @@ class AfterSummary:
     unbilled_orders: list  # (SalesOrder, profit, at_50, at_55)
     undeposited_by_year: dict  # year -> (count, total)
     negative_items: list  # (Item, on_hand)
+    skipped: dict = field(default_factory=dict)  # short name -> Zoho IDs of $0.00 documents not created
 
 
 @dataclass(frozen=True)
@@ -119,6 +120,8 @@ class Replay(MoneyReplay):
         self.pending_applications: dict[str, list] = {}
         # (vendor pk, Zoho bill number) -> [(vendor payment, amount)] for payments made before the bill's date.
         self.pending_bill_applications: dict[tuple, list] = {}
+        # Zoho documents with nothing to post ($0.00, no lines): short name -> Zoho IDs. The tie-out skips them.
+        self.skipped: dict[str, set] = {}
         self.vendors: dict[str, Vendor] = {}
         self.bank_accounts: dict[str, BankAccount] = {}
         self.warnings: list[str] = []
@@ -419,6 +422,10 @@ class Replay(MoneyReplay):
             quantity = _quantity(row["QuantityOrdered"])
             price, _ = mapping.line_price(mapping.money(row["Item Total"]), quantity)
             lines.append(OrderLineSpec(item, quantity, price, description=row["Item Desc"]))
+        if not lines:
+            self.skipped.setdefault("sales_orders", set()).add(event.zoho_id)
+            self.warnings.append(f"Sales order {event.number} has no lines in Zoho ($0.00); it was not created.")
+            return
         void = first["Status"].strip().lower() == "void"
         notes = first["Notes"].strip()
         if void:
@@ -479,6 +486,7 @@ class Replay(MoneyReplay):
             record_movements(kind=MovementKind.ADJUSTMENT, date=event.date, lines=free, user=self.user,
                              allow_negative=True, source_type="migration.free_goods", source_id=event.zoho_id)
         if not item_lines and not expense_lines:
+            self.skipped.setdefault("bills", set()).add(event.zoho_id)
             self.warnings.append(f"Bill {event.number} ({event.date}) is $0.00 in Zoho; no bill was created.")
             self._note_negative([l.item for l in free], event)
             return
@@ -570,6 +578,10 @@ class Replay(MoneyReplay):
         for item, amount in extras:
             if amount:
                 lines.append(InvoiceLineSpec(item, 1, amount, description=item.name))
+        if not lines:
+            self.skipped.setdefault("invoices", set()).add(event.zoho_id)
+            self.warnings.append(f"Invoice {event.number} has no lines in Zoho ($0.00); it was not created.")
+            return
         with transaction.atomic(), use_number(DocType.INV, event.number):
             invoice = create_invoice(
                 customer=self.customer_for("invoices", first), date=event.date, lines=lines,
@@ -603,6 +615,7 @@ class Replay(MoneyReplay):
             unbilled_orders=self._unbilled_orders(),
             undeposited_by_year=self._undeposited_by_year(),
             negative_items=self._negative_items(),
+            skipped={short: set(ids) for short, ids in self.skipped.items()},
         )
 
     def _open_reconciliations(self) -> None:
