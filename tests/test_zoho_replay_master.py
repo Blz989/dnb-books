@@ -125,3 +125,14 @@ def test_opening_stock_posted_at_2020_02_01(replay):
     lines = {l.account.name: l.debit - l.credit for l in JournalLine.objects.in_ledger().filter(entry=entry)}
     assert lines == {"Inventory Asset": Decimal("1000.00"), "Opening Balance Offset": Decimal("-1000.00")}
     assert ZohoRecord.objects.get(kind="opening_stock", zoho_id="4700000000003").target == movement
+
+
+def test_opening_stock_value_drift_warns(db, admin_user, tmp_path):
+    from tests.zoho_sample import sample_rows
+    row = dict(next(r for r in sample_rows()["items"] if r["SKU"] == "GAD-C"))
+    row.update({"Item ID": "4700000000099", "Item Name": "Uneven", "SKU": "UNEVEN",
+                "Opening Stock": "10000", "Opening Stock Value": "1000.01"})
+    r = Replay(read_export(build_sample_export(tmp_path, extra_rows={"items": [row]})), admin_user)
+    r.load_master()
+    assert r.warnings == ["Opening stock UNEVEN: value 1000.00 vs Zoho 1000.01"]
+    assert StockMovement.objects.get(item=r.items["UNEVEN"]).unit_cost == Decimal("0.1000")

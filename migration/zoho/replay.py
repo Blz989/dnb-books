@@ -12,6 +12,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from banking.models import BankAccount
 from contacts.models import Customer, Vendor
+from items.costing import unit_4dp
 from items.models import Category, CostingMethod, InventorySettings, Item, ItemType
 from items.stock import StockLine, record_opening_batch
 from ledger.models import Account, AccountSubtype
@@ -23,7 +24,6 @@ from sales.models import SalesSettings
 
 OPENING_DATE = date(2020, 2, 1)
 FEED_START = date(2026, 1, 1)  # becomes BankAccount.feed_starts in Task 10; the field does not exist yet
-UNIT_STEP = Decimal("0.0001")
 
 # Non-stock items for the extra amounts on Zoho documents: sku, name, Zoho income account.
 SERVICE_ITEMS = (
@@ -205,18 +205,23 @@ class Replay:
             self.record("vendor", row["Contact ID"], vendor)
 
     def _post_opening_stock(self) -> None:
-        lines, owners = [], []
+        lines, owners, values = [], [], []
         for row in self.rows("items"):
             quantity = int(Decimal(row["Opening Stock"].replace(",", "") or "0"))
             if quantity <= 0:
                 continue
             value = mapping.money(row["Opening Stock Value"])
             item = self.items[row["SKU"].strip() or row["Item Name"]]
-            unit_cost = (value / quantity).quantize(UNIT_STEP)
+            unit_cost = unit_4dp(value / quantity)
             lines.append(StockLine(item, quantity, reason="Opening stock from Zoho", unit_cost=unit_cost))
             owners.append(row["Item ID"])
+            values.append(value)
         if not lines:
             return
         movements = record_opening_batch(date=OPENING_DATE, lines=lines, user=self.user)
-        for zoho_id, movement in zip(owners, movements):
+        for zoho_id, movement, value in zip(owners, movements, values):
             self.record("opening_stock", zoho_id, movement)
+            if movement.total_cost != value:
+                # Nothing extra is posted; the tie-out expects Zoho's value, so the owner is told.
+                self.warnings.append(
+                    f"Opening stock {movement.item.sku}: value {movement.total_cost} vs Zoho {value}")
