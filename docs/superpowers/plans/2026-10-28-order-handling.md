@@ -147,7 +147,7 @@ Rules from spec 5.1, with these implementation choices:
   - When the order date is before `start_date`, add `Before handling start`, and owed is 0.00.
   - When there is no rate for the order date, owed is 0.00.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_profit.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_profit.py`:
   - `test_stock_order`: receive 10 at 4.00, sell 3 at 9.50. Sales 28.50, cost 12.00, profit 16.50, owed 9.08 (55% of 16.50 = 9.075, half-up).
   - `test_drop_ship_order_with_bill`: drop-ship 3 at 9.50, billed at 4.00. Profit 16.50.
   - `test_drop_ship_line_without_bill_is_pending`: cost 0.00, profit 28.50, flag `Drop-ship bill not entered`.
@@ -163,10 +163,10 @@ Rules from spec 5.1, with these implementation choices:
   - `test_rate_by_order_date`: an order dated Oct 31 uses 55% even when invoiced on Nov 3 after a 50% rate from Nov 1.
   - `test_before_start_owes_zero`
   - `test_orders_filters_by_date_and_customer`
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_profit.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement `handling/profit.py`. Batch the queries per `orders()` call using `select_related` and `prefetch_related` on invoice lines, allocations, and applications, so the report stays at a handful of queries per page, not per order.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_profit.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: profit per order`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_profit.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement `handling/profit.py`. Batch the queries per `orders()` call using `select_related` and `prefetch_related` on invoice lines, allocations, and applications, so the report stays at a handful of queries per page, not per order.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_profit.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: profit per order`.
 
 ### Task 3: Periods and creating a run
 
