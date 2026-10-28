@@ -19,8 +19,8 @@ from items.stock import StockLine, record_movements, record_value_adjustment
 from ledger.posting import LineSpec, post_entry
 from migration.models import ZohoRecord
 from migration.zoho import mapping
-from purchasing.balances import bill_balance
-from purchasing.models import Bill, VendorPaymentMethod
+from purchasing.balances import bill_balance, vendor_credit_unapplied
+from purchasing.models import Bill, VendorCredit, VendorPaymentMethod
 from purchasing.posting.credits import (
     AllowanceLineSpec,
     ReturnLineSpec,
@@ -43,6 +43,11 @@ from sales.posting.receipts import (
 OPENING_DATE = date(2020, 2, 1)
 MAX_CANDIDATES = 20
 ZERO = Decimal("0.00")
+
+
+def _credit_reason(row: dict) -> str:
+    """Zoho's credit note export has no reason column; Subject, then Notes, says why."""
+    return (row["Subject"].strip() or row["Notes"].strip())[:200]
 
 
 def _quantity(text: str) -> int:
@@ -143,7 +148,7 @@ class MoneyReplay:
         first = rows[0]
         lines = [
             CreditLineSpec(
-                row["Item Name"].strip() or first["Reason"].strip() or "Credit", mapping.money(row["Item Total"]),
+                row["Item Name"].strip() or _credit_reason(first) or "Credit", mapping.money(row["Item Total"]),
                 self.account(row["Account"]) if row["Account"].strip() else None)
             for row in rows if mapping.money(row["Item Total"])
         ]
@@ -151,7 +156,7 @@ class MoneyReplay:
             with use_number(DocType.CN, event.number):
                 note = create_credit_note(
                     customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
-                    reason=first["Reason"].strip(), user=self.user)
+                    reason=_credit_reason(first), user=self.user)
             self.record("credit_note", event.zoho_id, note)
 
     def post_credit_application(self, event) -> None:
@@ -258,23 +263,44 @@ class MoneyReplay:
             self.record("vendor_credit", event.zoho_id, credits[0])
             if len(credits) > 1:
                 self.record("vendor_credit", f"{event.zoho_id}:allowance", credits[1])
-            applied = {}
-            for row in rows:
-                number = row["Bill Number"].strip()
-                amount = mapping.money(row["Amount Applied"])
-                if number and amount > 0 and number not in applied:
-                    applied[number] = amount
-            left = {c.pk: sum((l.amount for l in c.lines.all()), ZERO) for c in credits}
-            for number, amount in applied.items():
-                bill = self._bill(vendor, number, amount)
-                for credit in credits:
-                    take = min(amount, left[credit.pk])
-                    if take > 0:
-                        apply_vendor_credit(credit, bill, take, date=event.date, user=self.user)
-                        left[credit.pk] -= take
-                        amount -= take
         if returns:
             self._note_negative([l.item for l in returns], event)
+
+    def apply_vendor_credits(self) -> None:
+        """Zoho's vendor credit export doesn't say which bills a credit was applied to. Each bill does carry
+        Zoho's remaining balance, so after everything else has posted, each credit's applied part (Total minus
+        Balance) goes to that vendor's bills that still owe more here than in Zoho, oldest bill first."""
+        zoho_balance = {}
+        for row in self.export.files["bills"]:
+            zoho_balance.setdefault(row["Bill ID"], mapping.money(row["Balance"]))
+        bill_type = ContentType.objects.get_for_model(Bill)
+        bills = {r.object_id: r.zoho_id for r in ZohoRecord.objects.filter(kind="bill", content_type=bill_type)}
+        excess = {}
+        for bill in Bill.objects.filter(pk__in=bills).order_by("date", "id"):
+            over = bill_balance(bill) - zoho_balance[bills[bill.pk]]
+            if over > 0:
+                excess[bill.pk] = [bill, over]
+        credit_type = ContentType.objects.get_for_model(VendorCredit)
+        records = ZohoRecord.objects.filter(kind="vendor_credit", content_type=credit_type)
+        credits = VendorCredit.objects.filter(pk__in=records.values("object_id")).order_by("date", "id")
+        zoho_id = {r.object_id: r.zoho_id.split(":")[0] for r in records}
+        for credit in credits:
+            first = self.doc_rows("vendor_credit", zoho_id[credit.pk])[0]
+            wanted = min(mapping.money(first["Total"]) - mapping.money(first["Balance"]),
+                         vendor_credit_unapplied(credit))
+            with transaction.atomic():
+                for bill_pk, slot in excess.items():
+                    bill, over = slot
+                    if wanted <= 0:
+                        break
+                    if bill.vendor_id != credit.vendor_id or over <= 0:
+                        continue
+                    take = min(wanted, over)
+                    apply_vendor_credit(credit, bill, take, date=max(credit.date, bill.date), user=self.user)
+                    slot[1] -= take
+                    wanted -= take
+            if wanted > 0:
+                self.warnings.append(f"{credit.number}: {wanted:,.2f} of the credit matched no bill.")
 
     # ---- entries ----
     def _post(self, event, source_type: str, lines: list[LineSpec], *, memo: str, reference: str = "") -> None:

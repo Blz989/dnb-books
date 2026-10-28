@@ -23,7 +23,7 @@ from sales.balances import invoice_balance, payment_unapplied
 from sales.checks import ar_check, undeposited_check
 from sales.models import CreditNote, Deposit, Invoice, Payment, PaymentMethod
 from sales.posting.deposits import undeposited_payments
-from tests.zoho_sample import BANK, CARD, EXPECTED, UNDEPOSITED, build_sample_export
+from tests.zoho_sample import BANK, CARD, EXPECTED, UNDEPOSITED, build_sample_export, sample_rows
 
 
 def _replay(admin_user, tmp_path, *, extra_rows=None, pairs=None, after_each=None):
@@ -111,6 +111,8 @@ def test_vendor_payment_check_number_registered_handwritten(replay):
 
 
 def test_credit_note_and_vendor_credit_applied(replay):
+    # Zoho's export has no vendor credit applications; finish() rebuilds them from Zoho's bill balances.
+    replay.finish()
     note = CreditNote.objects.get(number="CN-000001")
     line = note.lines.get()
     assert (line.description, line.amount, line.account.name) == ("Red Widget", Decimal("60.00"), "Sales")
@@ -235,3 +237,18 @@ def test_bank_charges_on_undeposited_payment_warn_and_post_nothing(db, admin_use
     assert not ZohoRecord.objects.filter(kind="bank_charges", zoho_id="54200000001")
     assert Payment.objects.get(number="CP-3001").amount == Decimal("50.00")
     assert undeposited_check() == [] and ar_check() == [] and check_invariants() == []
+
+
+def test_vendor_credit_with_no_bill_owing_more_is_warned(db, admin_user, tmp_path):
+    rows = sample_rows()
+    for row in rows["bills"]:
+        if row["Bill Number"] == "BILL-003":
+            row["Balance"] = row["Total"]  # Zoho shows BILL-003 unpaid, so the credit went nowhere we can see
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    r.finish()
+    credit = VendorCredit.objects.get(number="VC-0001")
+    assert not credit.applications.exists()
+    assert "VC-0001: 120.00 of the credit matched no bill." in r.warnings

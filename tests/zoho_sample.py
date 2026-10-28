@@ -222,7 +222,7 @@ def _purchase_order(zid, number, date, vendor, lines):
     return rows
 
 
-def _bill(zid, number, date, status, vendor, lines, *, po="", cf_so="", terms="Net 30"):
+def _bill(zid, number, date, status, vendor, lines, *, po="", cf_so="", terms="Net 30", balance=None):
     """Lines are (item key, qty, rate) for stock lines, or (None, qty, rate, account, description)."""
     parts = []
     for l in lines:
@@ -240,7 +240,8 @@ def _bill(zid, number, date, status, vendor, lines, *, po="", cf_so="", terms="N
             "Bill ID": zid, "Bill Date": date, "Bill Number": number, "Vendor Name": vendor,
             "Bill Status": status, "Item Name": name, "SKU": sku, "Account": account,
             "Description": desc, "Quantity": str(l[1]), "Rate": _m(l[2]), "Item Total": _m(amount),
-            "Total": _m(total), "Adjustment": "0.00", "Adjustment Account": "",
+            "Total": _m(total), "Balance": _m(total if balance is None else balance),
+            "Adjustment": "0.00", "Adjustment Account": "",
             "Payment Terms Label": terms, "Purchase Order Number": po, "CF.Sales Order": cf_so,
         })
     return rows
@@ -321,10 +322,11 @@ def sample_rows() -> dict[str, list[dict[str, str]]]:
 
     b = rows["bills"]
     b += _bill("53000000001", "BILL-001", "2024-02-12", "Paid", pioneer,
-               [("A", 100, D("12.00")), ("B", 50, D("15.00"))], po="PO-0001")
+               [("A", 100, D("12.00")), ("B", 50, D("15.00"))], po="PO-0001", balance=D("0"))
     b += _bill("53000000002", "BILL-002", "2024-08-01", "Paid", summit,
-               [("D", 100, D("3.00")), ("C", 30, D("28.00"))], po="PO-0002")
-    b += _bill("53000000003", "BILL-003", "2025-03-08", "Open", pioneer, [("A", 60, D("12.00"))], po="PO-0003")
+               [("D", 100, D("3.00")), ("C", 30, D("28.00"))], po="PO-0002", balance=D("0"))
+    b += _bill("53000000003", "BILL-003", "2025-03-08", "Open", pioneer, [("A", 60, D("12.00"))], po="PO-0003",
+               balance=D("600.00"))  # VC-0001 (120.00) was applied to it
     b += _bill("53000000004", "BILL-004", "2025-06-02", "Open", summit, [("B", 10, D("15.00"))], cf_so="SO-0007")
     b += _bill("53000000005", "BILL-005", "2025-05-20", "Open", cordon,
                [(None, 1, D("45.00"), "Shipping Expenses", "Shipping for Order SO-0006")],
@@ -358,7 +360,8 @@ def sample_rows() -> dict[str, list[dict[str, str]]]:
     rows["credit_notes"] = [{
         "CreditNotes ID": "56000000001", "Credit Note Date": "2025-02-20",
         "Credit Note Number": "CN-000001", "Customer Name": birch, "Item Name": "Red Widget",
-        "Account": "Sales", "Item Total": "60.00", "Total": "60.00", "Reason": "Damaged in transit",
+        "Account": "Sales", "Item Total": "60.00", "Total": "60.00", "Subject": "Damaged in transit",
+        "Notes": "",
     }]
     rows["credit_applications"] = [{
         "Credit Note Number": "CN-000001", "Invoice Number": "INV-000006", "Amount": "60.00",
@@ -367,10 +370,10 @@ def sample_rows() -> dict[str, list[dict[str, str]]]:
 
     # --- Vendor credit VC-0001 (10 blue widgets back to Pioneer) applied to BILL-003.
     rows["vendor_credits"] = [{
-        "VendorCredit ID": "57000000001", "Vendor Credit Date": "2025-03-15",
+        "Vendor Credit ID": "57000000001", "Vendor Credit Date": "2025-03-15",
         "Vendor Credit Number": "VC-0001", "Vendor Name": pioneer, "Item Name": "Blue Widget",
         "SKU": "WID-A", "Quantity": "10", "Account": "Inventory Asset", "Item Total": "120.00",
-        "Total": "120.00", "Bill Number": "BILL-003", "Amount Applied": "120.00",
+        "Total": "120.00", "Balance": "0.00",
     }]
 
     rows["expenses"] = [
@@ -448,16 +451,18 @@ def build_sample_export(
     *,
     drop_column: tuple[str, str] | None = None,
     extra_rows: dict[str, list[dict]] | None = None,
+    rows: dict[str, list[dict]] | None = None,
 ) -> Path:
     """Write the sample export folder under tmp_path and return it.
 
     drop_column=(short name, column) removes that column from the file.
     extra_rows={short name: [row dicts]} appends rows (keys are Zoho column names;
     for zipped documents they go in the last inner file).
+    rows= replaces the whole sample (start from sample_rows() and change it).
     """
     folder = Path(tmp_path) / "zoho_export"
     folder.mkdir(parents=True, exist_ok=True)
-    rows = sample_rows()
+    rows = rows if rows is not None else sample_rows()
     for short, extra in (extra_rows or {}).items():
         rows[short] = rows[short] + [dict(r) for r in extra]
     for short, filename in FILES.items():

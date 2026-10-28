@@ -48,7 +48,7 @@ ID_COLUMNS: dict[str, str] = {
     "vendor_payments": "VendorPayment ID",
     "credit_notes": "CreditNotes ID",
     "credit_applications": "",
-    "vendor_credits": "VendorCredit ID",
+    "vendor_credits": "Vendor Credit ID",
     "expenses": "Expense Reference ID",
     "journals": "Journal ID",
     "deposits": "",
@@ -94,6 +94,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "Account", "Description", "Quantity", "Rate", "Item Total", "Total", "Adjustment",
         "Adjustment Account", "Payment Terms Label", "Purchase Order Number",
         "CF.Sales Order",
+     "Balance",
     ),
     "customer_payments": (
         "Payment Number", "Mode", "Date", "Amount", "Unused Amount", "Bank Charges",
@@ -106,12 +107,12 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     ),
     "credit_notes": (
         "Credit Note Date", "Credit Note Number", "Customer Name", "Item Name", "Account",
-        "Item Total", "Total", "Reason",
+        "Item Total", "Total", "Subject", "Notes",
     ),
     "credit_applications": ("Credit Note Number", "Invoice Number", "Amount", "Date"),
     "vendor_credits": (
         "Vendor Credit Date", "Vendor Credit Number", "Vendor Name", "Item Name", "SKU",
-        "Quantity", "Account", "Item Total", "Total", "Bill Number", "Amount Applied",
+        "Quantity", "Account", "Item Total", "Total", "Balance",
     ),
     "expenses": (
         "Expense Date", "Expense Description", "Expense Account", "Paid Through",

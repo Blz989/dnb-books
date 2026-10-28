@@ -501,6 +501,7 @@ class Replay(MoneyReplay):
 
     # ---- after the replay (Task 7) ----
     def finish(self) -> AfterSummary:
+        self.apply_vendor_credits()
         with transaction.atomic():
             self._open_reconciliations()
             self._set_sequences()
