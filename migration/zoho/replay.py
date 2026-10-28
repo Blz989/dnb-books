@@ -333,12 +333,17 @@ class Replay(MoneyReplay):
                 name = f"{name} ({taken[key]})"
                 renamed += 1
             company = row["Company Name"].strip()
+            email, notes = row["EmailID"].strip(), row["Notes"]
+            if email and not mapping.valid_email(email):
+                self.warnings.append(f'Customer "{name}": email "{email}" is not valid; it was kept in the notes.')
+                notes = f"{notes}\nZoho email: {email}".strip()
+                email = ""
             customer = Customer.objects.create(
                 name=name, contact_name=company if company != name else "",
-                email=row["EmailID"].strip(), phone=row["Phone"].strip(),
+                email=email, phone=row["Phone"].strip(),
                 billing_address=mapping.address(row, "Billing"),
                 ship_to_address=mapping.address(row, "Shipping"),
-                terms=mapping.terms(row["Payment Terms Label"]), notes=row["Notes"],
+                terms=mapping.terms(row["Payment Terms Label"]), notes=notes,
                 is_active=row["Status"].strip().lower() != "inactive",
             )
             self.customers[row["Contact ID"]] = customer

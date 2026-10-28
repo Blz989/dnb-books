@@ -158,3 +158,17 @@ def test_sku_outside_the_rule_is_cleaned_and_still_found(db, admin_user, tmp_pat
     item = r.items["Skyflake/800g"]
     assert item.sku == "Skyflake-800g"
     assert 'SKU "Skyflake/800g" was imported as Skyflake-800g.' in r.warnings
+
+
+def test_invalid_customer_email_kept_in_notes(db, admin_user, tmp_path):
+    from migration.zoho.reader import read_export
+    from migration.zoho.replay import Replay
+    from tests.zoho_sample import build_sample_export, sample_rows
+
+    rows = sample_rows()
+    rows["customers"][0] = {**rows["customers"][0], "EmailID": "someone52.@gmail.com"}
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    acme = r.customers_by_name["Acme Hardware"]
+    assert acme.email == "" and "Zoho email: someone52.@gmail.com" in acme.notes
+    assert any("is not valid" in w for w in r.warnings)

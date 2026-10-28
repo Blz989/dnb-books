@@ -59,6 +59,17 @@ CUSTOMER_ID_COLUMN = {
 }
 
 
+def valid_email(text: str) -> bool:
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+
+    try:
+        validate_email(text)
+    except ValidationError:
+        return False
+    return True
+
+
 def name_key(name: str) -> str:
     return " ".join(name.split()).casefold()
 
