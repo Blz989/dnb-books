@@ -4,7 +4,7 @@
     <label>{% if kind == "vendor" %}Vendor{% else %}Customer{% endif %}
       <select name="{{ kind }}"><option value="">Choose a {{ kind }}</option>
         {% for p in parties %}<option value="{{ p.pk }}"{% if party and party.pk == p.pk %} selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></label>
-    {% if kind == "customer" %}<input type="hidden" name="method" value="{{ method }}">{% endif %}
+    {% if kind == "customer" %}<input type="hidden" name="method" value="{{ method }}" id="pick-method">{% endif %}
     <button type="submit" class="btn">Show open {% if kind == "vendor" %}bills{% else %}invoices{% endif %}</button>
     {% if rows %}<button type="submit" name="fill" value="1" class="btn">Fill oldest first</button>{% endif %}
   </form>

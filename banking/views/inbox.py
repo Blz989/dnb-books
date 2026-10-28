@@ -305,7 +305,7 @@ def _catchup(request, pk, *, kind):
     party_model = Vendor if pay else Customer
     data = request.POST if request.method == "POST" else request.GET
     party_id = data.get(kind, "")
-    party = party_model.objects.filter(pk=party_id).first() if party_id.isdigit() else None
+    party = party_model.objects.filter(pk=party_id).first() if party_id.isascii() and party_id.isdigit() else None
     rows = (_open_bills if pay else _open_invoices)(party) if party else []
     bank_amount = abs(txn.amount)
     default_method = PaymentMethod.CHECK if txn.check_number else PaymentMethod.ACH

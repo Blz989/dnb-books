@@ -10,7 +10,7 @@ from banking.models import BankTransaction, Match, TxnSource, TxnStatus
 from items.models import ItemType
 from purchasing.models import VendorPayment
 from purchasing.posting.bills import BillExpenseSpec, create_bill
-from sales.models import Payment
+from sales.models import Deposit, Payment
 from sales.posting.invoices import InvoiceLineSpec, create_invoice
 
 D = Decimal
@@ -113,6 +113,9 @@ def test_receive_payment_flow_check(adm, invoices, customer, make_txn):
     assert txn.status == TxnStatus.MATCHED
     payment = Payment.objects.get()
     assert payment.reference == "1042" and payment.amount == D("650.00")
+    deposit = Deposit.objects.get()
+    assert list(deposit.payments.all()) == [payment]
+    assert Match.objects.get(bank_transaction=txn).deposit == deposit
 
 
 def test_mismatch_keeps_inputs(adm, bills, vendor, make_txn):
@@ -168,3 +171,18 @@ def test_login_required_and_wrong_sign_refused(adm, client, make_txn):
     out = make_txn("-20.00")
     assert client.get(pay_url(out)).status_code == 302
     assert adm.get(receive_url(out)).status_code == 302
+
+
+def test_method_survives_fill(adm, invoices, customer, make_txn):
+    txn = make_txn("400.00")
+    page = text(adm.get(receive_url(txn), {"customer": customer.pk, "method": "WIRE", "fill": "1"}))
+    assert '<option value="WIRE" selected>' in page
+    assert 'name="method" value="WIRE" id="pick-method"' in page
+
+
+def test_non_ascii_party_id_is_not_a_500(adm, make_txn):
+    out = make_txn("-20.00")
+    money_in = make_txn("30.00")
+    assert adm.get(pay_url(out), {"vendor": "\u00b2"}).status_code == 200
+    assert adm.get(receive_url(money_in), {"customer": "\u00b2"}).status_code == 200
+    assert adm.post(pay_url(out), {"token": "t", "vendor": "\u00b2"}).status_code == 200

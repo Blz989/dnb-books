@@ -20,3 +20,11 @@
   inputs.forEach(function (input) { input.addEventListener("input", update); });
   update();
 })();
+
+// Carry the chosen method through "Show open ..." and "Fill oldest first", which submit the separate pick form.
+(function () {
+  var select = document.querySelector("#catchup-form select[name=method]");
+  var hidden = document.getElementById("pick-method");
+  if (!select || !hidden) return;
+  select.addEventListener("change", function () { hidden.value = select.value; });
+})();
