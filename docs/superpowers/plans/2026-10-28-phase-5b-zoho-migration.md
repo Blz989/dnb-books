@@ -256,17 +256,17 @@ Checks:
     - creates a `ZohoRecord` for every object
   - `Replay.record(kind: str, zoho_id: str, obj) -> None`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_use_number_forces_one_number`: inside `use_number(DocType.PMT, "CP-1002")`, `next_number(DocType.PMT) == "CP-1002"`, and the next call falls back to the sequence (`PMT-00001`).
   - `test_use_number_refuses_used` (`{number} is already used.`)
   - `test_master_accounts_numbered_and_settings_configured`: all three settings report `is_configured`.
   - `test_bank_accounts_created_by_kind`: `BUS COMPLETE CHK` CHECKING, `Chase Ink Unlimited` CARD, `Line Of Credit - Chase` LOAN, `Line Of Credit - Headway` LOAN, and none for Petty Cash or Undeposited Funds.
   - `test_items_customers_vendors_and_zoho_records`
   - `test_opening_stock_posted_at_2020_02_01`
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_replay_master.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_replay_master.py tests/test_numbering.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: replay Zoho master data; keep Zoho numbers`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_replay_master.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_replay_master.py tests/test_numbering.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: replay Zoho master data; keep Zoho numbers`.
 
 ### Task 5: Replay orders, purchase orders, bills, and invoices
 
