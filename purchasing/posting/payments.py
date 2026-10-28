@@ -57,6 +57,13 @@ def _check_number_free(paid_from: Account, number: str) -> None:
     assert_free(paid_from, number, error=PurchasingError)
 
 
+def _is_loan_account(account: Account) -> bool:
+    """A liability registered as a loan or line of credit bank account; paying from it draws on the loan."""
+    from banking.models import AccountKind, BankAccount
+
+    return BankAccount.objects.filter(ledger_account=account, kind=AccountKind.LOAN).exists()
+
+
 def pay_vendor(
     *, vendor: Vendor, date: date_type, method: VendorPaymentMethod, amount: Decimal, paid_from: Account, user,
     check_number: str = "", reference: str = "", applications: Sequence[tuple[Bill, Decimal]] = (),
@@ -70,7 +77,7 @@ def pay_vendor(
         if method == VendorPaymentMethod.CARD:
             if paid_from is None or paid_from.subtype != AccountSubtype.CREDIT_CARD:
                 raise PurchasingError("Choose the credit card used.")
-        elif paid_from is None or paid_from.subtype != AccountSubtype.BANK:
+        elif paid_from is None or not (paid_from.subtype == AccountSubtype.BANK or _is_loan_account(paid_from)):
             raise PurchasingError("Choose the bank account to pay from.")
         check_number = (check_number or "").strip()
         if method == VendorPaymentMethod.CHECK:

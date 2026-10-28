@@ -194,3 +194,39 @@ def test_ledger_checks_zero(make_bill, make_invoice, make_txn, vendor, customer,
     inbox.receive_payment_from_row(
         make_txn("300.00"), customer=customer, amounts={inv2.pk: D("300.00")}, method=PaymentMethod.CHECK, user=admin_user)
     zero_checks()
+
+
+def test_pay_vendor_from_loan_account(make_bill, vendor, admin_user, loan, ap):
+    from ledger.models import JournalLine
+    from purchasing.posting.payments import pay_vendor
+
+    bill = make_bill("250.00")
+    payment = pay_vendor(vendor=vendor, date=d(1, 5), method=VM.ACH, amount=D("250.00"), paid_from=loan.ledger_account,
+                         user=admin_user, applications=[(bill, D("250.00"))])
+    lines = {(l.account_id, l.debit, l.credit) for l in JournalLine.objects.filter(entry=payment.journal_entry)}
+    assert lines == {(ap.pk, D("250.00"), D("0.00")), (loan.ledger_account_id, D("0.00"), D("250.00"))}
+    assert ap_check() == []
+
+
+def test_pay_vendor_still_refuses_other_accounts(make_bill, vendor, admin_user, expense, freight):
+    from purchasing.errors import PurchasingError
+    from purchasing.posting.payments import pay_vendor
+
+    make_bill("10.00")
+    for account in (expense, None):
+        with pytest.raises(PurchasingError, match="Choose the bank account to pay from."):
+            pay_vendor(vendor=vendor, date=d(1, 5), method=VM.ACH, amount=D("10.00"), paid_from=account, user=admin_user)
+    # A liability that is not registered as a loan account is refused too.
+    with pytest.raises(PurchasingError, match="Choose the bank account to pay from."):
+        pay_vendor(vendor=vendor, date=d(1, 5), method=VM.ACH, amount=D("10.00"), paid_from=freight, user=admin_user)
+
+
+def test_pay_bills_from_loan_row(make_bill, make_txn, vendor, admin_user, loan):
+    b1, b2 = make_bill("100.00", ref="B1"), make_bill("60.00", ref="B2")
+    ach = inbox.pay_bills_from_row(
+        make_txn("-100.00", account=loan), vendor=vendor, amounts={b1.pk: D("100.00")}, user=admin_user)
+    check = inbox.pay_bills_from_row(
+        make_txn("-60.00", account=loan, check_number="31"), vendor=vendor, amounts={b2.pk: D("60.00")}, user=admin_user)
+    assert ach.method == VM.ACH and ach.paid_from == loan.ledger_account
+    assert check.method == VM.CHECK and check.check_number == "31"
+    assert ap_check() == []
