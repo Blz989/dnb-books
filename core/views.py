@@ -7,6 +7,7 @@ from django.utils import timezone
 from backup.service import backup_status
 from banking import status as banking_status
 from core.roles import is_admin
+from handling.periods import due_periods
 from items.models import InventorySettings
 from items.reports import item_totals
 from purchasing import reports as purchasing_reports
@@ -21,6 +22,7 @@ def home(request):
     today = timezone.localdate()
     overdue = sales_reports.open_invoices(today, overdue_only=True)
     bills = purchasing_reports.bills_due_summary(today)
+    handling_due = due_periods(today)
     return render(request, "core/home.html", {
         "open_ar": sales_reports.ar_aging(today).totals.total,
         "overdue_total": sum((r.balance for r in overdue), 0),
@@ -36,6 +38,8 @@ def home(request):
         "bank_inbox_count": banking_status.inbox_count(),
         "bank_sync": banking_status.sync_status(),
         "unreconciled": banking_status.unreconciled_accounts(today),
+        "handling_due": handling_due[0] if handling_due else None,
+        "handling_due_count": len(handling_due),
         "nav_active": "home",
         "stock_value": stock_value,
         "inventory_unconfigured": is_admin(request.user) and not InventorySettings.load().is_configured,

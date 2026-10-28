@@ -1,7 +1,8 @@
 {% extends "core/base.html" %}
+{% load handling_tags %}
 {% block title %}Purchasing settings{% endblock %}
 {% block page_title %}Purchasing settings{% endblock %}
-{% block page_subtitle %}<div class="sub">Accounts payable account, document numbering, and 1099 thresholds</div>{% endblock %}
+{% block page_subtitle %}<div class="sub">Accounts payable account, document numbering, 1099 thresholds, and handling</div>{% endblock %}
 {% block content %}
 {% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
 <div class="card"><div class="body">
@@ -58,5 +59,17 @@
   </table>
   <p><button type="submit" class="btn primary">Save thresholds</button></p>
 </form>
+</div></div>
+
+<h2>Handling</h2>
+{% handling_config as h %}
+<div class="card"><div class="body">
+  <dl class="facts">
+    <dt>Handling vendor</dt><dd>{{ h.settings.vendor.name|default:"—" }}</dd>
+    <dt>Expense account</dt><dd>{% if h.settings.expense_account %}{{ h.settings.expense_account.number }} {{ h.settings.expense_account.name }}{% else %}—{% endif %}</dd>
+    <dt>Start date</dt><dd>{{ h.settings.start_date|date:"M j, Y"|default:"—" }}</dd>
+    <dt>Current rate</dt><dd>{% if h.current_rate is not None %}{{ h.current_rate|percent }}{% elif h.has_rates %}None yet. The first rate starts later.{% else %}—{% endif %}</dd>
+  </dl>
+  <p><a class="btn" href="{% url 'handling:settings' %}">Edit handling settings</a></p>
 </div></div>
 {% endblock %}

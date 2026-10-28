@@ -1,5 +1,5 @@
 {% extends "core/base.html" %}
-{% load purchasing_tags %}
+{% load purchasing_tags handling_tags %}
 {% block title %}{{ order.number }}{% endblock %}
 {% block page_title %}{{ order.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/customers/{{ order.customer.pk }}/">{{ order.customer.name }}</a> · {{ order.date|date:"Y-m-d" }} · <span class="tag{% if order.status == 'CLOSED' %} ns{% endif %}">{{ order.get_status_display }}</span></div>{% endblock %}
@@ -46,4 +46,5 @@
   </tbody>
 </table>
 </div>
+{% profit_panel order.number %}
 {% endblock %}

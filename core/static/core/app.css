@@ -110,8 +110,11 @@ table.data tr.total td { font-weight: 600; border-top: 2px solid var(--text); }
 .tag.ns { background: transparent; border: 1px dashed var(--border); color: var(--muted); }
 .tag.overdue { background: var(--error-bg); color: var(--error-text); }
 .tag.void { background: var(--error-bg); color: var(--error-text); }
+/* Same look as the sidebar's "below zero" pill. */
+.tag.flag { font-size: 11px; font-weight: 500; padding: 1px 7px; background: var(--warn-bg); color: var(--warn-text); vertical-align: middle; }
 .neg { color: var(--warn-text-strong); font-weight: 600; }
 .dash { color: var(--muted); }
+.nowrap { white-space: nowrap; }
 .foot { display: flex; justify-content: space-between; padding: 10px 14px; color: var(--muted); font-size: 13px; }
 .links { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; margin: 0; list-style: none; }
 .empty { padding: 28px 14px; text-align: center; color: var(--muted); }
@@ -146,3 +149,6 @@ table.data tr.total td { font-weight: 600; border-top: 2px solid var(--text); }
 .recon-bar .difference.ok { color: var(--accent-text); }
 .recon-actions { margin: 4px 0 24px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 button.btn:disabled { opacity: .5; cursor: not-allowed; }
+#order-profitability th, #order-profitability td { padding-left: 10px; padding-right: 10px; }
+#order-profitability th:first-child, #order-profitability td:first-child { padding-left: 14px; }
+#order-profitability th:last-child, #order-profitability td:last-child { padding-right: 14px; }

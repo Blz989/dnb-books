@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load handling_tags %}
 {% block title %}{{ invoice.number }}{% endblock %}
 {% block page_title %}{{ invoice.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/customers/{{ invoice.customer.pk }}/">{{ invoice.customer.name }}</a> · {{ invoice.date|date:"Y-m-d" }} · due {{ invoice.due_date|date:"Y-m-d" }} · {{ invoice.get_terms_display }}
@@ -37,6 +38,7 @@
     <dt>Journal entries</dt><dd>{% for label, e in entries %}<a href="{% url 'admin:ledger_journalentry_change' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="dash">None. The total is zero.</span>{% endfor %}</dd>
   </dl>
 </div></div>
+{% if not invoice.sales_order %}{% profit_panel invoice.number %}{% endif %}
 
 <h2>Payments and credits applied</h2>
 <div class="card">

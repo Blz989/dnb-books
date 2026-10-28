@@ -1,0 +1,26 @@
+{% extends "core/base.html" %}
+{% block title %}Handling{% endblock %}
+{% block page_title %}Handling{% endblock %}
+{% block page_subtitle %}<div class="sub">Twice-monthly bills to the handling company for its share of order profit.</div>{% endblock %}
+{% block page_actions %}
+  {% if upcoming %}{% if can_bill %}<a class="btn primary" href="{% url 'handling:preview' upcoming.end %}">Next: {{ upcoming.label }}</a>{% else %}<button type="button" class="btn primary" disabled>Next: {{ upcoming.label }}</button>{% endif %}{% endif %}
+{% endblock %}
+{% block content %}
+{% if not_set_up %}<div class="banner info">{{ not_set_up }}{% if is_admin %} <a href="{% url 'handling:settings' %}">Open settings</a>{% endif %}</div>{% endif %}
+{% if upcoming and not can_bill %}<div class="banner info">{{ not_ended }}</div>{% endif %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>Period</th><th class="num">Total</th><th>Bill or credit</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for run in runs %}
+    <tr{% if run.status == "VOID" %} style="text-decoration: line-through"{% endif %}>
+      <td><a href="{% url 'handling:run' run.pk %}">{{ run.label }}</a></td>
+      <td class="num">{{ run.total|floatformat:"2g" }}</td>
+      <td>{% if run.bill %}<a class="sku" href="{% url 'purchasing:bill-detail' run.bill.number %}">{{ run.bill.number }}</a>{% elif run.vendor_credit %}<a class="sku" href="{% url 'purchasing:credit-detail' run.vendor_credit.number %}">{{ run.vendor_credit.number }}</a>{% else %}<span class="dash">Nothing to bill</span>{% endif %}</td>
+      <td>{% if run.status == "VOID" %}<span class="tag void">Void</span>{% else %}<span class="tag">Posted</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No handling bills yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

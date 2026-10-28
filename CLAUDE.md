@@ -8,7 +8,7 @@ Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. 
 - **Current spec:** `docs/superpowers/specs/2026-10-28-order-handling-design.md` (order profitability and handling, approved).
 - **Current plan:** `docs/superpowers/plans/2026-10-28-order-handling.md` (order profitability and handling, approved).
 - **Visual references:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`; all screens match it) `docs/design/invoice-mockup.html` (invoice PDF), and `docs/design/check-mockup.html` (printed check).
-- **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment.
+- **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment, Order profitability and handling.
 
 Read the specs and the current plan before starting. The plan's Global Constraints, Review Focus, and per-task Interfaces blocks are binding. If the plan and spec conflict, or a plan step cannot work as written, stop and ask the owner rather than improvising a different design. Small mechanical fixes to the plan (a wrong import path, a typo in a test) are fine; note them in the PR.
 

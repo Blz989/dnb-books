@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block title %}Order profitability{% endblock %}
+{% block page_title %}Order profitability{% endblock %}
+{% block page_subtitle %}<div class="sub">Sales, cost, and handling for orders dated in the range. Sales are net of credits.</div>{% endblock %}
+{% block content %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if rows is not None %}
+<table class="data" id="order-profitability">
+  <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th class="num">Sales</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Margin</th><th class="num">Handling owed</th><th class="num">Billed</th><th class="num">Balance</th></tr></thead>
+  <tbody>
+  {% for o in rows %}
+    <tr><td>{% if o.sales_order %}<a class="sku" href="{% url 'sales:order-detail' o.key %}">{{ o.key }}</a>{% else %}<a class="sku" href="{% url 'sales:invoice-detail' o.key %}">{{ o.key }}</a>{% endif %}{% for f in o.flags %} <span class="tag flag">{{ f }}</span>{% endfor %}</td>
+      <td>{{ o.customer.name }}</td><td class="nowrap">{{ o.date|date:"Y-m-d" }}</td>
+      <td class="num">{{ o.net_sales|floatformat:"2g" }}</td><td class="num">{{ o.cost|floatformat:"2g" }}</td>
+      <td class="num{% if o.profit < 0 %} neg{% endif %}">{{ o.profit|floatformat:"2g" }}</td>
+      <td class="num">{% if o.margin is None %}<span class="dash">—</span>{% else %}{{ o.margin }}%{% endif %}</td>
+      <td class="num">{{ o.owed|floatformat:"2g" }}</td><td class="num">{{ o.billed|floatformat:"2g" }}</td>
+      <td class="num">{{ o.balance|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="10" class="empty">No orders in this range.</td></tr>
+  {% endfor %}
+    <tr class="total"><td>Total</td><td></td><td></td>
+      <td class="num">{{ totals.sales|floatformat:"2g" }}</td><td class="num">{{ totals.cost|floatformat:"2g" }}</td>
+      <td class="num">{{ totals.profit|floatformat:"2g" }}</td>
+      <td class="num">{% if totals.margin is None %}<span class="dash">—</span>{% else %}{{ totals.margin }}%{% endif %}</td>
+      <td class="num">{{ totals.owed|floatformat:"2g" }}</td><td class="num">{{ totals.billed|floatformat:"2g" }}</td>
+      <td class="num">{{ totals.balance|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

@@ -102,7 +102,7 @@ Test setup throughout: reuse the fixtures in `tests/conftest.py`: `admin_user`, 
     - `rate_for(day: date) -> Decimal | None`: the rate with the latest `effective_from <= day`.
     - `add_rate(*, effective_from: date, percent: Decimal, user) -> HandlingRate`: admin only. Refuses a percent outside 0 to 100 with `Enter a rate between 0 and 100%.` Refuses a date on or before the latest existing date with `The new rate must start after {long date}.` Stores `percent / 100` with 4 dp.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_models.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_models.py`:
   - `test_settings_not_configured_until_vendor_account_start_and_rate`
   - `test_rate_for_uses_latest_effective_on_or_before`: rates of 55% from Oct 1 and 50% from Nov 1. `rate_for(Oct 31) == Decimal("0.5500")`, `rate_for(Nov 1) == Decimal("0.5000")`, and `rate_for(Sep 30) is None`.
   - `test_add_rate_stores_fraction` (55 gives `0.5500`) and `test_add_rate_refuses_bad_percent` (−1 and 101).
@@ -110,10 +110,10 @@ Test setup throughout: reuse the fixtures in `tests/conftest.py`: `admin_user`, 
   - `test_add_rate_is_admin_only`: `PermissionDenied` for `standard_user`.
   - `test_only_one_posted_run_per_period`: a second POSTED run with the same `period_start` raises `IntegrityError`, but a VOID one plus a POSTED one is allowed.
   - `test_run_label`: Oct 16 to 31, 2026 gives `"Oct 16–31, 2026"`.
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_models.py -v`. Expect it to fail on the import of `handling`.
-- [ ] **Step 3:** Implement the models, `rates.py`, and the migration (`uv run python manage.py makemigrations handling`). Register `HandlingSettings`, `HandlingRate`, and `HandlingRun` with auditlog, as the other apps do.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_models.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: handling app, settings, and rates`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_models.py -v`. Expect it to fail on the import of `handling`.
+- [x] **Step 3:** Implement the models, `rates.py`, and the migration (`uv run python manage.py makemigrations handling`). Register `HandlingSettings`, `HandlingRate`, and `HandlingRun` with auditlog, as the other apps do.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_models.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: handling app, settings, and rates`.
 
 ### Task 2: Profit per order
 
@@ -147,7 +147,7 @@ Rules from spec 5.1, with these implementation choices:
   - When the order date is before `start_date`, add `Before handling start`, and owed is 0.00.
   - When there is no rate for the order date, owed is 0.00.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_profit.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_profit.py`:
   - `test_stock_order`: receive 10 at 4.00, sell 3 at 9.50. Sales 28.50, cost 12.00, profit 16.50, owed 9.08 (55% of 16.50 = 9.075, half-up).
   - `test_drop_ship_order_with_bill`: drop-ship 3 at 9.50, billed at 4.00. Profit 16.50.
   - `test_drop_ship_line_without_bill_is_pending`: cost 0.00, profit 28.50, flag `Drop-ship bill not entered`.
@@ -163,10 +163,10 @@ Rules from spec 5.1, with these implementation choices:
   - `test_rate_by_order_date`: an order dated Oct 31 uses 55% even when invoiced on Nov 3 after a 50% rate from Nov 1.
   - `test_before_start_owes_zero`
   - `test_orders_filters_by_date_and_customer`
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_profit.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement `handling/profit.py`. Batch the queries per `orders()` call using `select_related` and `prefetch_related` on invoice lines, allocations, and applications, so the report stays at a handful of queries per page, not per order.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_profit.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: profit per order`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_profit.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement `handling/profit.py`. Batch the queries per `orders()` call using `select_related` and `prefetch_related` on invoice lines, allocations, and applications, so the report stays at a handful of queries per page, not per order.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_profit.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: profit per order`.
 
 ### Task 3: Periods and creating a run
 
@@ -199,7 +199,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
    - Total = 0: no document.
 6. Save the run and its lines, render the statement PDF to `statement_pdf`, and return the run.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_runs.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_runs.py`:
   - `test_periods_and_labels`: `Period.containing(date(2026,2,20))` is Feb 16 to 28, labeled `Feb 16–28, 2026`. `next()` after Oct 16 to 31 is Nov 1 to 15.
   - `test_first_period_contains_start_date`
   - `test_create_run_posts_one_bill_for_the_total`: the bill's vendor is the handling vendor, dated period end, number `HND-20261015`. The expense line is on `6400` for the total, and the run lines match the preview.
@@ -213,10 +213,10 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `test_second_create_for_same_period_refused` (Review Focus 5): `{label} is already billed.`, and exactly one POSTED run.
   - `test_settings_incomplete_refused`
   - `test_statement_pdf_lists_rows`: `pdf.startswith(b"%PDF")`, and the rendered HTML contains each order key and the total.
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_runs.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement `periods.py`, `billing.py`, and the statement template. The statement follows `sales/pdf.py`: bundled fonts and the Ledger paper style. It shows the title `Handling statement, {label}`, DNB's name and address from `SalesSettings`, the handling vendor's name, and the columns order, customer, sales, cost, profit, owed to date, billed before, and this bill, with a total row.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_runs.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: handling periods and runs`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_runs.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement `periods.py`, `billing.py`, and the statement template. The statement follows `sales/pdf.py`: bundled fonts and the Ledger paper style. It shows the title `Handling statement, {label}`, DNB's name and address from `SalesSettings`, the handling vendor's name, and the columns order, customer, sales, cost, profit, owed to date, billed before, and this bill, with a total row.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_runs.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: handling periods and runs`.
 
 ### Task 4: Voiding, the lock on handling bills, and the month close check
 
@@ -232,7 +232,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `run_lock(entry) -> str | None`: for an entry with `source_type` `purchasing.bill` or `purchasing.vendor_credit` whose `source_id` is the bill or credit number of a POSTED run, it returns `{number} is the handling bill for {label}. Void it from Handling.` Otherwise it returns `None`.
   - `close_check(year: int, month: int) -> list[str]`: for months on or after the start date's month, one message per period in that month without a POSTED run.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_locks.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_locks.py`:
   - `test_void_latest_run_voids_its_bill_and_frees_the_period`
   - `test_void_only_latest`
   - `test_void_needs_reason_and_admin`
@@ -245,10 +245,10 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `test_close_blocked_until_both_periods_billed`: `close_period(2026, 10, user)` raises `PeriodCloseBlockedError` naming `Oct 16–31, 2026`, and closes after both runs exist.
   - `test_close_override_with_reason`
   - `test_months_before_start_not_checked`
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_locks.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement `void_run`, `checks.py`, and the registrations.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_locks.py tests/test_bills.py tests/test_vendor_credits.py -v`. Expect PASS. Ordinary bill behavior must be unchanged.
-- [ ] **Step 5:** Commit with `feat: void handling runs, lock handling bills, month close check`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_locks.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement `void_run`, `checks.py`, and the registrations.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_locks.py tests/test_bills.py tests/test_vendor_credits.py -v`. Expect PASS. Ordinary bill behavior must be unchanged.
+- [x] **Step 5:** Commit with `feat: void handling runs, lock handling bills, month close check`.
 
 ### Task 5: Order profitability report, profit panel, and settings screens
 
@@ -278,7 +278,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - The rate history table, and an Add rate form (effective from, percent).
   - On first save with no rates, a 55% rate from the start date is created.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_views.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_views.py`:
   - `test_report_lists_orders_with_totals`
   - `test_report_filters_customer_dates_unbilled`
   - `test_report_shows_flags`
@@ -288,17 +288,17 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `test_add_rate_from_settings`
   - `test_start_date_locked_after_first_run`
   - `test_standard_user_can_view_report`
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_views.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement. Match `docs/design/items-mockup.html` (tokens, table style, tags, and the Auto/Light/Dark toggle comes from `base.html`).
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_views.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots.** Use a demo database with `seed_demo`, then `scripts/screenshots.mjs`, in light and dark. Capture:
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_views.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement. Match `docs/design/items-mockup.html` (tokens, table style, tags, and the Auto/Light/Dark toggle comes from `base.html`).
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_views.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots.** Use a demo database with `seed_demo`, then `scripts/screenshots.mjs`, in light and dark. Capture:
   - the report, unfiltered and with `unbilled=1`, including a flagged row
   - the profit panel on a sales order with a drop-ship line
   - the panel on a direct invoice
   - the settings page
 
   Send them with `SendUserFile`, with a one-line caption each.
-- [ ] **Step 6:** Commit with `feat: order profitability report, profit panel, handling settings`.
+- [x] **Step 6:** Commit with `feat: order profitability report, profit panel, handling settings`.
 
 ### Task 6: Handling run screens and home card
 
@@ -320,7 +320,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
 - **Run detail:** the saved rows, a link to the bill or credit, a statement PDF link, and, for the latest POSTED run when the user is an admin, a Void form with a reason.
 - **Home card:** when `due_periods(today)` is not empty, show `Handling bill due for {first label}` linking to its preview. Settings incomplete means no card.
 
-- [ ] **Step 1: Write the failing tests** (append to `tests/test_handling_views.py`):
+- [x] **Step 1: Write the failing tests** (append to `tests/test_handling_views.py`):
   - `test_run_list_and_next_button`
   - `test_preview_then_create` (redirects to the run detail, and the bill exists)
   - `test_create_double_post_same_token_makes_one_run` (Review Focus 5): `That was already done.`
@@ -329,10 +329,10 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `test_statement_served_inline`
   - `test_home_card_due_and_hidden`
   - `test_standard_user_can_create_run`
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_views.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_views.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots** in light and dark:
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_views.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_views.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots** in light and dark:
   - the run list, with the Next button enabled and with it disabled
   - the preview
   - the preview with incomplete settings
@@ -341,7 +341,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - the statement PDF, rasterized
 
   Send each with a caption.
-- [ ] **Step 6:** Commit with `feat: handling run screens and home card`.
+- [x] **Step 6:** Commit with `feat: handling run screens and home card`.
 
 ### Task 7: Acceptance, README, and PR
 
@@ -349,7 +349,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
 - Create: `tests/test_handling_acceptance.py`
 - Modify: `README.md` (feature list, Status line), `CLAUDE.md` (Done list)
 
-- [ ] **Step 1: Write `test_handling_month`**, following spec success criterion 1. Run through October 2026:
+- [x] **Step 1: Write `test_handling_month`**, following spec success criterion 1. Run through October 2026:
   - Ship and invoice a stock order, a drop-ship order with its line invoiced before its bill, and a mixed order in two invoices.
   - Run Oct 1–15, and check each row by hand: write each expected figure as a literal.
   - Enter the late drop-ship bill, apply a customer credit, and edit an invoice.
@@ -358,10 +358,10 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `close_period(2026, 10, admin_user)` succeeds.
   - Check, after each step, that `ap_check`, `ar_check`, `undeposited_check`, and `items.stock.check_invariants()` are empty.
   - Finally, check that the sum of POSTED run bill totals, less credit totals, equals the ledger balance of `6400` (`JournalLine.objects.in_ledger()`, debit − credit), which is success criterion 2.
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_acceptance.py -v`. Expect PASS. If it fails, fix the code in the task that owns it.
-- [ ] **Step 3:** Run `uv run pytest -q`. Every test must pass.
-- [ ] **Step 4:** Update `README.md`: add Order profitability and Handling to the feature list, and update the Status line. In `CLAUDE.md`, add "Order profitability and handling" to Done.
-- [ ] **Step 5:** Commit with `test: order handling acceptance; docs`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_acceptance.py -v`. Expect PASS. If it fails, fix the code in the task that owns it.
+- [x] **Step 3:** Run `uv run pytest -q`. Every test must pass.
+- [x] **Step 4:** Update `README.md`: add Order profitability and Handling to the feature list, and update the Status line. In `CLAUDE.md`, add "Order profitability and handling" to Done.
+- [x] **Step 5:** Commit with `test: order handling acceptance; docs`.
 - [ ] **Step 6:** Open the PR `Order profitability and handling` into `main`. Its body follows `CLAUDE.md`:
   - the tasks with their status
   - the final pytest output

@@ -25,6 +25,7 @@
 <div class="kpis">
   <div class="kpi"><div class="l">Bills due in 7 days</div><div class="v">{{ bills_due_total|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:bills-due' %}?through={{ bills_due_through }}">{{ bills_due_count }} bill{{ bills_due_count|pluralize }} due</a></div></div>
   <div class="kpi{% if bills_overdue_count %} warn{% endif %}"><div class="l">Overdue bills</div><div class="v">{{ bills_overdue_total|floatformat:"2g" }}</div><div class="note"><a href="/purchasing/bills/?overdue=1">{{ bills_overdue_count }} overdue bill{{ bills_overdue_count|pluralize }}</a></div></div>
+  {% if handling_due %}<div class="kpi warn"><div class="l">Handling</div><div class="v" style="font-size:16px"><a href="{% url 'handling:preview' handling_due.end %}">Handling bill due for {{ handling_due.label }}</a></div><div class="note">{% if handling_due_count > 1 %}{{ handling_due_count }} periods are waiting. {% endif %}<a href="{% url 'handling:runs' %}">Handling bills</a></div></div>{% endif %}
 </div>
 <div class="kpis">
   <div class="kpi"><div class="l">Inbox items waiting</div><div class="v">{{ bank_inbox_count }}</div><div class="note"><a href="/banking/inbox/">Open the inbox</a></div></div>
@@ -63,6 +64,7 @@
     <li><a href="{% url 'purchasing:pay-bills' %}">Pay bills</a></li>
     <li><a href="{% url 'purchasing:credit-new' %}?kind=return">Return to vendor</a></li>
     <li><a href="{% url 'purchasing:credit-new' %}?kind=allowance">Credit without a return</a></li>
+    <li><a href="{% url 'handling:runs' %}">Handling</a></li>
   </ul>
   <h2>Reports</h2>
   <ul class="links">
@@ -76,6 +78,7 @@
     <li><a href="{% url 'reports:open-sales-orders' %}">Open sales orders</a></li>
     <li><a href="{% url 'reports:undeposited-funds' %}">Undeposited funds</a></li>
     <li><a href="{% url 'reports:drop-ship-awaiting-bill' %}">Drop shipments awaiting bill</a></li>
+    <li><a href="{% url 'reports:order-profitability' %}">Order profitability</a></li>
     <li><a href="{% url 'reports:ap-aging' %}">A/P aging</a></li>
     <li><a href="{% url 'reports:bills-due' %}">Bills due</a></li>
     <li><a href="{% url 'reports:vendor-balances' %}">Vendor balances</a></li>
