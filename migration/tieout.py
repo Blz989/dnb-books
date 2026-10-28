@@ -74,7 +74,7 @@ class TieOut:
 
     @property
     def passed(self) -> bool:
-        return all(c.passed for c in self.checks)
+        return all(c.passed for c in self.checks) and not self.count_differences
 
     @property
     def failed_checks(self) -> int:
@@ -299,7 +299,6 @@ def compare(reports_dir: Path, as_of: date, after, plan, warnings, export) -> Ti
 def _context(t: TieOut, pdf: bool) -> dict:
     return {
         "t": t, "pdf": pdf, "css": CSS_PATH.read_text(), "font_uri": FONT_DIR.as_uri(),
-        "negative_skus": _ever_negative(t.after, t.warnings),
     }
 
 

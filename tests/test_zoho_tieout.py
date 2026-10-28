@@ -164,3 +164,18 @@ def test_html_is_standalone_with_theme_toggle_and_sections(run, tmp_path):
     positions = [html.index(f"<h2>{s}</h2>") for s in order]
     assert positions == sorted(positions)
     assert positions[0] < html.index("Trial balance") < positions[1]
+
+
+def test_document_total_difference_fails_tieout(run, tmp_path):
+    export, replay, after, plan = run
+    folder = make_reports(tmp_path / "reports", plan)
+    export.files["invoices"][0]["Total"] = "9,999.00"
+    t = compare(folder, AS_OF, after, plan, replay.warnings, export)
+    assert [c.name for c in t.checks if not c.passed] == []  # every report still ties out
+    assert t.count_differences >= 1 and not t.passed
+    bad = [d.label for d in t.counts if d.ours != d.zoho]
+    assert "Invoices: total" in bad
+    html = render_html(t)
+    assert "Failed. 0 of 6 checks did not tie out, 1 document difference." in html or "Failed. 0 of" in html
+    assert "Passed. Every" not in html
+    assert "Invoices: total" in html and '<tr class="bad"><td>Invoices: total' in html

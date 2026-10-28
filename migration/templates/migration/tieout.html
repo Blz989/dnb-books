@@ -30,10 +30,10 @@
 </div>
 
 <h2>Summary</h2>
-{% if t.passed %}<div class="banner ok">Passed. Every report ties out.</div>
-{% else %}<div class="banner error">Failed. {{ t.failed_checks }} of {{ t.checks|length }} checks did not tie out.</div>{% endif %}
+{% if t.passed %}<div class="banner ok">Passed. Every report and every document count ties out.</div>
+{% else %}<div class="banner error">Failed. {{ t.failed_checks }} of {{ t.checks|length }} checks did not tie out, {{ t.count_differences }} document difference{{ t.count_differences|pluralize:"s" }}.</div>{% endif %}
 <div class="kpis">
-  <div class="kpi{% if t.failed_checks %} warn{% endif %}"><div class="l">Checks passed</div><div class="v">{{ t.checks|passed_count }} of {{ t.checks|length }}</div></div>
+  <div class="kpi{% if t.failed_checks %} warn{% endif %}"><div class="l">Report checks passed</div><div class="v">{{ t.checks|passed_count }} of {{ t.checks|length }}</div></div>
   <div class="kpi{% if t.count_differences %} warn{% endif %}"><div class="l">Document count differences</div><div class="v">{{ t.count_differences }}</div></div>
   <div class="kpi"><div class="l">Inventory value differences</div><div class="v">{% if t.inventory_value_provided %}{{ t.inventory_value|differing|length }}{% else %}Not provided{% endif %}</div></div>
   <div class="kpi"><div class="l">Warnings</div><div class="v">{{ t.warnings|length }}</div></div>
