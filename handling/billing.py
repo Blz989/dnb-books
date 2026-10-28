@@ -1,4 +1,5 @@
-"""Handling runs (spec 5.3): one half-month period turned into one bill (or vendor credit) to the handling company.
+"""Handling runs (spec 5.3, 5.4): one half-month period turned into one bill (or vendor credit) to the handling
+company, and voiding the latest one.
 
 The bill or credit is created only through the purchasing posting functions, so the ledger is touched only through
 ledger/posting.py as usual. Profit figures come from handling.profit, which reads documents only.
@@ -14,10 +15,11 @@ from django.db import IntegrityError, transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from core.roles import require_admin
 from ledger.errors import PostingError
 from purchasing.errors import PurchasingError
-from purchasing.posting.bills import BillExpenseSpec, create_bill
-from purchasing.posting.credits import AllowanceLineSpec, create_allowance_credit
+from purchasing.posting.bills import BillExpenseSpec, create_bill, void_bill
+from purchasing.posting.credits import AllowanceLineSpec, create_allowance_credit, void_vendor_credit
 from sales.models import SalesSettings
 
 from .models import HandlingRun, HandlingRunLine, HandlingSettings, RunStatus, long_date
@@ -127,6 +129,34 @@ def create_run(period: Period, *, user, today: date | None = None) -> HandlingRu
         run.statement_pdf.save(f"handling-{period.end:%Y%m%d}-{run.pk}.pdf", ContentFile(statement_pdf(run)),
                                save=True)
         return run
+
+
+def void_run(run: HandlingRun, *, user, reason: str) -> HandlingRun:
+    require_admin(user)
+    reason = (reason or "").strip()
+    if not reason:
+        raise HandlingError("Enter a reason.")
+    with transaction.atomic():
+        current = HandlingRun.objects.select_related("bill", "vendor_credit").get(pk=run.pk)
+        latest = HandlingRun.objects.filter(status=RunStatus.POSTED).order_by("-period_start").first()
+        if current.status != RunStatus.POSTED or latest is None or latest.pk != current.pk:
+            raise HandlingError("Only the most recent handling bill can be voided.")
+        # VOID first: handling.checks.run_lock only guards documents of POSTED runs, so this lets our own void of
+        # the bill or credit through. Any refusal below rolls the status back with everything else.
+        current.status = RunStatus.VOID
+        current.voided_by = user
+        current.voided_at = timezone.now()
+        current.void_reason = reason
+        current.save()
+        try:
+            if current.bill is not None:
+                void_bill(current.bill, user=user, reason=reason, date=current.bill.date)
+            elif current.vendor_credit is not None:
+                void_vendor_credit(current.vendor_credit, user=user, reason=reason, date=current.vendor_credit.date)
+        except (PurchasingError, PostingError) as exc:
+            raise HandlingError(str(exc)) from exc
+    run.refresh_from_db()
+    return run
 
 
 # ---- statement PDF ----

@@ -232,7 +232,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `run_lock(entry) -> str | None`: for an entry with `source_type` `purchasing.bill` or `purchasing.vendor_credit` whose `source_id` is the bill or credit number of a POSTED run, it returns `{number} is the handling bill for {label}. Void it from Handling.` Otherwise it returns `None`.
   - `close_check(year: int, month: int) -> list[str]`: for months on or after the start date's month, one message per period in that month without a POSTED run.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_locks.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_locks.py`:
   - `test_void_latest_run_voids_its_bill_and_frees_the_period`
   - `test_void_only_latest`
   - `test_void_needs_reason_and_admin`
@@ -245,10 +245,10 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `test_close_blocked_until_both_periods_billed`: `close_period(2026, 10, user)` raises `PeriodCloseBlockedError` naming `Oct 16–31, 2026`, and closes after both runs exist.
   - `test_close_override_with_reason`
   - `test_months_before_start_not_checked`
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_locks.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement `void_run`, `checks.py`, and the registrations.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_locks.py tests/test_bills.py tests/test_vendor_credits.py -v`. Expect PASS. Ordinary bill behavior must be unchanged.
-- [ ] **Step 5:** Commit with `feat: void handling runs, lock handling bills, month close check`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_locks.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement `void_run`, `checks.py`, and the registrations.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_locks.py tests/test_bills.py tests/test_vendor_credits.py -v`. Expect PASS. Ordinary bill behavior must be unchanged.
+- [x] **Step 5:** Commit with `feat: void handling runs, lock handling bills, month close check`.
 
 ### Task 5: Order profitability report, profit panel, and settings screens
 
