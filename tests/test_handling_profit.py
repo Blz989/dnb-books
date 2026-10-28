@@ -298,3 +298,28 @@ def test_orders_query_count_does_not_grow_per_order(customer, admin_user, stocke
     with CaptureQueriesContext(connection) as four:
         assert len(orders(d(10, 31))) == 4
     assert len(four.captured_queries) == len(one.captured_queries) <= 12
+
+
+def test_voided_drop_ship_invoice_keeps_its_cost_before_the_void_date(customer, admin_user, gadget):
+    so = order_of(customer, admin_user, d(10, 1), OrderLineSpec(gadget, 3, D("9.50"), **DS))
+    inv = invoice(so, admin_user, d(10, 3), 3)
+    drop_ship_bill(so, admin_user, d(10, 8), 3, "4.00")
+    void_invoice(inv, user=admin_user, reason="Wrong customer", date=d(10, 20))
+    before = order_profit(so.number, d(10, 15))
+    assert (before.sales, before.cost, before.profit, before.flags) == (D("28.50"), D("12.00"), D("16.50"), [])
+    assert before.invoices[0].lines[0].pending is False
+    assert [o.cost for o in orders(d(10, 15))] == [D("12.00")]
+    after = order_profit(so.number, d(10, 20))
+    assert (after.sales, after.cost, after.profit, after.flags) == (D("0.00"), D("0.00"), D("0.00"), [])
+
+
+def test_stock_cost_copy_matches_effective_total(customer, admin_user, gadget, vendor):
+    from handling.profit import _stock_cost
+    from items.stock import effective_total
+
+    receive(gadget, 10, "4.00", d(10, 3), vendor, admin_user)
+    so = order_of(customer, admin_user, d(10, 1), OrderLineSpec(gadget, 3, D("9.50")))
+    line = invoice(so, admin_user, d(10, 5), 3).lines.get()
+    receive(gadget, 10, "3.00", d(10, 2), vendor, admin_user)  # adds a cost revision to the sale
+    assert line.stock_movement.revisions.exists()
+    assert _stock_cost(line, d(10, 31)) == -effective_total(line.stock_movement) == D("9.00")
