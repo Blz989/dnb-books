@@ -85,10 +85,67 @@ def test_undeposited_by_year(replay, after):
     assert after.undeposited_by_year == {2024: (1, Decimal("1012.50")), 2025: (1, Decimal("295.00"))}
 
 
-def test_existing_reconciliations_unaffected():
-    # The Phase 5a behavior is covered by tests/test_reconcile.py and tests/test_reconcile_views.py.
+def test_existing_reconciliations_unaffected(db, admin_user, tmp_path):
     from banking import reconcile
-    assert reconcile.ZERO == Decimal("0.00")
+    from banking.models import AccountKind, BankAccount
+    from ledger.models import Account, AccountSubtype, AccountType
+    from ledger.posting import LineSpec, post_entry
+
+    cash = Account.objects.create(number="1000", name="Checking", type=AccountType.ASSET, subtype=AccountSubtype.BANK)
+    income = Account.objects.create(number="4000", name="Sales", type=AccountType.INCOME, subtype=AccountSubtype.INCOME)
+    bank = BankAccount.objects.create(ledger_account=cash, kind=AccountKind.CHECKING)
+    post_entry(date=date(2026, 1, 3), memo="Deposit", user=admin_user, lines=[
+        LineSpec(account=cash, debit=Decimal("100.00")), LineSpec(account=income, credit=Decimal("100.00"))])
+    rec = reconcile.start(bank, statement_date=date(2026, 1, 31), statement_balance=Decimal("90.00"), user=admin_user)
+    for item in rec.items.all():
+        reconcile.toggle(item, True)
+    diff = reconcile.difference(rec)
+    assert isinstance(diff, Decimal) and diff == Decimal("-10.00")
+    with pytest.raises(ReconcileError, match="The difference must be 0.00 to finish."):
+        reconcile.finish(rec, user=admin_user)
+    reconcile.set_statement_balance(rec, Decimal("100.00"), admin_user)
+    assert reconcile.difference(rec) == Decimal("0.00")
+    reconcile.finish(rec, user=admin_user)
+    rec.refresh_from_db()
+    assert rec.status == ReconStatus.FINISHED and rec.statement_balance == Decimal("100.00")
+
+
+def _extra_replay(admin_user, tmp_path, extra):
+    r = Replay(read_export(build_sample_export(tmp_path, extra_rows=extra)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    return r
+
+
+def test_unbilled_profit_split_exact_and_floored(db, admin_user, tmp_path):
+    from tests.zoho_sample import _invoice, _sales_order
+    # Item A costs 12.00 a unit (FIFO). SO-0009 sells one at 12.30: profit 0.30, so 55% is 0.165 -> 0.17
+    # (half up) and 50% is 0.15. SO-0010 sells one at 10.00: profit -2.00, handling floored at 0.00.
+    extra = {
+        "sales_orders": (
+            _sales_order("50000000009", "SO-0009", "2025-07-01", "Closed", "Acme Hardware", [("A", 1, Decimal("12.30"))])
+            + _sales_order("50000000010", "SO-0010", "2025-07-01", "Closed", "Acme Hardware", [("A", 1, Decimal("10.00"))])),
+        "invoices": (
+            _invoice("51000000010", "INV-000010", "2025-07-02", "Open", "Acme Hardware", "SO-0009",
+                     [("A", 1, Decimal("12.30"))])
+            + _invoice("51000000011", "INV-000011", "2025-07-02", "Open", "Acme Hardware", "SO-0010",
+                       [("A", 1, Decimal("10.00"))])),
+    }
+    after = _extra_replay(admin_user, tmp_path, extra).finish()
+    rows = {o.number: (profit, a50, a55) for o, profit, a50, a55 in after.unbilled_orders}
+    assert rows["SO-0003"] == (Decimal("500.00"), Decimal("250.00"), Decimal("275.00"))  # 20 x (50.00 - 25.00)
+    assert rows["SO-0009"] == (Decimal("0.30"), Decimal("0.15"), Decimal("0.17"))
+    assert rows["SO-0010"] == (Decimal("-2.00"), Decimal("0.00"), Decimal("0.00"))
+
+
+def test_negative_items_listed_with_on_hand(db, admin_user, tmp_path):
+    from tests.zoho_sample import _invoice
+    # Gadget (GAD-C): 40 opening + 30 on BILL-002 - 30 sold (INV-000003, INV-000009) = 40 on hand; 60 more invoiced leaves -20.
+    extra = {"invoices": _invoice("51000000012", "INV-000012", "2025-12-01", "Open", "Acme Hardware", "",
+                                  [("C", 60, Decimal("50.00"))])}
+    after = _extra_replay(admin_user, tmp_path, extra).finish()
+    assert [(item.sku, qty) for item, qty in after.negative_items] == [("GAD-C", -20)]
 
 
 def test_working_page_blank_balance_then_saved(replay, after, admin_user, client):
