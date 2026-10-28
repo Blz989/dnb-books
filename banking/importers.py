@@ -16,6 +16,7 @@ from django.db import transaction
 from .models import BankAccount, BankTransaction, TxnSource, TxnStatus
 
 D = Decimal
+FEED_REASON = "Before the feed start date."
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,7 @@ class ImportResult:
     added: int
     skipped: int
     possible_duplicates: int
+    before_feed_start: int = 0
 
 
 class CsvImportError(Exception):
@@ -169,7 +171,7 @@ def import_transactions(
     bank_account: BankAccount, txns: Sequence[ParsedTxn], *, source: TxnSource, user,
 ) -> ImportResult:
     """Save new rows. Rows that look like the same bank activity from the other source arrive EXCLUDED."""
-    added = skipped = duplicates = 0
+    added = skipped = duplicates = before_feed = 0
     other = TxnSource.FILE if source == TxnSource.PLAID else TxnSource.PLAID
     with transaction.atomic():
         existing_ids = set(
@@ -179,6 +181,15 @@ def import_transactions(
                 skipped += 1
                 continue
             existing_ids.add(t.external_id)
+            if t.date < bank_account.feed_starts:
+                # Checked before duplicates, so a pre-feed row never also counts as a duplicate.
+                BankTransaction.objects.create(
+                    bank_account=bank_account, external_id=t.external_id, date=t.date, description=t.description,
+                    amount=t.amount, check_number=t.check_number, source=source, status=TxnStatus.EXCLUDED,
+                    exclude_reason=FEED_REASON,
+                )
+                before_feed += 1
+                continue
             rows = BankTransaction.objects.filter(bank_account=bank_account, date=t.date, amount=t.amount)
             other_rows = list(rows.filter(source=other).order_by("date", "id")[:1])
             # Pair one-to-one: a second identical charge only counts as a duplicate if the other source has a second.
@@ -194,7 +205,8 @@ def import_transactions(
                 bank_account=bank_account, external_id=t.external_id, date=t.date, description=t.description,
                 amount=t.amount, check_number=t.check_number, source=source, status=status, exclude_reason=reason,
             )
-    return ImportResult(added=added, skipped=skipped, possible_duplicates=duplicates)
+    return ImportResult(
+        added=added, skipped=skipped, possible_duplicates=duplicates, before_feed_start=before_feed)
 
 
 def import_csv(bank_account: BankAccount, text: str, *, user) -> ImportResult:

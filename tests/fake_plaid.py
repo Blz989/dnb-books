@@ -19,9 +19,11 @@ class FakePlaidClient:
         self.error = error
         self.calls: list[tuple[str, str | None]] = []
         self.link_updates: list[str | None] = []
+        self.link_days_requested: list[int | None] = []  # None in update mode, as the real client sends no transactions
 
     def create_link_token(self, user_id, access_token=None):
         self.link_updates.append(access_token)
+        self.link_days_requested.append(None if access_token else 365)
         return "link-sandbox-fake"
 
     def exchange_public_token(self, public_token):

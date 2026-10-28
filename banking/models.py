@@ -1,3 +1,5 @@
+from datetime import date
+
 from auditlog.registry import auditlog
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -102,6 +104,7 @@ class BankAccount(models.Model):
     mask = models.CharField(max_length=10, blank=True)
     csv_mapping = models.JSONField(default=dict, blank=True)
     next_check_number = models.PositiveIntegerField(default=1001)
+    feed_starts = models.DateField(default=date(2026, 1, 1))
     is_active = models.BooleanField(default=True)
 
     class Meta:

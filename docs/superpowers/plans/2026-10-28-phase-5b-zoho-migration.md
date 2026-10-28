@@ -510,17 +510,17 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - `create_link_token` adds `transactions=LinkTokenTransactions(days_requested=365)` when not in update mode.
   - The bank account form shows "Feed starts", with the help text `Bank rows dated before this are set aside.`
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_rows_before_feed_start_excluded_with_reason`
   - `test_feed_start_beats_duplicate_reason` (Review Focus 4): a file row before the feed start that duplicates a Plaid row gets the feed reason and is counted once, in `before_feed_start`.
   - `test_restore_feed_excluded_row`
   - `test_link_token_requests_365_days`: the recorded fake client sees `days_requested == 365`. Update mode sends no `transactions`.
   - `test_bank_account_form_feed_starts`
-- [ ] **Step 2:** Run `uv run pytest tests/test_feed_starts.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_feed_starts.py tests/test_imports.py tests/test_plaid_sync.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots.** The bank account form with Feed starts. Send them.
-- [ ] **Step 6:** Commit with `feat: feed start date and a year of Plaid history`.
+- [x] **Step 2:** Run `uv run pytest tests/test_feed_starts.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_feed_starts.py tests/test_imports.py tests/test_plaid_sync.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots.** The bank account form with Feed starts. Send them.
+- [x] **Step 6:** Commit with `feat: feed start date and a year of Plaid history`.
 
 ### Task 11: Pay bills and Receive payment from a bank row (services)
 
