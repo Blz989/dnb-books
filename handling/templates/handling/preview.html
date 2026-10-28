@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% block title %}Handling {{ period.label }}{% endblock %}
+{% block page_title %}Handling {{ period.label }}{% endblock %}
+{% block page_subtitle %}<div class="sub">Preview. Nothing is saved until you press the button. <a href="{% url 'handling:runs' %}">All handling bills</a></div>{% endblock %}
+{% block content %}
+{% if problem %}<div class="banner {% if not_set_up %}info{% else %}warning{% endif %}">{{ problem }}{% if not_set_up %}{% if is_admin %} <a href="{% url 'handling:settings' %}">Open settings</a>{% endif %}{% elif problem_link %} <a href="{{ problem_link }}">Open →</a>{% endif %}</div>{% endif %}
+{% if pv %}
+<div class="card">
+<table class="data" id="handling-preview">
+  <thead><tr><th>Order</th><th>Customer</th><th class="num">Sales</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Owed to date</th><th class="num">Billed before</th><th class="num">This bill</th></tr></thead>
+  <tbody>
+  {% for r in pv.rows %}
+    <tr><td>{% if r.order.sales_order %}<a class="sku" href="{% url 'sales:order-detail' r.order.key %}">{{ r.order.key }}</a>{% else %}<a class="sku" href="{% url 'sales:invoice-detail' r.order.key %}">{{ r.order.key }}</a>{% endif %}</td>
+      <td>{{ r.order.customer.name }}</td>
+      <td class="num">{{ r.order.net_sales|floatformat:"2g" }}</td><td class="num">{{ r.order.cost|floatformat:"2g" }}</td>
+      <td class="num{% if r.order.profit < 0 %} neg{% endif %}">{{ r.order.profit|floatformat:"2g" }}</td>
+      <td class="num">{{ r.owed_to_date|floatformat:"2g" }}</td><td class="num">{{ r.billed_before|floatformat:"2g" }}</td>
+      <td class="num{% if r.this_bill < 0 %} neg{% endif %}">{{ r.this_bill|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="8" class="empty">No orders to bill in this period.</td></tr>
+  {% endfor %}
+    <tr class="total"><td>Total</td><td></td>
+      <td class="num">{{ totals.net_sales|floatformat:"2g" }}</td><td class="num">{{ totals.cost|floatformat:"2g" }}</td>
+      <td class="num">{{ totals.profit|floatformat:"2g" }}</td><td class="num">{{ totals.owed_to_date|floatformat:"2g" }}</td>
+      <td class="num">{{ totals.billed_before|floatformat:"2g" }}</td>
+      <td class="num{% if pv.total < 0 %} neg{% endif %}">{{ pv.total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+</div>
+{% if can_create %}
+<form method="post" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <button type="submit" class="btn primary">{{ button }}</button>
+  <a class="btn" href="{% url 'handling:runs' %}">Cancel</a>
+  <span class="dash">{% if pv.total > 0 %}A bill to the handling company for {{ pv.total|floatformat:"2g" }}, dated {{ period.end|date:"M j, Y" }}.{% elif pv.total < 0 %}A credit from the handling company for {{ pv.total|floatformat:"2g"|cut:"-" }}, dated {{ period.end|date:"M j, Y" }}.{% else %}Nothing to bill. The period is marked as billed.{% endif %}</span>
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

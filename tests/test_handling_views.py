@@ -1,3 +1,4 @@
+import re
 from html import unescape
 from datetime import date
 from decimal import Decimal
@@ -7,7 +8,7 @@ from django.utils import timezone
 
 from contacts.models import Customer, Terms, Vendor
 from handling.billing import create_run
-from handling.models import HandlingRate, HandlingSettings
+from handling.models import HandlingRate, HandlingRun, HandlingSettings, RunStatus
 from handling.periods import Period
 from ledger.models import Account, AccountSubtype, AccountType
 from purchasing.posting.bills import bill_from_po
@@ -318,3 +319,228 @@ def test_seed_demo_sets_up_handling(db):
     assert s.start_date == earliest.replace(day=1)
     assert list(HandlingRate.objects.values_list("effective_from", "rate")) == [(s.start_date, D("0.5500"))]
     assert s.is_configured
+
+
+# ---- runs ----
+
+RUNS = "/handling/"
+PREVIEW_1 = "/handling/preview/2026-10-15/"
+PREVIEW_2 = "/handling/preview/2026-10-31/"
+
+
+@pytest.fixture
+def on_day(monkeypatch):
+    """Sets the date the screens treat as today."""
+    def set_today(day):
+        monkeypatch.setattr(timezone, "localdate", lambda *a, **k: day)
+    return set_today
+
+
+def page(r):
+    return unescape(r.content.decode())
+
+
+def token_of(r):
+    return re.search(r'name="token" value="([^"]+)"', r.content.decode()).group(1)
+
+
+def test_run_list_and_next_button(client, admin_user, customer, stocked, on_day):
+    client.force_login(admin_user)
+    on_day(d(10, 10))
+    html = page(client.get(RUNS))
+    for header in ["Period", "Total", "Bill or credit", "Status"]:
+        assert f">{header}</th>" in html
+    assert "No handling bills yet." in html
+    assert '<button type="button" class="btn primary" disabled>Next: Oct 1–15, 2026</button>' in html
+    assert "Oct 1–15, 2026 can't be billed until Oct 15, 2026." in html
+    assert f'href="{PREVIEW_1}"' not in html
+    assert 'href="/handling/" class="on">Handling</a>' in html
+
+    on_day(d(10, 15))
+    html = page(client.get(RUNS))
+    assert f'<a class="btn primary" href="{PREVIEW_1}">Next: Oct 1–15, 2026</a>' in html
+    assert "can't be billed until" not in html
+
+    stock_sale(customer, admin_user, stocked, d(10, 2), d(10, 3))
+    run = create_run(OCT_1, user=admin_user, today=LATER)
+    on_day(d(10, 20))
+    html = page(client.get(RUNS))
+    assert f'href="/handling/runs/{run.pk}/">Oct 1–15, 2026</a>' in html
+    assert f'href="/purchasing/bills/{run.bill.number}/">{run.bill.number}</a>' in html
+    assert "9.08" in html and "Posted" in html
+    assert "Next: Oct 16–31, 2026" in html
+    assert "Oct 16–31, 2026 can't be billed until Oct 31, 2026." in html
+
+    s = HandlingSettings.load()
+    s.vendor = None
+    s.save()
+    html = page(client.get(RUNS))
+    assert "Set up handling in Purchasing settings first." in html and f'href="{SETTINGS}"' in html
+    assert "Next:" not in html
+
+
+def test_preview_then_create(client, admin_user, customer, stocked, on_day):
+    on_day(LATER)
+    so, _ = stock_sale(customer, admin_user, stocked, d(10, 2), d(10, 3))
+    client.force_login(admin_user)
+    r = client.get(PREVIEW_1)
+    assert r.status_code == 200
+    html = page(r)
+    for header in ["Order", "Customer", "Sales", "Cost", "Profit", "Owed to date", "Billed before", "This bill"]:
+        assert f">{header}</th>" in html
+    assert f'href="/sales/orders/{so.number}/"' in html and "Acme Builders" in html
+    for value in ["28.50", "12.00", "16.50", "9.08", "0.00"]:
+        assert value in html
+    assert 'class="total"' in html
+    assert ">Create bill</button>" in html
+    assert client.get("/handling/preview/2026-10-14/").status_code == 404
+
+    r = client.post(PREVIEW_1, {"token": token_of(r)})
+    run = HandlingRun.objects.get()
+    assert r.status_code == 302 and r["Location"] == f"/handling/runs/{run.pk}/"
+    assert run.bill is not None and run.bill.vendor.name == "Harbor Handling LLC" and run.total == D("9.08")
+    assert run.created_by == admin_user
+    html = page(client.get(r["Location"]))
+    assert f'href="/purchasing/bills/{run.bill.number}/">{run.bill.number}</a>' in html
+    assert f'href="/handling/runs/{run.pk}/statement.pdf"' in html
+    assert so.number in html and "9.08" in html
+
+    # Incomplete settings: the problem instead of the table.
+    s = HandlingSettings.load()
+    s.vendor = None
+    s.save()
+    html = page(client.get(PREVIEW_2))
+    assert "Set up handling in Purchasing settings first." in html and f'href="{SETTINGS}"' in html
+    assert "<table" not in html and "Create bill" not in html
+
+
+def test_create_double_post_same_token_makes_one_run(client, admin_user, customer, stocked, on_day):
+    on_day(LATER)
+    stock_sale(customer, admin_user, stocked, d(10, 2), d(10, 3))
+    client.force_login(admin_user)
+    tab_a, tab_b = token_of(client.get(PREVIEW_1)), token_of(client.get(PREVIEW_1))
+    assert tab_a != tab_b
+    assert client.post(PREVIEW_1, {"token": tab_a}).status_code == 302
+    r = client.post(PREVIEW_1, {"token": tab_a}, follow=True)
+    assert "That was already done." in page(r)
+    r = client.post(PREVIEW_1, {"token": tab_b}, follow=True)
+    assert "Oct 1–15, 2026 is already billed." in page(r)
+    assert HandlingRun.objects.count() == 1
+    # The preview of a billed period says so and offers no button.
+    html = page(client.get(PREVIEW_1))
+    assert "Oct 1–15, 2026 is already billed." in html and "Create bill" not in html
+
+
+def test_create_credit_label_when_negative(client, admin_user, customer, stocked, on_day):
+    on_day(LATER)
+    _, inv = stock_sale(customer, admin_user, stocked, d(10, 2), d(10, 3))
+    create_run(OCT_1, user=admin_user, today=LATER)
+    note = create_credit_note(customer=customer, date=d(10, 20), user=admin_user, reason="Damaged",
+                              lines=[CreditLineSpec("Damaged", D("10.00"))])
+    apply_credit(note, inv, D("10.00"), date=d(10, 20), user=admin_user)
+    client.force_login(admin_user)
+    # Profit 16.50 - 10.00 = 6.50, owed 3.58, billed 9.08 before: -5.50.
+    r = client.get(PREVIEW_2)
+    html = page(r)
+    assert ">Create credit</button>" in html and "Create bill" not in html and "-5.50" in html
+    r = client.post(PREVIEW_2, {"token": token_of(r)})
+    run = HandlingRun.objects.get(period_start=d(10, 16))
+    assert run.vendor_credit is not None and run.bill is None and run.total == D("-5.50")
+    html = page(client.get(r["Location"]))
+    assert f'href="/purchasing/credits/{run.vendor_credit.number}/">{run.vendor_credit.number}</a>' in html
+
+    # Nothing to bill: the period is recorded with no bill.
+    html = page(client.get("/handling/preview/2026-11-15/"))
+    assert ">Record period</button>" in html and "Create bill" not in html
+
+
+def test_void_from_detail_admin_only(client, admin_user, standard_user, customer, stocked, on_day):
+    on_day(LATER)
+    stock_sale(customer, admin_user, stocked, d(10, 2), d(10, 3))
+    first = create_run(OCT_1, user=admin_user, today=LATER)
+    run = create_run(OCT_1.next(), user=admin_user, today=LATER)  # nothing to bill, recorded at 0.00
+    detail, void = f"/handling/runs/{run.pk}/", f"/handling/runs/{run.pk}/void/"
+
+    client.force_login(standard_user)
+    assert client.get(detail).status_code == 200
+    assert 'name="reason"' not in page(client.get(detail))
+    assert client.post(void, {"reason": "Wrong"}).status_code == 403
+    run.refresh_from_db()
+    assert run.status == RunStatus.POSTED
+
+    client.force_login(admin_user)
+    assert 'name="reason"' not in page(client.get(f"/handling/runs/{first.pk}/"))  # not the latest
+    r = client.post(f"/handling/runs/{first.pk}/void/", {"reason": "Wrong"}, follow=True)
+    assert "Only the most recent handling bill can be voided." in page(r)
+    assert client.get(void).status_code == 405
+    html = page(client.get(detail))
+    assert f'action="{void}"' in html and 'name="reason"' in html
+    r = client.post(void, {"reason": "  ", "token": "v1"}, follow=True)
+    assert "Enter a reason." in page(r)
+    run.refresh_from_db()
+    assert run.status == RunStatus.POSTED
+
+    r = client.post(void, {"reason": "Wrong period", "token": "v2"})
+    assert r.status_code == 302 and r["Location"] == detail
+    run.refresh_from_db()
+    assert run.status == RunStatus.VOID and run.void_reason == "Wrong period"
+    html = page(client.get(detail))
+    assert "Wrong period" in html and 'class="tag void"' in html and 'name="reason"' not in html
+    assert "That was already done." in page(client.post(void, {"reason": "Again", "token": "v2"}, follow=True))
+
+    # Now the first run is the latest, and its bill is voided with it.
+    r = client.post(f"/handling/runs/{first.pk}/void/", {"reason": "Rate was wrong", "token": "v3"})
+    first.refresh_from_db()
+    first.bill.refresh_from_db()
+    assert first.status == RunStatus.VOID and first.bill.status == "VOID"
+    r = client.get(f"/handling/runs/{first.pk}/statement.pdf")  # a void run's statement stays viewable
+    assert r.status_code == 200 and r.content.startswith(b"%PDF")
+
+
+def test_statement_served_inline(client, standard_user, admin_user, customer, stocked):
+    stock_sale(customer, admin_user, stocked, d(10, 2), d(10, 3))
+    run = create_run(OCT_1, user=admin_user, today=LATER)
+    client.force_login(standard_user)
+    r = client.get(f"/handling/runs/{run.pk}/statement.pdf")
+    assert r.status_code == 200 and r["Content-Type"] == "application/pdf"
+    assert r["Content-Disposition"] == 'inline; filename="handling-2026-10-15.pdf"'
+    assert b"".join(r.streaming_content if r.streaming else [r.content]).startswith(b"%PDF")
+    assert client.get("/handling/runs/999/statement.pdf").status_code == 404
+
+
+def test_home_card_due_and_hidden(client, admin_user, standard_user, customer, stocked, on_day):
+    card = f'href="{PREVIEW_1}">Handling bill due for Oct 1–15, 2026</a>'
+    client.force_login(standard_user)
+    on_day(d(10, 10))
+    assert "Handling bill due" not in page(client.get("/"))  # no period has ended
+    on_day(d(10, 20))
+    assert card in page(client.get("/"))
+    on_day(d(11, 5))  # two periods due: the first one is named
+    assert card in page(client.get("/"))
+    create_run(OCT_1, user=admin_user, today=LATER)
+    assert 'href="/handling/preview/2026-10-31/">Handling bill due for Oct 16–31, 2026</a>' in page(client.get("/"))
+    on_day(d(10, 20))
+    assert "Handling bill due" not in page(client.get("/"))
+    on_day(d(11, 5))
+    s = HandlingSettings.load()
+    s.expense_account = None
+    s.save()
+    assert "Handling bill due" not in page(client.get("/"))  # settings incomplete: no card
+
+
+def test_standard_user_can_create_run(client, standard_user, customer, stocked, on_day):
+    on_day(LATER)
+    stock_sale(customer, standard_user, stocked, d(10, 2), d(10, 3))
+    client.force_login(standard_user)
+    assert client.get(RUNS).status_code == 200
+    r = client.get(PREVIEW_1)
+    assert r.status_code == 200
+    r = client.post(PREVIEW_1, {"token": token_of(r)})
+    run = HandlingRun.objects.get()
+    assert r.status_code == 302 and run.created_by == standard_user and run.bill is not None
+    # Incomplete settings: standard users get the message without the admin link.
+    s = HandlingSettings.load()
+    s.vendor = None
+    s.save()
+    html = page(client.get(PREVIEW_2))
+    assert "Set up handling in Purchasing settings first." in html and f'href="{SETTINGS}"' not in html

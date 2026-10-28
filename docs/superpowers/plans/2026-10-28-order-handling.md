@@ -320,7 +320,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
 - **Run detail:** the saved rows, a link to the bill or credit, a statement PDF link, and, for the latest POSTED run when the user is an admin, a Void form with a reason.
 - **Home card:** when `due_periods(today)` is not empty, show `Handling bill due for {first label}` linking to its preview. Settings incomplete means no card.
 
-- [ ] **Step 1: Write the failing tests** (append to `tests/test_handling_views.py`):
+- [x] **Step 1: Write the failing tests** (append to `tests/test_handling_views.py`):
   - `test_run_list_and_next_button`
   - `test_preview_then_create` (redirects to the run detail, and the bill exists)
   - `test_create_double_post_same_token_makes_one_run` (Review Focus 5): `That was already done.`
@@ -329,10 +329,10 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `test_statement_served_inline`
   - `test_home_card_due_and_hidden`
   - `test_standard_user_can_create_run`
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_views.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_views.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots** in light and dark:
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_views.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_views.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots** in light and dark:
   - the run list, with the Next button enabled and with it disabled
   - the preview
   - the preview with incomplete settings
@@ -341,7 +341,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - the statement PDF, rasterized
 
   Send each with a caption.
-- [ ] **Step 6:** Commit with `feat: handling run screens and home card`.
+- [x] **Step 6:** Commit with `feat: handling run screens and home card`.
 
 ### Task 7: Acceptance, README, and PR
 

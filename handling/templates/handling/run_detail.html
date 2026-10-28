@@ -1,0 +1,46 @@
+{% extends "core/base.html" %}
+{% load handling_tags %}
+{% block title %}Handling {{ run.label }}{% endblock %}
+{% block page_title %}Handling {{ run.label }}{% endblock %}
+{% block page_subtitle %}<div class="sub">Created by {{ run.created_by.get_username }} on {{ run.created_at|date:"M j, Y" }} · <a href="{% url 'handling:runs' %}">All handling bills</a>{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}<a class="btn" href="{% url 'handling:statement' run.pk %}">Statement PDF</a>{% endblock %}
+{% block content %}
+{% if is_void %}<div class="banner error">Voided by {{ run.voided_by.get_username }} on {{ run.voided_at|date:"M j, Y" }}: {{ run.void_reason }}</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Total</div><div class="v">{{ run.total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">{% if run.vendor_credit %}Vendor credit{% else %}Bill{% endif %}</div><div class="v" style="font-size:16px">{% if run.bill %}<a class="sku" href="{% url 'purchasing:bill-detail' run.bill.number %}">{{ run.bill.number }}</a>{% elif run.vendor_credit %}<a class="sku" href="{% url 'purchasing:credit-detail' run.vendor_credit.number %}">{{ run.vendor_credit.number }}</a>{% else %}Nothing to bill{% endif %}</div><div class="note">{% if run.bill %}{{ run.bill.vendor.name }}{% elif run.vendor_credit %}{{ run.vendor_credit.vendor.name }}{% else %}The period is marked as billed.{% endif %}</div></div>
+  <div class="kpi"><div class="l">Orders</div><div class="v">{{ lines|length }}</div></div>
+</div>
+<div class="card">
+<table class="data" id="handling-run">
+  <thead><tr><th>Order</th><th>Customer</th><th class="num">Sales</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Rate</th><th class="num">Owed to date</th><th class="num">Billed before</th><th class="num">This bill</th></tr></thead>
+  <tbody>
+  {% for l in lines %}
+    <tr><td>{% if l.sales_order %}<a class="sku" href="{% url 'sales:order-detail' l.order_key %}">{{ l.order_key }}</a>{% else %}<a class="sku" href="{% url 'sales:invoice-detail' l.order_key %}">{{ l.order_key }}</a>{% endif %}</td>
+      <td>{{ l.customer.name }}</td>
+      <td class="num">{{ l.sales|floatformat:"2g" }}</td><td class="num">{{ l.cost|floatformat:"2g" }}</td>
+      <td class="num{% if l.profit < 0 %} neg{% endif %}">{{ l.profit|floatformat:"2g" }}</td><td class="num">{{ l.rate|percent }}</td>
+      <td class="num">{{ l.owed_to_date|floatformat:"2g" }}</td><td class="num">{{ l.billed_before|floatformat:"2g" }}</td>
+      <td class="num{% if l.this_bill < 0 %} neg{% endif %}">{{ l.this_bill|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="9" class="empty">No orders had anything to bill in this period.</td></tr>
+  {% endfor %}
+    <tr class="total"><td>Total</td><td></td>
+      <td class="num">{{ totals.sales|floatformat:"2g" }}</td><td class="num">{{ totals.cost|floatformat:"2g" }}</td>
+      <td class="num">{{ totals.profit|floatformat:"2g" }}</td><td></td>
+      <td class="num">{{ totals.owed_to_date|floatformat:"2g" }}</td><td class="num">{{ totals.billed_before|floatformat:"2g" }}</td>
+      <td class="num{% if run.total < 0 %} neg{% endif %}">{{ run.total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+</div>
+{% if can_void %}
+<h2>Void</h2>
+<div class="card"><div class="body">
+<p class="help">Voiding also voids the {% if run.vendor_credit %}vendor credit{% elif run.bill %}bill{% else %}run{% endif %}, and the period can be billed again. Only the most recent handling bill can be voided.</p>
+<form method="post" action="{% url 'handling:run-void' run.pk %}">{% csrf_token %}
+  <input type="hidden" name="token" value="{{ token }}">
+  <div class="form-row"><label for="id_reason">Reason</label><input type="text" name="reason" id="id_reason" maxlength="500"></div>
+  <button type="submit" class="btn">Void</button>
+</form>
+</div></div>
+{% endif %}
+{% endblock %}
