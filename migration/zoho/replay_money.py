@@ -125,7 +125,12 @@ class MoneyReplay:
                         payment, self._invoice(row["Invoice Number"]), applied,
                         date=_date(row["Invoice Payment Applied Date"], event.date), user=self.user)
             charges = mapping.money(first["Bank Charges"])
-            if charges > 0:
+            if charges > 0 and not to_bank:
+                # No payment backs a charge taken out of Undeposited Funds, so posting it would break
+                # the Undeposited check; the tie-out lists it instead (controller ruling, fix round 1).
+                self.warnings.append(
+                    f"Bank charges on payment {event.number}: {charges} not posted (deposited to Undeposited Funds).")
+            elif charges > 0:
                 entry = post_entry(
                     date=event.date, user=self.user, memo=f"Bank charges on payment {event.number}",
                     reference=ref, source_type="migration.expense", source_id=event.zoho_id,

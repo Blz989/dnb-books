@@ -223,3 +223,15 @@ def test_exact_subset_prefers_oldest_and_needs_exact_sum():
     assert exact_subset(amounts, Decimal("150.00")) == [0, 1]
     assert exact_subset(amounts, Decimal("101.00")) is None
     assert exact_subset([], Decimal("5.00")) is None
+
+
+def test_bank_charges_on_undeposited_payment_warn_and_post_nothing(db, admin_user, tmp_path):
+    row = dict(SMALL_CASH[0], **{
+        "CustomerPayment ID": "54200000001", "Payment Number": "CP-3001", "Date": "2025-07-15",
+        "Amount": "50.00", "Unused Amount": "50.00", "Bank Charges": "2.00"})
+    r = _replay(admin_user, tmp_path, extra_rows={"customer_payments": [row]})
+    assert "Bank charges on payment CP-3001: 2.00 not posted (deposited to Undeposited Funds)." in r.warnings
+    assert not JournalEntry.objects.filter(source_type="migration.expense", source_id="54200000001")
+    assert not ZohoRecord.objects.filter(kind="bank_charges", zoho_id="54200000001")
+    assert Payment.objects.get(number="CP-3001").amount == Decimal("50.00")
+    assert undeposited_check() == [] and ar_check() == [] and check_invariants() == []
