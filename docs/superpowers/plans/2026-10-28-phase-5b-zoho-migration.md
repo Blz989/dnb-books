@@ -355,7 +355,7 @@ Rules:
   - Value: `record_value_adjustment(item, amount=Value Adjusted, reason, account)`.
 - **Opening balances CSV** (`account,debit,credit`): one `post_entry` dated 2020-02-01 (`migration.opening`), balanced against "Opening Balance Offset" if the rows don't balance.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_payments_to_undeposited_and_to_bank`
   - `test_mixed_payment_numbers_kept` (Review Focus 2): `1001`, `CP-1002`, and `57` exist exactly.
   - `test_unused_amount_stays_unapplied`
@@ -369,10 +369,10 @@ Rules:
   - `test_quantity_and_value_adjustments`
   - `test_opening_balances_csv`
   - `test_all_ledger_checks_zero_after_full_replay`: after every event, `ar_check`, `ap_check`, `undeposited_check`, and `check_invariants` are empty.
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_replay_money.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_replay_money.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: replay Zoho payments, credits, deposits, and entries`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_replay_money.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_replay_money.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: replay Zoho payments, credits, deposits, and entries`.
 
 ### Task 7: After the replay: Dec 31 reconciliations, sequences, and lists
 

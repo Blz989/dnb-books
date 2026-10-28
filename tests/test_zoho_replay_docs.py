@@ -1,3 +1,4 @@
+import dataclasses
 from datetime import date
 from decimal import Decimal
 
@@ -186,8 +187,10 @@ def test_event_order_within_a_day(replay):
     assert ranks["undeposited_transfer"] == 5 and ranks["expense"] == 6
     adjustments = {e.zoho_id: e.rank for e in replay.events(kinds=("adjustment",))}
     assert adjustments == {"60000000001": 7, "60000000002": 7}
+    # Every kind now has a handler (Task 6); a kind without one is still refused.
+    expense = next(e for e in replay.events() if e.kind == "expense")
     with pytest.raises(NotImplementedError):
-        replay.post(next(e for e in replay.events() if e.kind == "expense"))
+        replay.post(dataclasses.replace(expense, kind="unknown"))
 
 
 def test_ledger_checks_zero_after_docs(replay):

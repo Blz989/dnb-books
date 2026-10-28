@@ -2,7 +2,8 @@
 
 Master data (accounts, settings, bank accounts, items, contacts, opening stock) is built by
 `Replay.load_master`. Documents are posted day by day by `Replay.post`, which hands each event to
-the `post_<kind>` method of the same name (added by later tasks). Every object made gets a
+the `post_<kind>` method of the same name. Orders, bills, and invoices are handled here; payments,
+credits, deposits, entries, and stock adjustments in `replay_money.MoneyReplay`. Every object made gets a
 `ZohoRecord` through `Replay.record`, so any Zoho row can be traced to what it became.
 """
 from collections import defaultdict
@@ -22,6 +23,7 @@ from ledger.models import Account, AccountSubtype
 from migration.models import ZohoRecord
 from migration.zoho import mapping
 from migration.zoho.reader import ID_COLUMNS, ZohoExport
+from migration.zoho.replay_money import OPENING_DATE, MoneyReplay, _quantity
 from purchasing.models import PurchasingSettings
 from purchasing.posting.bills import BillExpenseSpec, BillItemSpec, create_bill
 from purchasing.posting.orders import POLineSpec, close_po, create_po
@@ -31,7 +33,6 @@ from sales.numbering import use_number
 from sales.posting.invoices import InvoiceLineSpec, create_invoice, void_invoice
 from sales.posting.orders import OrderLineSpec, close_order, create_order, remaining
 
-OPENING_DATE = date(2020, 2, 1)
 FEED_START = date(2026, 1, 1)  # becomes BankAccount.feed_starts in Task 10; the field does not exist yet
 
 # Non-stock items for the extra amounts on Zoho documents: sku, name, Zoho income account.
@@ -80,11 +81,7 @@ RANKS = {
 }
 
 
-def _quantity(text: str) -> int:
-    return int(Decimal((text or "0").replace(",", "").strip() or "0"))
-
-
-class Replay:
+class Replay(MoneyReplay):
     def __init__(self, export: ZohoExport, user):
         self.export = export
         self.user = user
@@ -97,6 +94,7 @@ class Replay:
         self.orders: dict[str, SalesOrder] = {}  # Zoho sales order number -> order
         self.negative_items: set[str] = set()  # skus whose stock went below zero during replay
         self._doc_rows: dict[tuple[str, str], list[dict]] = {}
+        self.deposit_pairs: dict[tuple[date, Decimal], list[str]] = {}  # from load_deposit_pairs
 
     # ---- helpers shared with the document tasks ----
     def rows(self, short: str) -> list[dict]:
