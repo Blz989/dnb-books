@@ -224,6 +224,10 @@ class MoneyReplay:
             if row["Bill Number"].strip() and amount > 0:
                 applications.append((self._bill(vendor, row["Bill Number"], amount), amount))
         is_check = method == VendorPaymentMethod.CHECK
+        if is_check and not ref:
+            # A check with no number is "waiting to be printed" in DNB Books; these were written long ago.
+            ref = f"none-{event.number}"
+            self.warnings.append(f"Vendor payment {event.number}: Zoho has no check number; recorded as {ref}.")
         with transaction.atomic():
             with use_number(DocType.VP, event.number):
                 # pay_vendor registers the check number as handwritten.

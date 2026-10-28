@@ -274,3 +274,21 @@ def test_payment_before_its_invoice_applies_on_the_invoice_date(db, admin_user, 
     assert app.applied_on == date.fromisoformat(inv["Invoice Date"])
     assert not r.pending_applications
     assert ar_check() == [] and undeposited_check() == []
+
+
+def test_check_payment_without_a_number_is_not_left_to_print(db, admin_user, tmp_path):
+    from banking.checknumbers import is_to_print
+    from purchasing.models import VendorPayment
+
+    rows = sample_rows()
+    for r in rows["vendor_payments"]:
+        if r["Mode"] == "Check":
+            r["Reference Number"] = ""
+            number = r["Payment Number"]
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    payment = VendorPayment.objects.get(number=number)
+    assert payment.check_number == f"none-{number}" and not is_to_print(payment)
+    assert any("has no check number" in w for w in r.warnings)
