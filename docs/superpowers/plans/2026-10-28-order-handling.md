@@ -278,7 +278,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - The rate history table, and an Add rate form (effective from, percent).
   - On first save with no rates, a 55% rate from the start date is created.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_views.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_views.py`:
   - `test_report_lists_orders_with_totals`
   - `test_report_filters_customer_dates_unbilled`
   - `test_report_shows_flags`
@@ -288,17 +288,17 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `test_add_rate_from_settings`
   - `test_start_date_locked_after_first_run`
   - `test_standard_user_can_view_report`
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_views.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement. Match `docs/design/items-mockup.html` (tokens, table style, tags, and the Auto/Light/Dark toggle comes from `base.html`).
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_views.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots.** Use a demo database with `seed_demo`, then `scripts/screenshots.mjs`, in light and dark. Capture:
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_views.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement. Match `docs/design/items-mockup.html` (tokens, table style, tags, and the Auto/Light/Dark toggle comes from `base.html`).
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_views.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots.** Use a demo database with `seed_demo`, then `scripts/screenshots.mjs`, in light and dark. Capture:
   - the report, unfiltered and with `unbilled=1`, including a flagged row
   - the profit panel on a sales order with a drop-ship line
   - the panel on a direct invoice
   - the settings page
 
   Send them with `SendUserFile`, with a one-line caption each.
-- [ ] **Step 6:** Commit with `feat: order profitability report, profit panel, handling settings`.
+- [x] **Step 6:** Commit with `feat: order profitability report, profit panel, handling settings`.
 
 ### Task 6: Handling run screens and home card
 

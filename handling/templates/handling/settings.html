@@ -1,0 +1,56 @@
+{% extends "core/base.html" %}
+{% load handling_tags %}
+{% block title %}Handling settings{% endblock %}
+{% block page_title %}Handling settings{% endblock %}
+{% block page_subtitle %}<div class="sub">Who bills handling, where it is booked, when it starts, and the rate. <a href="{% url 'purchasing:settings' %}">Purchasing settings</a></div>{% endblock %}
+{% block content %}
+{% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="action" value="settings">
+  {% for field in form %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endfor %}
+  {% if not rates %}<p class="help">Saving for the first time adds a 55% rate from the start date.</p>{% endif %}
+  <button type="submit" class="btn primary">Save settings</button>
+</form>
+</div></div>
+
+<h2>Rates</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Effective from</th><th class="num">Rate</th><th>Added by</th><th>Added on</th></tr></thead>
+  <tbody>
+  {% for r in rates %}
+    <tr><td>{{ r.effective_from|date:"M j, Y" }}</td><td class="num">{{ r.rate|percent }}</td>
+      <td>{{ r.created_by.get_username }}</td><td>{{ r.created_at|date:"Y-m-d" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No rates yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Add rate</h2>
+<div class="card"><div class="body">
+{% if rate_form.non_field_errors %}<div class="banner error">{% for e in rate_form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<p class="help">A new rate applies to orders dated on or after its start.</p>
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="action" value="rate">
+  <div class="form-grid" style="max-width:34rem">
+  {% for field in rate_form %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endfor %}
+  </div>
+  <button type="submit" class="btn primary">Add rate</button>
+</form>
+</div></div>
+{% endblock %}

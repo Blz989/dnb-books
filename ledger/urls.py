@@ -1,5 +1,6 @@
 from django.urls import path
 
+from handling import views as handling_views
 from items import views as item_views
 
 from purchasing.views import reports as purchasing_reports
@@ -27,5 +28,6 @@ urlpatterns = [
     path("bills-due/", purchasing_reports.bills_due, name="bills-due"),
     path("vendor-balances/", purchasing_reports.vendor_balances, name="vendor-balances"),
     path("open-purchase-orders/", purchasing_reports.open_purchase_orders, name="open-purchase-orders"),
+    path("order-profitability/", handling_views.order_profitability, name="order-profitability"),
     path("1099-summary/", purchasing_reports.summary_1099, name="1099-summary"),
 ]

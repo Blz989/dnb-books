@@ -1,0 +1,46 @@
+{% load handling_tags %}<section id="profit-panel">
+<h2>Profit{% for f in p.flags %} <span class="tag flag">{{ f }}</span>{% endfor %}</h2>
+{% if p.invoices %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Sales</div><div class="v">{{ p.net_sales|floatformat:"2g" }}</div><div class="note">{% if p.credits %}{{ p.sales|floatformat:"2g" }} less {{ p.credits|floatformat:"2g" }} in credits{% else %}No credits applied{% endif %}</div></div>
+  <div class="kpi"><div class="l">Cost</div><div class="v">{{ p.cost|floatformat:"2g" }}</div></div>
+  <div class="kpi{% if p.profit < 0 %} warn{% endif %}"><div class="l">Profit</div><div class="v">{{ p.profit|floatformat:"2g" }}</div><div class="note">{% if p.margin is None %}No margin{% else %}{{ p.margin }}% margin{% endif %}</div></div>
+  <div class="kpi"><div class="l">Handling owed</div><div class="v">{{ p.owed|floatformat:"2g" }}</div><div class="note">{% if p.rate is None %}No rate on {{ p.date|date:"Y-m-d" }}{% else %}{{ p.rate|percent }} of profit{% endif %}</div></div>
+</div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Item</th><th>Description</th><th>Ship from</th><th class="num">Sales</th><th class="num">Cost</th></tr></thead>
+  <tbody>
+  {% for ip in p.invoices %}
+    <tr class="section"><th colspan="3"><a class="sku" href="{% url 'sales:invoice-detail' ip.invoice.number %}">{{ ip.invoice.number }}</a> <span class="dash">{{ ip.invoice.date|date:"Y-m-d" }}</span>{% if ip.invoice.status == "VOID" %} <span class="tag void">Void</span>{% endif %}</th>
+      <th class="num">{{ ip.sales|floatformat:"2g" }}</th><th class="num">{{ ip.cost|floatformat:"2g" }}</th></tr>
+    {% for lc in ip.lines %}
+    <tr><td><a class="sku" href="/items/{{ lc.invoice_line.item.sku }}/">{{ lc.invoice_line.item.sku }}</a></td>
+      <td>{{ lc.invoice_line.description|default:lc.invoice_line.item.name }} <span class="dash">× {{ lc.invoice_line.quantity }}</span></td>
+      <td>{{ lc.invoice_line.get_fulfillment_display }}</td>
+      <td class="num">{{ lc.invoice_line.amount|floatformat:"2g" }}</td>
+      <td class="num">{% if lc.pending %}<span class="tag flag">Drop-ship bill not entered</span> {% endif %}{{ lc.cost|floatformat:"2g" }}</td></tr>
+    {% endfor %}
+    {% if ip.credits %}<tr><td></td><td>Credits applied</td><td></td><td class="num">-{{ ip.credits|floatformat:"2g" }}</td><td></td></tr>{% endif %}
+  {% endfor %}
+    <tr class="total"><td>Total</td><td></td><td></td><td class="num">{{ p.net_sales|floatformat:"2g" }}</td><td class="num">{{ p.cost|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+</div>
+<h2>Handling billed</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Handling bill</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+  {% for r in runs %}
+    <tr><td>{% if r.url %}<a class="sku" href="{{ r.url }}">{{ r.label }}</a>{% else %}{{ r.label }}{% endif %}</td><td class="num">{{ r.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="2" class="empty">Not billed yet.</td></tr>
+  {% endfor %}
+  {% if runs %}<tr class="total"><td>Total billed</td><td class="num">{{ p.billed|floatformat:"2g" }}</td></tr>{% endif %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="card"><div class="empty">No profit yet. Nothing has been invoiced.</div></div>
+{% endif %}
+</section>

@@ -73,4 +73,7 @@ class Command(BaseCommand):
         from banking.demo import seed_banking
 
         seed_banking(user)
+        from handling.demo import seed_handling
+
+        seed_handling(user)
         self.stdout.write("Demo data ready. Log in as demo / demo-pass-123.")
