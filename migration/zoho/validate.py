@@ -13,7 +13,8 @@ VENDOR_COLUMN = {s: "Vendor Name" for s in VENDOR_SHORTS}
 # Credit notes post to accounts in DNB Books, so their item names are only descriptions.
 ITEM_LINES = ("sales_orders", "invoices", "purchase_orders", "bills", "vendor_credits")
 ACCOUNT_COLUMNS = {
-    "invoices": ("Shipping Charge Account", "Adjustment Account"),
+    "sales_orders": ("Account",),
+    "invoices": ("Shipping Charge Account", "Adjustment Account", "Account"),
     "bills": ("Account", "Adjustment Account"),
     "credit_notes": ("Account",),
     "vendor_credits": ("Account",),

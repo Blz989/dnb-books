@@ -409,9 +409,12 @@ class Replay(MoneyReplay):
         first = rows[0]
         lines = []
         for row in rows:
+            item = self.line_item(row)
+            if item is None:
+                continue
             quantity = _quantity(row["QuantityOrdered"])
             price, _ = mapping.line_price(mapping.money(row["Item Total"]), quantity)
-            lines.append(OrderLineSpec(self.item_for(row), quantity, price, description=row["Item Desc"]))
+            lines.append(OrderLineSpec(item, quantity, price, description=row["Item Desc"]))
         void = first["Status"].strip().lower() == "void"
         notes = first["Notes"].strip()
         if void:
@@ -476,6 +479,15 @@ class Replay(MoneyReplay):
             self.warnings.append(f"{event.number}: total {ours} vs Zoho {theirs}")
         self._note_negative([s.item for s in item_lines], event)
 
+    def line_item(self, row: dict) -> Item | None:
+        """The item for a Zoho order or invoice line. Zoho has item-less lines: $0.00 placeholders (skipped,
+        None) and Shopify shipping charges booked straight to an account (a SHIP line on that account)."""
+        if row["SKU"].strip() or row["Item Name"].strip():
+            return self.item_for(row)
+        if not mapping.money(row["Item Total"]):
+            return None
+        return self._service_item("SHIP", row["Account"])
+
     def _service_item(self, base_sku: str, account_name: str) -> Item:
         """SHIP or ADJ, or a copy of it that posts to the Zoho account the document names (spec 4.2)."""
         default = self.items[base_sku]
@@ -517,11 +529,13 @@ class Replay(MoneyReplay):
         lines, taken = [], defaultdict(int)
         leftover = tax = Decimal("0.00")
         for row in rows:
-            item = self.item_for(row)
+            tax += mapping.money(row["Item Tax Amount"])
+            item = self.line_item(row)
+            if item is None:
+                continue
             quantity = _quantity(row["Quantity"])
             price, cents = mapping.line_price(mapping.money(row["Item Total"]), quantity)
             leftover += cents
-            tax += mapping.money(row["Item Tax Amount"])
             so_line = self._so_line(order, item, quantity, taken)
             # Zoho tracked every one of these lines as stock, so fulfillment is STOCK.
             lines.append(InvoiceLineSpec(

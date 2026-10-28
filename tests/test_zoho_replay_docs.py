@@ -353,3 +353,18 @@ def test_same_name_customers_stay_apart_and_invoices_follow_the_contact_id(db, a
     assert Invoice.objects.get(number="INV-T1").customer == second
     assert Customer.objects.filter(name="Cedar Ridge Outfitters").exists()
     assert any("share a name" in w for w in r.warnings)
+
+
+def test_item_less_lines_zero_skipped_and_shipping_kept(db, admin_user, tmp_path):
+    """Zoho's Shopify orders carry $0.00 placeholder lines and shipping charges booked straight to Sales."""
+    base = _invoice_row("INV-S1", "61000000888", "Blue Widget", "WID-A", 1, "12.00", "12.00", "17.99")
+    blank = {**base, "Item Name": "", "SKU": "", "Quantity": "1", "Item Price": "0.00", "Item Total": "0.00",
+             "Item Desc": ""}
+    ship = {**base, "Item Name": "", "SKU": "", "Quantity": "1", "Item Price": "5.99", "Item Total": "5.99",
+            "Item Desc": "Shipping Charges : Standard", "Account": "Sales"}
+    _replay(admin_user, tmp_path, extra_rows={"invoices": [base, blank, ship]})
+    invoice = Invoice.objects.get(number="INV-S1")
+    assert invoice_total(invoice) == Decimal("17.99")
+    shipping = invoice.lines.get(description="Shipping Charges : Standard")
+    assert (shipping.amount, shipping.item.income_account.name) == (Decimal("5.99"), "Sales")
+    assert invoice.lines.count() == 2
