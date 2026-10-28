@@ -1,0 +1,24 @@
+/* Printed handling statement. Fixed light palette from docs/design/invoice-mockup.html, not the app's theme tokens. */
+@page { size: letter landscape; margin: 0.5in; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, sans-serif; font-size: 9.5pt; line-height: 1.21; color: #2b2620; background: #fff; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2f6b4f; padding-bottom: 12pt; margin-bottom: 16pt; }
+.co { line-height: 1.45; color: #6f655a; }
+.co b { color: #2b2620; font-size: 12pt; font-family: "Source Serif 4"; font-weight: 600; }
+h1 { font-family: "Source Serif 4"; font-weight: 600; font-size: 20pt; margin: 0; color: #1f3a2f; text-align: right; }
+.meta { margin-top: 6pt; border-collapse: collapse; margin-left: auto; }
+.meta td { padding: 1.5pt 0 1.5pt 14pt; text-align: right; }
+.meta td:first-child { color: #6f655a; }
+table.lines { width: 100%; border-collapse: collapse; }
+.lines th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #6f655a; font-weight: 600; padding: 6pt; border-bottom: 1px solid #e3dccd; background: #faf6ee; }
+.lines td { padding: 6pt; border-bottom: 1px solid #eee8db; vertical-align: top; }
+.lines tr { break-inside: avoid; }
+.lines thead { display: table-header-group; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lines th.num { text-align: right; }
+.key { color: #2f6b4f; font-weight: 500; white-space: nowrap; }
+.empty { color: #6f655a; text-align: center; padding: 14pt 6pt; }
+.total td { border-top: 2px solid #2f6b4f; border-bottom: none; padding-top: 7pt; font-weight: 700; color: #1f3a2f; }
+.total td:last-child { font-size: 11pt; }
+.note { margin-top: 14pt; color: #6f655a; font-size: 8.5pt; }
+.void-mark { position: fixed; top: 30%; left: 22%; transform: rotate(-20deg); font-family: "Source Serif 4"; font-weight: 600; font-size: 120pt; letter-spacing: .08em; color: rgba(156, 42, 42, 0.16); border: 8pt solid rgba(156, 42, 42, 0.16); padding: 0 24pt; }

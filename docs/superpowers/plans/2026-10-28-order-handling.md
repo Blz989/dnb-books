@@ -199,7 +199,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
    - Total = 0: no document.
 6. Save the run and its lines, render the statement PDF to `statement_pdf`, and return the run.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_handling_runs.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_handling_runs.py`:
   - `test_periods_and_labels`: `Period.containing(date(2026,2,20))` is Feb 16 to 28, labeled `Feb 16–28, 2026`. `next()` after Oct 16 to 31 is Nov 1 to 15.
   - `test_first_period_contains_start_date`
   - `test_create_run_posts_one_bill_for_the_total`: the bill's vendor is the handling vendor, dated period end, number `HND-20261015`. The expense line is on `6400` for the total, and the run lines match the preview.
@@ -213,10 +213,10 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `test_second_create_for_same_period_refused` (Review Focus 5): `{label} is already billed.`, and exactly one POSTED run.
   - `test_settings_incomplete_refused`
   - `test_statement_pdf_lists_rows`: `pdf.startswith(b"%PDF")`, and the rendered HTML contains each order key and the total.
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_runs.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement `periods.py`, `billing.py`, and the statement template. The statement follows `sales/pdf.py`: bundled fonts and the Ledger paper style. It shows the title `Handling statement, {label}`, DNB's name and address from `SalesSettings`, the handling vendor's name, and the columns order, customer, sales, cost, profit, owed to date, billed before, and this bill, with a total row.
-- [ ] **Step 4:** Run `uv run pytest tests/test_handling_runs.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: handling periods and runs`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_runs.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement `periods.py`, `billing.py`, and the statement template. The statement follows `sales/pdf.py`: bundled fonts and the Ledger paper style. It shows the title `Handling statement, {label}`, DNB's name and address from `SalesSettings`, the handling vendor's name, and the columns order, customer, sales, cost, profit, owed to date, billed before, and this bill, with a total row.
+- [x] **Step 4:** Run `uv run pytest tests/test_handling_runs.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: handling periods and runs`.
 
 ### Task 4: Voiding, the lock on handling bills, and the month close check
 

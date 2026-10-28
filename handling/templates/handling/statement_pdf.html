@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Handling statement, {{ label }}</title>
+<style>
+@font-face { font-family: "Inter"; font-weight: 100 900; src: url("{{ font_uri }}/inter-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Source Serif 4"; font-weight: 600; src: url("{{ font_uri }}/source-serif-4-latin-600-normal.woff2") format("woff2"); }
+</style>
+</head>
+<body>
+{% if is_void %}<div class="void-mark">VOID</div>{% endif %}
+<div class="top">
+  <div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div>
+  <div>
+    <h1>Handling statement, {{ label }}</h1>
+    <table class="meta">
+      <tr><td>Handling company</td><td><b>{{ vendor.name }}</b></td></tr>
+      <tr><td>Period ends</td><td>{{ period_end }}</td></tr>
+      {% if run.bill %}<tr><td>Bill</td><td><b>{{ run.bill.number }}</b> · {{ run.bill.vendor_invoice_number }}</td></tr>{% endif %}
+      {% if run.vendor_credit %}<tr><td>Vendor credit</td><td><b>{{ run.vendor_credit.number }}</b></td></tr>{% endif %}
+    </table>
+  </div>
+</div>
+
+<table class="lines">
+  <thead><tr>
+    <th style="width:12%">Order</th><th>Customer</th>
+    <th class="num" style="width:10%">Sales</th><th class="num" style="width:10%">Cost</th><th class="num" style="width:10%">Profit</th>
+    <th class="num" style="width:11%">Owed to date</th><th class="num" style="width:11%">Billed before</th><th class="num" style="width:11%">This bill</th>
+  </tr></thead>
+  <tbody>
+  {% for line in lines %}
+    <tr><td class="key">{{ line.order_key }}</td><td>{{ line.customer.name }}</td>
+      <td class="num">{{ line.sales|floatformat:"2g" }}</td><td class="num">{{ line.cost|floatformat:"2g" }}</td>
+      <td class="num">{{ line.profit|floatformat:"2g" }}</td><td class="num">{{ line.owed_to_date|floatformat:"2g" }}</td>
+      <td class="num">{{ line.billed_before|floatformat:"2g" }}</td><td class="num">{{ line.this_bill|floatformat:"2g" }}</td></tr>
+  {% empty %}
+    <tr><td colspan="8" class="empty">No orders changed in this period. Nothing to bill.</td></tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr class="total"><td colspan="2">Total</td>
+      <td class="num">{{ totals.sales|floatformat:"2g" }}</td><td class="num">{{ totals.cost|floatformat:"2g" }}</td>
+      <td class="num">{{ totals.profit|floatformat:"2g" }}</td><td class="num">{{ totals.owed_to_date|floatformat:"2g" }}</td>
+      <td class="num">{{ totals.billed_before|floatformat:"2g" }}</td><td class="num">{% if run.total < 0 %}−{% endif %}${{ total_abs|floatformat:"2g" }}</td></tr>
+  </tfoot>
+</table>
+
+<p class="note">Sales are after credits. This bill is the handling owed on each order to date, less what earlier handling bills already charged.</p>
+</body>
+</html>
