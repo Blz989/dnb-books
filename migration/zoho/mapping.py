@@ -52,6 +52,13 @@ class AccountPlan:
     is_active: bool
 
 
+def clean_sku(text: str) -> str:
+    """A Zoho SKU made to fit DNB Books' SKU rule: "&" becomes "and", any other character outside letters,
+    numbers, dots, dashes, and underscores becomes "-", and it is cut to 50 characters."""
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", text.strip().replace("&", "and")).strip("-._")
+    return cleaned[:50].rstrip("-._")
+
+
 def money(text: str) -> Decimal:
     """Zoho amounts: "1,234.5", "0.000", and on items "USD 2.99". Only US dollars are supported."""
     cleaned = (text or "").replace(",", "").strip()

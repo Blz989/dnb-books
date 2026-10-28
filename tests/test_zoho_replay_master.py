@@ -143,3 +143,17 @@ def test_opening_stock_value_drift_warns(db, admin_user, tmp_path):
     r.load_master()
     assert r.warnings == ["Opening stock UNEVEN: value 1000.00 vs Zoho 1000.01"]
     assert StockMovement.objects.get(item=r.items["UNEVEN"]).unit_cost == Decimal("0.1000")
+
+
+def test_sku_outside_the_rule_is_cleaned_and_still_found(db, admin_user, tmp_path):
+    from migration.zoho.reader import read_export
+    from migration.zoho.replay import Replay
+    from tests.zoho_sample import build_sample_export, sample_rows
+
+    rows = sample_rows()
+    rows["items"][0] = {**rows["items"][0], "SKU": "Skyflake/800g"}
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    item = r.items["Skyflake/800g"]
+    assert item.sku == "Skyflake-800g"
+    assert 'SKU "Skyflake/800g" was imported as Skyflake-800g.' in r.warnings

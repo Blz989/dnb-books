@@ -264,7 +264,15 @@ class Replay(MoneyReplay):
         categories: dict[str, Category] = {}
         for row in self.rows("items"):
             stock = row["Item Type"].strip().lower() == "inventory"
-            sku = row["SKU"].strip()
+            zoho_sku = row["SKU"].strip()
+            sku = mapping.clean_sku(zoho_sku)
+            if sku and sku != zoho_sku:
+                taken = {i.sku for i in self.items.values()}
+                base, n = sku, 2
+                while sku in taken:
+                    sku = f"{base[:47]}-{n}"
+                    n += 1
+                self.warnings.append(f'SKU "{zoho_sku}" was imported as {sku}.')
             if not sku:
                 sku = f"ZOHO-{row['Item ID']}"
                 self.warnings.append(f'Item "{row["Item Name"]}" has no SKU; {sku} was used.')
@@ -290,7 +298,7 @@ class Replay(MoneyReplay):
                     row, "Inventory Account", (AccountSubtype.INVENTORY,), inventory) if stock else None,
                 is_active=row["Status"].strip().lower() != "inactive",
             )
-            self.items[sku if row["SKU"].strip() else row["Item Name"]] = item
+            self.items[zoho_sku or row["Item Name"]] = item
             self.record("item", row["Item ID"], item)
         for sku, name, account_name in SERVICE_ITEMS:
             target = self.account(account_name)

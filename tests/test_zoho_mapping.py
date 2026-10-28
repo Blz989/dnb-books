@@ -110,3 +110,12 @@ def test_money_reads_a_usd_prefix_and_refuses_other_currencies():
     assert money("USD 1,250.00") == Decimal("1250.00")
     with pytest.raises(ValueError, match="Only US dollar amounts"):
         money("EUR 5.00")
+
+
+def test_clean_sku_fits_the_sku_rule():
+    from migration.zoho.mapping import clean_sku
+
+    assert clean_sku("j&jpotatochipsbbq") == "jandjpotatochipsbbq"
+    assert clean_sku("Skyflake/800g") == "Skyflake-800g"
+    assert clean_sku("Shipping Charges : Standard") == "Shipping-Charges-Standard"
+    assert clean_sku("WID-A") == "WID-A"
