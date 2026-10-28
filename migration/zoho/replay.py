@@ -112,6 +112,9 @@ class Replay(MoneyReplay):
         self.items: dict[str, Item] = {}
         self.customers: dict[str, Customer] = {}  # by Zoho contact ID
         self.customers_by_name: dict[str, Customer] = {}
+        # Zoho's inactive accounts, items, and contacts still have history. They stay active while it replays,
+        # since posting refuses inactive ones, and are switched off in finish().
+        self.inactive: list = []
         self.vendors: dict[str, Vendor] = {}
         self.bank_accounts: dict[str, BankAccount] = {}
         self.warnings: list[str] = []
@@ -216,8 +219,10 @@ class Replay(MoneyReplay):
             row = rows[plan.name]
             account = Account.objects.create(
                 number=plan.number, name=plan.name, type=plan.type, subtype=plan.subtype,
-                is_active=plan.is_active, description=row.get("Description", ""),
+                description=row.get("Description", ""),
             )
+            if not plan.is_active:
+                self.inactive.append(account)
             self.accounts[plan.name] = account
             self.record("account", row["Account ID"], account)
 
@@ -304,8 +309,10 @@ class Replay(MoneyReplay):
                     row, "Purchase Account", (AccountSubtype.COST_OF_GOODS_SOLD,), cogs) if stock else None,
                 inventory_account=self._item_account(
                     row, "Inventory Account", (AccountSubtype.INVENTORY,), inventory) if stock else None,
-                is_active=row["Status"].strip().lower() != "inactive",
+                is_active=True,
             )
+            if row["Status"].strip().lower() == "inactive":
+                self.inactive.append(item)
             self.items[zoho_sku or row["Item Name"]] = item
             self.record("item", row["Item ID"], item)
         for sku, name, account_name in SERVICE_ITEMS:
@@ -344,8 +351,10 @@ class Replay(MoneyReplay):
                 billing_address=mapping.address(row, "Billing"),
                 ship_to_address=mapping.address(row, "Shipping"),
                 terms=mapping.terms(row["Payment Terms Label"]), notes=notes,
-                is_active=row["Status"].strip().lower() != "inactive",
+                is_active=True,
             )
+            if row["Status"].strip().lower() == "inactive":
+                self.inactive.append(customer)
             self.customers[row["Contact ID"]] = customer
             self.customers_by_name.setdefault(row["Display Name"], customer)
             self.record("customer", row["Contact ID"], customer)
@@ -357,8 +366,10 @@ class Replay(MoneyReplay):
                 name=row["Display Name"].strip(), email=row["EmailID"].strip(),
                 phone=row["Phone"].strip(), address=mapping.address(row, "Billing"),
                 terms=mapping.terms(row["Payment Terms Label"]),
-                is_active=row["Status"].strip().lower() != "inactive",
+                is_active=True,
             )
+            if row["Status"].strip().lower() == "inactive":
+                self.inactive.append(vendor)
             self.vendors[row["Display Name"]] = vendor
             self.record("vendor", row["Contact ID"], vendor)
 
@@ -544,6 +555,8 @@ class Replay(MoneyReplay):
     def finish(self) -> AfterSummary:
         self.apply_vendor_credits()
         with transaction.atomic():
+            for obj in self.inactive:
+                type(obj).objects.filter(pk=obj.pk).update(is_active=False)
             self._open_reconciliations()
             self._set_sequences()
         return AfterSummary(

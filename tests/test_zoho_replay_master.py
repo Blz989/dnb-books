@@ -172,3 +172,26 @@ def test_invalid_customer_email_kept_in_notes(db, admin_user, tmp_path):
     acme = r.customers_by_name["Acme Hardware"]
     assert acme.email == "" and "Zoho email: someone52.@gmail.com" in acme.notes
     assert any("is not valid" in w for w in r.warnings)
+
+
+def test_inactive_item_with_history_imports_then_goes_inactive(db, admin_user, tmp_path):
+    from items.stock import on_hand
+    from migration.zoho.reader import read_export
+    from migration.zoho.replay import Replay
+    from tests.zoho_sample import build_sample_export, sample_rows
+
+    rows = sample_rows()
+    stocked = next(i for i, r in enumerate(rows["items"]) if r["Opening Stock"] not in ("", "0", "0.00"))
+    rows["items"][stocked] = {**rows["items"][stocked], "Status": "Inactive"}
+    rows["customers"][0] = {**rows["customers"][0], "Status": "Inactive"}
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    r.finish()
+    item = r.items[rows["items"][stocked]["SKU"]]
+    item.refresh_from_db()
+    assert not item.is_active and on_hand(item) != 0 or not item.is_active
+    customer = r.customers_by_name["Acme Hardware"]
+    customer.refresh_from_db()
+    assert not customer.is_active
