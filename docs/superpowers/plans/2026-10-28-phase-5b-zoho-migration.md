@@ -177,7 +177,7 @@ The column names for `Credit_Note.csv`, `Creditnotes_Invoice.csv`, and `Vendor_C
   - `customer_method(mode: str, deposit_to: str) -> PaymentMethod`: deposit to `Undeposited Funds` gives CHECK when Mode is `Check`, otherwise CASH. Any other `Deposit To` gives ACH.
   - `vendor_method(mode: str, paid_through_subtype) -> VendorPaymentMethod`: a credit card subtype gives CARD. Mode `Check` gives CHECK. Anything else gives ACH. The Zoho Mode is kept in the reference.
 
-- [ ] **Step 1: Write the failing tests** in `tests/test_zoho_mapping.py`:
+- [x] **Step 1: Write the failing tests** in `tests/test_zoho_mapping.py`:
   - `test_money_parses_zoho_forms`: `"1,234.5"` → `Decimal("1234.50")`, `"0.000"` → `Decimal("0.00")`, `""` → `Decimal("0.00")`.
   - `test_account_plan_numbers_by_type_and_name`: two Bank accounts get `1000` and `1010` in name order. A/R gets `1100`, A/P `2000`, Credit Card `2100`, Income `4000`, Expense `6000`. Inactive stays inactive.
   - `test_bank_kind` (each case above)
@@ -185,10 +185,10 @@ The column names for `Credit_Note.csv`, `Creditnotes_Invoice.csv`, and `Vendor_C
   - `test_line_price_discount`: `line_price(Decimal("10.00"), 3) == (Decimal("3.3333"), Decimal("0.00"))`, `line_price(Decimal("1000.00"), 300) == (Decimal("3.3333"), Decimal("0.01"))`, and `line_price(Decimal("0.00"), 2) == (Decimal("0.0000"), Decimal("0.00"))`.
   - `test_customer_method`
   - `test_vendor_method`
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_mapping.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_mapping.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: Zoho field mapping`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_mapping.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_mapping.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: Zoho field mapping`.
 
 ### Task 3: Validation
 
