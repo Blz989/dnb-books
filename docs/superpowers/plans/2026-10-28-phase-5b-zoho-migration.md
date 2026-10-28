@@ -544,7 +544,7 @@ Document in the README that the app and scheduler are stopped first (`docker com
     - CHECK: `receive_payment(method=CHECK)`, then `make_deposit([payment], bank_account=row ledger, date=txn.date)`, then link the deposit.
   - `fill_oldest_first(open_docs: list[tuple[int, Decimal]], total: Decimal) -> dict[int, Decimal]`, a pure function used by the views.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_pay_bills_exact_total_required` (mismatch message with `1,234.56` formatting)
   - `test_pay_bills_check_number_used`
   - `test_pay_bills_card_and_ach`
@@ -556,10 +556,10 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - `test_receive_payment_total_mismatch`
   - `test_fill_oldest_first`
   - `test_ledger_checks_zero`
-- [ ] **Step 2:** Run `uv run pytest tests/test_inbox_catchup.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_inbox_catchup.py tests/test_inbox.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: pay bills and receive payment from a bank row`.
+- [x] **Step 2:** Run `uv run pytest tests/test_inbox_catchup.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_inbox_catchup.py tests/test_inbox.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: pay bills and receive payment from a bank row`.
 
 ### Task 12: Catch-up screens
 
