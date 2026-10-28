@@ -92,7 +92,7 @@ def _debit_account(spec: BillItemSpec, kind: BillLineKind, vendor: Vendor, n: in
 def validate_bill(
     *, vendor: Vendor, date: date_type, item_lines: Sequence[BillItemSpec], expense_lines: Sequence[BillExpenseSpec],
     purchase_order: PurchaseOrder | None, vendor_invoice_number: str, exclude_bill: Bill | None = None,
-    allow_duplicate: bool = False, check_vendor: bool = True,
+    allow_duplicate: bool = False, check_vendor: bool = True, allow_negative_adjustment: bool = False,
 ) -> None:
     """Every check that can fail before anything is saved."""
     PurchasingSettings.load().require_configured()
@@ -121,7 +121,7 @@ def validate_bill(
     for n, spec in enumerate(expense_lines, len(item_lines) + 1):
         if not isinstance(spec.amount, Decimal):
             raise TypeError("Amounts must be Decimal, never float or int.")
-        if not spec.amount.is_finite() or spec.amount <= 0:
+        if not spec.amount.is_finite() or spec.amount == 0 or (spec.amount < 0 and not allow_negative_adjustment):
             raise PurchasingError(f"Line {n}: enter an amount above zero.")
         if spec.amount > Decimal(MAX_AMOUNT_TEXT):
             raise PurchasingError(f"Line {n}: that amount is too large.")
@@ -160,6 +160,11 @@ def validate_bill(
             raise DuplicateBillWarning(
                 f"{vendor.name} already has bill {duplicate.number} with invoice # "
                 f"{duplicate.vendor_invoice_number}. Save anyway?")
+
+
+def _side(account: Account, signed: Decimal) -> LineSpec:
+    """Positive is a debit, negative a credit."""
+    return LineSpec(account, debit=signed) if signed > 0 else LineSpec(account, credit=-signed)
 
 
 def post_lines(
@@ -202,8 +207,9 @@ def post_lines(
         entry = post_entry(
             date=bill.date, user=user, memo=f"Bill {bill.number} {bill.vendor.name}",
             source_type="purchasing.bill", source_id=bill.number,
-            lines=[LineSpec(account, debit=amount) for account, amount in debits.items() if amount != 0]
-            + [LineSpec(settings.ap_account, credit=total)],
+            # A negative net (only possible with allow_negative_adjustment) posts on the other side.
+            lines=[_side(account, amount) for account, amount in debits.items() if amount != 0]
+            + [_side(settings.ap_account, -total)],
         )
     bill.journal_entry = entry
     bill.save()
@@ -217,7 +223,9 @@ def create_bill(
     *, vendor: Vendor, date: date_type, vendor_invoice_number: str, item_lines: Sequence[BillItemSpec] = (),
     expense_lines: Sequence[BillExpenseSpec] = (), user, purchase_order: PurchaseOrder | None = None,
     terms: Terms | None = None, notes: str = "", allow_duplicate: bool = False, allow_negative: bool = False,
+    allow_negative_adjustment: bool = False,
 ) -> Bill:
+    """allow_negative_adjustment lets expense lines be negative; only the Zoho import passes it."""
     if purchase_order is None:
         po_ids = {s.po_line.order for s in item_lines if s.po_line is not None}
         if len(po_ids) == 1:
@@ -226,7 +234,7 @@ def create_bill(
         validate_bill(
             vendor=vendor, date=date, item_lines=item_lines, expense_lines=expense_lines,
             purchase_order=purchase_order, vendor_invoice_number=vendor_invoice_number,
-            allow_duplicate=allow_duplicate)
+            allow_duplicate=allow_duplicate, allow_negative_adjustment=allow_negative_adjustment)
         terms = terms or vendor.terms
         bill = Bill.objects.create(
             number=next_number(DocType.BILL), vendor=vendor, vendor_invoice_number=vendor_invoice_number.strip(),

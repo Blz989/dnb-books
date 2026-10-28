@@ -49,7 +49,7 @@ def _is_stock_line(spec: InvoiceLineSpec) -> bool:
 
 def validate_invoice(
     *, customer: Customer, date: date_type, lines: Sequence[InvoiceLineSpec], sales_order: SalesOrder | None,
-    exclude_invoice: Invoice | None = None, check_customer: bool = True,
+    exclude_invoice: Invoice | None = None, check_customer: bool = True, allow_negative_adjustment: bool = False,
 ) -> None:
     """Every check that can fail before anything is saved."""
     SalesSettings.load().require_configured()
@@ -57,7 +57,7 @@ def validate_invoice(
         raise InvoiceError(f"{customer.name} is inactive.")
     if not lines:
         raise InvoiceError("An invoice needs at least one line with a quantity.")
-    validate_lines(lines, error=InvoiceError)
+    validate_lines(lines, error=InvoiceError, allow_negative_price=allow_negative_adjustment)
     assert_open(date)
     if sales_order is not None:
         if sales_order.customer_id != customer.pk:
@@ -82,6 +82,11 @@ def _remap_warning(exc: NegativeStockWarning, stock_positions: list[int]) -> Neg
         return re.sub(r"^Line (\d+):", lambda m: f"Line {stock_positions[int(m.group(1)) - 1]}:", message)
 
     return NegativeStockWarning([fix(m) for m in exc.messages])
+
+
+def _side(account, signed: Decimal) -> LineSpec:
+    """Positive is a debit, negative a credit."""
+    return LineSpec(account, debit=signed) if signed > 0 else LineSpec(account, credit=-signed)
 
 
 def post_lines(
@@ -123,8 +128,9 @@ def post_lines(
         entry = post_entry(
             date=invoice.date, user=user, memo=f"Invoice {invoice.number} {invoice.customer.name}",
             source_type="sales.invoice", source_id=invoice.number,
-            lines=[LineSpec(settings.ar_account, debit=total)] + [
-                LineSpec(account, credit=amount) for account, amount in by_account.items() if amount != 0
+            # A negative net (only possible with allow_negative_adjustment) posts on the other side.
+            lines=[_side(settings.ar_account, total)] + [
+                _side(account, -amount) for account, amount in by_account.items() if amount != 0
             ],
         )
     invoice.journal_entry = entry
@@ -134,10 +140,13 @@ def post_lines(
 def create_invoice(
     *, customer: Customer, date: date_type, lines: Sequence[InvoiceLineSpec], user,
     sales_order: SalesOrder | None = None, terms: Terms | None = None, ship_to: str | None = None,
-    notes: str | None = None, allow_negative: bool = False,
+    notes: str | None = None, allow_negative: bool = False, allow_negative_adjustment: bool = False,
 ) -> Invoice:
+    """allow_negative_adjustment lets non-stock lines have negative prices; only the Zoho import passes it."""
     with transaction.atomic():
-        validate_invoice(customer=customer, date=date, lines=lines, sales_order=sales_order)
+        validate_invoice(
+            customer=customer, date=date, lines=lines, sales_order=sales_order,
+            allow_negative_adjustment=allow_negative_adjustment)
         terms = terms or customer.terms
         invoice = Invoice.objects.create(
             number=next_number(DocType.INV), customer=customer, date=date, terms=terms,

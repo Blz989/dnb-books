@@ -5,22 +5,31 @@ Master data (accounts, settings, bank accounts, items, contacts, opening stock) 
 the `post_<kind>` method of the same name (added by later tasks). Every object made gets a
 `ZohoRecord` through `Replay.record`, so any Zoho row can be traced to what it became.
 """
+from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 
 from banking.models import BankAccount
 from contacts.models import Customer, Vendor
 from items.costing import unit_4dp
 from items.models import Category, CostingMethod, InventorySettings, Item, ItemType
-from items.stock import StockLine, record_opening_batch
+from items.stock import StockLine, on_hand, record_opening_batch
 from ledger.models import Account, AccountSubtype
 from migration.models import ZohoRecord
 from migration.zoho import mapping
-from migration.zoho.reader import ZohoExport
+from migration.zoho.reader import ID_COLUMNS, ZohoExport
 from purchasing.models import PurchasingSettings
-from sales.models import SalesSettings
+from purchasing.posting.bills import BillExpenseSpec, BillItemSpec, create_bill
+from purchasing.posting.orders import POLineSpec, close_po, create_po
+from sales.balances import invoice_total
+from sales.models import DocType, Fulfillment, OrderStatus, SalesOrder, SalesSettings
+from sales.numbering import use_number
+from sales.posting.invoices import InvoiceLineSpec, create_invoice, void_invoice
+from sales.posting.orders import OrderLineSpec, close_order, create_order, remaining
 
 OPENING_DATE = date(2020, 2, 1)
 FEED_START = date(2026, 1, 1)  # becomes BankAccount.feed_starts in Task 10; the field does not exist yet
@@ -33,6 +42,48 @@ SERVICE_ITEMS = (
 )
 
 
+@dataclass(frozen=True)
+class Event:
+    date: date
+    rank: int
+    number: str
+    kind: str
+    zoho_id: str
+
+
+# kind -> (short name, date column, number column or "" when the file has none)
+EVENT_SOURCES = {
+    "sales_order": ("sales_orders", "Order Date", "SalesOrder Number"),
+    "purchase_order": ("purchase_orders", "Purchase Order Date", "Purchase Order Number"),
+    "bill": ("bills", "Bill Date", "Bill Number"),
+    "adjustment": ("adjustments", "Date", ""),
+    "invoice": ("invoices", "Invoice Date", "Invoice Number"),
+    "customer_payment": ("customer_payments", "Date", "Payment Number"),
+    "vendor_payment": ("vendor_payments", "Date", "Payment Number"),
+    "credit_note": ("credit_notes", "Credit Note Date", "Credit Note Number"),
+    "credit_application": ("credit_applications", "Date", "Credit Note Number"),
+    "vendor_credit": ("vendor_credits", "Vendor Credit Date", "Vendor Credit Number"),
+    "expense": ("expenses", "Expense Date", ""),
+    "journal": ("journals", "Journal Date", "Journal Number"),
+    "transfer": ("transfers", "Transaction Date", "Reference"),
+    "other_deposit": ("deposits", "Transaction Date", "Reference"),
+}
+# Spec 4.3: the order of posting within one day.
+RANKS = {
+    "sales_order": 1, "purchase_order": 1,
+    "bill": 2,  # adjustments that add stock are also 2; those that remove it are 7
+    "invoice": 3,
+    "customer_payment": 4, "vendor_payment": 4, "credit_note": 4, "credit_application": 4,
+    "vendor_credit": 4,
+    "undeposited_transfer": 5,
+    "expense": 6, "journal": 6, "transfer": 6, "other_deposit": 6,
+}
+
+
+def _quantity(text: str) -> int:
+    return int(Decimal((text or "0").replace(",", "").strip() or "0"))
+
+
 class Replay:
     def __init__(self, export: ZohoExport, user):
         self.export = export
@@ -43,6 +94,9 @@ class Replay:
         self.vendors: dict[str, Vendor] = {}
         self.bank_accounts: dict[str, BankAccount] = {}
         self.warnings: list[str] = []
+        self.orders: dict[str, SalesOrder] = {}  # Zoho sales order number -> order
+        self.negative_items: set[str] = set()  # skus whose stock went below zero during replay
+        self._doc_rows: dict[tuple[str, str], list[dict]] = {}
 
     # ---- helpers shared with the document tasks ----
     def rows(self, short: str) -> list[dict]:
@@ -59,6 +113,50 @@ class Replay:
             return self.accounts[name]
         except KeyError:
             raise ValueError(f'The export has no account named "{name}".') from None
+
+    def item_for(self, row: dict) -> Item:
+        return self.items[row["SKU"].strip() or row["Item Name"]]
+
+    def doc_rows(self, kind: str, zoho_id: str) -> list[dict]:
+        """The export rows of one event (all lines of one document)."""
+        short = EVENT_SOURCES["transfer" if kind == "undeposited_transfer" else kind][0]
+        if not self._doc_rows:
+            self._index_rows()
+        return self._doc_rows[(short, zoho_id)]
+
+    def _index_rows(self) -> None:
+        for short, *_ in EVENT_SOURCES.values():
+            id_column = ID_COLUMNS[short]
+            for row in self.rows(short):
+                key = row[id_column] if id_column else row["_id"]
+                self._doc_rows.setdefault((short, key), []).append(row)
+
+    # ---- events ----
+    def events(self, kinds=None) -> list[Event]:
+        """Every document in the export as one event, sorted by (date, rank, number) as spec 4.3 says."""
+        if not self._doc_rows:
+            self._index_rows()
+        events = []
+        for kind, (short, date_column, number_column) in EVENT_SOURCES.items():
+            id_column = ID_COLUMNS[short]
+            seen = set()
+            for row in self.rows(short):
+                zoho_id = row[id_column] if id_column else row["_id"]
+                if zoho_id in seen:
+                    continue
+                seen.add(zoho_id)
+                event_kind, rank = kind, RANKS.get(kind)
+                if kind == "adjustment":
+                    adds = _quantity(row["Quantity Adjusted"]) > 0 or mapping.money(row["Value Adjusted"]) > 0
+                    rank = 2 if adds else 7
+                elif kind == "transfer" and row["From Account"].strip() == mapping.UNDEPOSITED:
+                    event_kind, rank = "undeposited_transfer", RANKS["undeposited_transfer"]
+                if kinds is not None and event_kind not in kinds:
+                    continue
+                number = row[number_column].strip() if number_column else ""
+                events.append(Event(
+                    date.fromisoformat(row[date_column].strip()), rank, number or zoho_id, event_kind, zoho_id))
+        return sorted(events, key=lambda e: (e.date, e.rank, e.number))
 
     def post(self, event) -> None:
         """Posts one event. Each kind is a `post_<kind>` method added by the document tasks."""
@@ -225,3 +323,158 @@ class Replay:
                 # Nothing extra is posted; the tie-out expects Zoho's value, so the owner is told.
                 self.warnings.append(
                     f"Opening stock {movement.item.sku}: value {movement.total_cost} vs Zoho {value}")
+
+    # ---- documents (Task 5) ----
+    def _note_negative(self, items, event: Event) -> None:
+        """One warning per item, the first time its stock goes below zero."""
+        for item in items:
+            if item.is_stock and item.sku not in self.negative_items and on_hand(item) < 0:
+                self.negative_items.add(item.sku)
+                self.warnings.append(
+                    f"{item.sku}: stock went below zero on {event.date.isoformat()} ({event.number}).")
+
+    def post_sales_order(self, event: Event) -> None:
+        rows = self.doc_rows(event.kind, event.zoho_id)
+        first = rows[0]
+        lines = []
+        for row in rows:
+            quantity = _quantity(row["QuantityOrdered"])
+            price, _ = mapping.line_price(mapping.money(row["Item Total"]), quantity)
+            lines.append(OrderLineSpec(self.item_for(row), quantity, price, description=row["Item Desc"]))
+        void = first["Status"].strip().lower() == "void"
+        notes = first["Notes"].strip()
+        if void:
+            # Orders have no void in DNB Books; a void Zoho order comes over closed (plan Task 5).
+            notes = "\n".join(p for p in (notes, "Void in Zoho") if p)
+        with transaction.atomic(), use_number(DocType.SO, event.number):
+            order = create_order(
+                customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
+                user=self.user, notes=notes)
+            if void:
+                close_order(order, self.user)
+            self.orders[event.number] = order
+            self.record("sales_order", event.zoho_id, order)
+
+    def post_purchase_order(self, event: Event) -> None:
+        rows = self.doc_rows(event.kind, event.zoho_id)
+        lines = []
+        for row in rows:
+            quantity = _quantity(row["QuantityOrdered"])
+            price, _ = mapping.line_price(mapping.money(row["Item Total"]), quantity)
+            lines.append(POLineSpec(self.item_for(row), quantity, price))
+        with transaction.atomic(), use_number(DocType.PO, event.number):
+            po = create_po(
+                vendor=self.vendors[rows[0]["Vendor Name"]], date=event.date, lines=lines, user=self.user,
+                notes=f"Imported from Zoho (ID {event.zoho_id})")
+            # Purchase orders come over closed, for reference; stock enters through bills only.
+            close_po(po, self.user)
+            self.record("purchase_order", event.zoho_id, po)
+
+    def post_bill(self, event: Event) -> None:
+        rows = self.doc_rows(event.kind, event.zoho_id)
+        first = rows[0]
+        item_lines, expense_lines = [], []
+        leftover = Decimal("0.00")
+        for row in rows:
+            total = mapping.money(row["Item Total"])
+            if row["SKU"].strip() or row["Item Name"].strip():
+                quantity = _quantity(row["Quantity"])
+                price, cents = mapping.line_price(total, quantity)
+                leftover += cents
+                item_lines.append(BillItemSpec(self.item_for(row), quantity, price, description=row["Description"]))
+            else:
+                expense_lines.append(BillExpenseSpec(self.account(row["Account"]), total, row["Description"]))
+        # Zoho's own adjustment and every cent lost to 4-dp unit prices, so the bill totals Zoho's Total.
+        extra = mapping.money(first["Adjustment"]) + leftover
+        if extra:
+            name = first["Adjustment Account"].strip() or "Cost of Goods Sold"
+            expense_lines.append(BillExpenseSpec(self.account(name), extra, "Adjustment"))
+        notes = f"Imported from Zoho (ID {event.zoho_id})"
+        if first["CF.Sales Order"].strip():
+            notes += f"\nSales order {first['CF.Sales Order'].strip()}"
+        bill = create_bill(
+            vendor=self.vendors[first["Vendor Name"]], date=event.date, vendor_invoice_number=event.number,
+            item_lines=item_lines, expense_lines=expense_lines, user=self.user,
+            terms=mapping.terms(first["Payment Terms Label"]), notes=notes,
+            allow_duplicate=True, allow_negative=True, allow_negative_adjustment=True)
+        self.record("bill", event.zoho_id, bill)
+        ours = sum((l.amount for l in [*bill.item_lines.all(), *bill.expense_lines.all()]), Decimal("0.00"))
+        theirs = mapping.money(first["Total"])
+        if ours != theirs:
+            self.warnings.append(f"{event.number}: total {ours} vs Zoho {theirs}")
+        self._note_negative([s.item for s in item_lines], event)
+
+    def _service_item(self, base_sku: str, account_name: str) -> Item:
+        """SHIP or ADJ, or a copy of it that posts to the Zoho account the document names (spec 4.2)."""
+        default = self.items[base_sku]
+        name = (account_name or "").strip()
+        if not name or self.account(name).pk == default.income_account_id:
+            return default
+        key = f"{base_sku}:{name}"
+        if key not in self.items:
+            account = self.account(name)
+            item = Item.objects.create(
+                sku=f"{base_sku}-{account.number}", name=f"{default.name} ({name})",
+                item_type=ItemType.NON_STOCK, income_account=account)
+            self.items[key] = item
+            self.record("service_item", key, item)
+        return self.items[key]
+
+    def _so_line(self, order: SalesOrder | None, item: Item, quantity: int, taken: dict) -> object:
+        """The order's first line for this item with enough left to invoice, counting this invoice's lines."""
+        if order is None:
+            return None
+        for line in order.lines.all():
+            if line.item_id == item.pk and remaining(line) - taken[line.pk] >= quantity:
+                taken[line.pk] += quantity
+                return line
+        return None
+
+    def post_invoice(self, event: Event) -> None:
+        rows = self.doc_rows(event.kind, event.zoho_id)
+        first = rows[0]
+        order = None
+        so_number = first["Sales Order Number"].strip()
+        if so_number:
+            order = self.orders.get(so_number)
+            if order is not None:
+                order.refresh_from_db()
+                if order.status == OrderStatus.CLOSED:
+                    self.warnings.append(f"{event.number}: {so_number} is closed; the invoice is not linked to it.")
+                    order = None
+        lines, taken = [], defaultdict(int)
+        leftover = tax = Decimal("0.00")
+        for row in rows:
+            item = self.item_for(row)
+            quantity = _quantity(row["Quantity"])
+            price, cents = mapping.line_price(mapping.money(row["Item Total"]), quantity)
+            leftover += cents
+            tax += mapping.money(row["Item Tax Amount"])
+            so_line = self._so_line(order, item, quantity, taken)
+            # Zoho tracked every one of these lines as stock, so fulfillment is STOCK.
+            lines.append(InvoiceLineSpec(
+                item, quantity, price, description=row["Item Desc"], fulfillment=Fulfillment.STOCK,
+                so_line=so_line))
+        shipping = mapping.money(first["Shipping Charge"])
+        adjustment = mapping.money(first["Adjustment"]) + leftover
+        extras = (
+            (self._service_item("SHIP", first["Shipping Charge Account"]), shipping),
+            (self._service_item("ADJ", first["Adjustment Account"]), adjustment),
+            (self.items["TAX"], tax),
+        )
+        for item, amount in extras:
+            if amount:
+                lines.append(InvoiceLineSpec(item, 1, amount, description=item.name))
+        with transaction.atomic(), use_number(DocType.INV, event.number):
+            invoice = create_invoice(
+                customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
+                user=self.user, sales_order=order, terms=mapping.terms(first["Payment Terms Label"]),
+                notes=first["Notes"], allow_negative=True, allow_negative_adjustment=True)
+            self.record("invoice", event.zoho_id, invoice)
+            if first["Invoice Status"].strip().lower() == "void":
+                # Created, then voided on the same date: the number stays used and the ledger nets to zero.
+                void_invoice(invoice, user=self.user, reason="Void in Zoho", date=event.date)
+        ours, theirs = invoice_total(invoice), mapping.money(first["Total"])
+        if ours != theirs:
+            self.warnings.append(f"{event.number}: total {ours} vs Zoho {theirs}")
+        self._note_negative([s.item for s in lines], event)

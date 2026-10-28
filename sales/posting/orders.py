@@ -29,8 +29,13 @@ class OrderLineSpec:
     line_id: int | None = None
 
 
-def validate_lines(lines: Sequence, error: type[SalesError] = OrderError) -> None:
-    """Shared by orders and invoices. Line numbers are 1-based."""
+def validate_lines(
+    lines: Sequence, error: type[SalesError] = OrderError, allow_negative_price: bool = False,
+) -> None:
+    """Shared by orders and invoices. Line numbers are 1-based.
+
+    allow_negative_price lets a non-stock line carry a negative price (the Zoho import's adjustment lines).
+    """
     for n, line in enumerate(lines, 1):
         if not line.item.is_active:
             # The Phase 2 wording, for a stock item that would leave the shelf.
@@ -40,7 +45,7 @@ def validate_lines(lines: Sequence, error: type[SalesError] = OrderError) -> Non
             raise error(f"Line {n}: enter a quantity above zero.")
         if not isinstance(line.price, Decimal):
             raise TypeError("Prices must be Decimal, never float or int.")
-        if line.price < 0:
+        if line.price < 0 and not (allow_negative_price and not line.item.is_stock):
             raise error(f"Line {n}: price can't be negative.")
         if line.price.as_tuple().exponent < -4:
             raise error(f"Line {n}: price can have at most 4 decimal places.")

@@ -306,7 +306,7 @@ Rules:
   - The invoice must total Zoho's `Total`. If not, record a warning `"{number}: total {ours} vs Zoho {theirs}"` and continue.
 - Every document gets a `ZohoRecord`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_orders_keep_zoho_numbers_and_void_closed`
   - `test_invoice_totals_equal_zoho` (every sample invoice)
   - `test_discount_leftover_goes_on_adjustment_line` (Review Focus 1)
@@ -317,10 +317,10 @@ Rules:
   - `test_negative_stock_allowed_and_warned`
   - `test_event_order_within_a_day`: a bill and an invoice on the same date; the bill posts first.
   - `test_ledger_checks_zero_after_docs`: `ar_check`, `ap_check`, and `check_invariants` are all empty.
-- [ ] **Step 2:** Run `uv run pytest tests/test_zoho_replay_docs.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_zoho_replay_docs.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: replay Zoho orders, bills, and invoices`.
+- [x] **Step 2:** Run `uv run pytest tests/test_zoho_replay_docs.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_zoho_replay_docs.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: replay Zoho orders, bills, and invoices`.
 
 ### Task 6: Replay payments, credits, deposits, expenses, journals, transfers, and adjustments
 
