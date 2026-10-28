@@ -349,7 +349,7 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
 - Create: `tests/test_handling_acceptance.py`
 - Modify: `README.md` (feature list, Status line), `CLAUDE.md` (Done list)
 
-- [ ] **Step 1: Write `test_handling_month`**, following spec success criterion 1. Run through October 2026:
+- [x] **Step 1: Write `test_handling_month`**, following spec success criterion 1. Run through October 2026:
   - Ship and invoice a stock order, a drop-ship order with its line invoiced before its bill, and a mixed order in two invoices.
   - Run Oct 1–15, and check each row by hand: write each expected figure as a literal.
   - Enter the late drop-ship bill, apply a customer credit, and edit an invoice.
@@ -358,10 +358,10 @@ Use the `finance:journal-entry` skill to review the bill and credit postings. Re
   - `close_period(2026, 10, admin_user)` succeeds.
   - Check, after each step, that `ap_check`, `ar_check`, `undeposited_check`, and `items.stock.check_invariants()` are empty.
   - Finally, check that the sum of POSTED run bill totals, less credit totals, equals the ledger balance of `6400` (`JournalLine.objects.in_ledger()`, debit − credit), which is success criterion 2.
-- [ ] **Step 2:** Run `uv run pytest tests/test_handling_acceptance.py -v`. Expect PASS. If it fails, fix the code in the task that owns it.
-- [ ] **Step 3:** Run `uv run pytest -q`. Every test must pass.
-- [ ] **Step 4:** Update `README.md`: add Order profitability and Handling to the feature list, and update the Status line. In `CLAUDE.md`, add "Order profitability and handling" to Done.
-- [ ] **Step 5:** Commit with `test: order handling acceptance; docs`.
+- [x] **Step 2:** Run `uv run pytest tests/test_handling_acceptance.py -v`. Expect PASS. If it fails, fix the code in the task that owns it.
+- [x] **Step 3:** Run `uv run pytest -q`. Every test must pass.
+- [x] **Step 4:** Update `README.md`: add Order profitability and Handling to the feature list, and update the Status line. In `CLAUDE.md`, add "Order profitability and handling" to Done.
+- [x] **Step 5:** Commit with `test: order handling acceptance; docs`.
 - [ ] **Step 6:** Open the PR `Order profitability and handling` into `main`. Its body follows `CLAUDE.md`:
   - the tasks with their status
   - the final pytest output

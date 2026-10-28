@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Phase 5a (banking) is built and tested, on top of Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import (Phase 5b) is next. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import (Phase 5b) is next. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -14,6 +14,8 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging | 3 |
 | Purchasing | Vendors, purchase orders (including drop-ship POs), bills that receive stock at the bill price, vendor payments by check, ACH, or company card, vendor credits and returns, A/P aging, 1099 summary | 4 |
 | Banking | Plaid bank feeds or OFX, QFX, and CSV files, an inbox that suggests matches for you to confirm, transfers and loan payments, reconciliation that locks what it clears, check printing on existing voucher stock | 5a |
+| Order profitability | Profit per order (sales less stock and drop-ship cost), a report with flags, and a profit panel on each order and direct invoice | After 5a |
+| Handling | Twice-monthly bill to the handling company for 55% of each order's profit not yet billed, with a statement PDF, corrections in the next bill, and a month close check | After 5a |
 | Migration | Full Zoho history import with month-by-month verification | 5b |
 
 **Not included:** multi-currency, sales tax, multiple warehouses, serial or batch tracking, kits, e-commerce sync, emailing from the app, payroll. See the spec for the full list.
@@ -81,6 +83,22 @@ Nothing is booked from the bank feed until you confirm it. Confirming a row that
 A reconciled month is locked: the documents behind it can't be voided or edited until an admin undoes that reconciliation (the most recent one only).
 
 A month won't close while customer balances, undeposited payments, or vendor balances disagree with the ledger. An admin can close it anyway from Admin, Accounting periods, with a reason that is saved on the period.
+
+### Order profitability and handling
+
+Each order's profit is its sales, less credits applied to its invoices, less the cost of what shipped on it (FIFO stock cost plus drop-ship bill cost). An invoice with no sales order is its own order. The handling company is paid 55% of each order's profit, never below zero.
+
+| Task | Where |
+|---|---|
+| Set up handling (once, admin) | Purchasing settings, Edit handling settings. Pick the handling vendor and the Handling expense account, set the start date, and confirm the 55% rate. Orders dated before the start date never get handling |
+| Change the rate (admin) | Handling settings, Add rate. It applies to orders dated on or after its date |
+| See the profit of every order | Reports, Order profitability. Filter by date, customer, or "Has unbilled handling". Flags show a drop-ship line whose bill isn't entered, an order below zero, and orders before the start date |
+| See one order's profit | Open the sales order or direct invoice. The profit panel shows sales by invoice, credits, cost by line, and each handling bill that billed it |
+| Bill handling, on the 15th and the last day of the month | Handling, Next. Check the preview, then Create bill. The bill carries each order's handling to date less what earlier bills carried, so a late drop-ship bill, a credit, or an edit is corrected in the next bill. If corrections exceed new handling, it creates a vendor credit instead |
+| Pay the handling company | Pay bills, like any other bill |
+| Undo the latest handling bill (admin) | Handling, open the run, Void. Only the latest run can be voided, and only before it is paid. Handling bills can't be voided or edited from Bills |
+
+A month won't close until both of its handling bills are created. An admin can close it anyway with a reason.
 
 ## How it works
 
