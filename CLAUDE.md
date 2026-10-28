@@ -5,8 +5,8 @@ Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. 
 ## Source of truth
 
 - **System spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md` (whole system, approved).
-- **Current spec:** `docs/superpowers/specs/2026-10-28-order-handling-design.md` (order profitability and handling, approved).
-- **Current plan:** `docs/superpowers/plans/2026-10-28-order-handling.md` (order profitability and handling, approved).
+- **Current spec:** `docs/superpowers/specs/2026-10-28-phase-5b-zoho-migration-design.md` (Phase 5b, approved).
+- **Current plan:** `docs/superpowers/plans/2026-10-28-phase-5b-zoho-migration.md` (Phase 5b, approved).
 - **Visual references:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`; all screens match it) `docs/design/invoice-mockup.html` (invoice PDF), and `docs/design/check-mockup.html` (printed check).
 - **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment, Order profitability and handling.
 
@@ -14,7 +14,7 @@ Read the specs and the current plan before starting. The plan's Global Constrain
 
 ## How to execute the current plan
 
-1. Work on a new branch from `main` named after the work (now: `claude/order-handling`).
+1. Work on a new branch from `main` named after the work (now: `claude/phase-5b-zoho-migration`).
 2. Use the `superpowers:subagent-driven-development` skill to execute the plan task by task, unless the owner chooses inline execution (`superpowers:executing-plans`). Follow TDD as each task's steps describe: failing test, confirm it fails, implement, confirm it passes, commit.
 3. One commit per task at minimum, using the commit message given in the task.
 4. Tick the plan's checkboxes (`- [ ]` to `- [x]`) as steps complete, and commit that with the task.
@@ -58,7 +58,7 @@ docker compose up -d --build     # production-like run (app + scheduler); see RE
 ## Conventions
 
 - Python 3.12+, Django 5.2 LTS. Keep dependencies to the list in the plan's Tech Stack; ask before adding any other.
-- One Django app per module (`core`, `ledger`, `backup`, `items`, `contacts`, `sales`, `purchasing`, `banking`, `handling`). Keep files focused; split a file when it grows past one clear responsibility.
+- One Django app per module (`core`, `ledger`, `backup`, `items`, `contacts`, `sales`, `purchasing`, `banking`, `handling`, `migration`). Keep files focused; split a file when it grows past one clear responsibility.
 - Tests live in `tests/`, pytest style, one file per task area as the plan names them.
 - American English (-ize spellings) in code, UI text, and docs.
 - UI text is plain and short. No marketing tone.
@@ -66,4 +66,4 @@ docker compose up -d --build     # production-like run (app + scheduler); see RE
 
 ## Later phases (not now)
 
-Phase 5b: Zoho migration (needs the Zoho data export). It gets its own spec and plan before any code.
+None planned after Phase 5b. The owner's real Zoho export is never committed; dry runs against it happen in the owner's Claude session.
