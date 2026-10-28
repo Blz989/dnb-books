@@ -311,3 +311,19 @@ def test_vendor_payment_before_its_bill_applies_on_the_bill_date(db, admin_user,
     app = payment.applications.get()
     assert payment.date == date.fromisoformat(paid_on) < app.applied_on == date.fromisoformat(bill_date)
     assert not r.pending_bill_applications and ap_check() == []
+
+
+def test_undeposited_transfer_found_among_the_latest_payments(db, admin_user, tmp_path):
+    """Real case: years of older cash sit in Undeposited Funds; the transfer banks the last few days' cash."""
+    old_cash = [dict(SMALL_CASH[0], **{"CustomerPayment ID": f"5420000000{n:02d}", "Payment Number": f"CP-30{n:02d}",
+                                       "Date": f"2024-02-{n:02d}", "Amount": "7.00", "Unused Amount": "7.00"})
+                for n in range(1, 26)]
+    recent = [dict(SMALL_CASH[0], **{"CustomerPayment ID": f"5430000000{n}", "Payment Number": f"CP-40{n}",
+                                     "Date": f"2024-04-2{n}", "Amount": amt, "Unused Amount": amt})
+              for n, amt in ((1, "165.00"), (2, "1234.00"), (3, "2000.00"), (4, "1000.00"))]
+    transfer = dict(LATE_TRANSFER, **{"Transaction Date": "2024-04-27", "Total": "4,399.00"})
+    r = _replay(admin_user, tmp_path, extra_rows={"customer_payments": old_cash + recent, "transfers": [transfer]})
+    deposit = Deposit.objects.get(date=date(2024, 4, 27))
+    assert sorted(p.number for p in deposit.all_payments.all()) == ["CP-401", "CP-402", "CP-403", "CP-404"]
+    assert not any("2024-04-27" in w for w in r.warnings)
+    assert undeposited_check() == []

@@ -178,8 +178,10 @@ class MoneyReplay:
         """Zoho moved cash out of Undeposited Funds by transfer; here it becomes a real deposit (spec 4.2)."""
         row = self.doc_rows(event.kind, event.zoho_id)[0]
         total = mapping.money(row["Total"])
-        candidates = list(
-            undeposited_payments().filter(date__lte=event.date, amount__lte=total)[:MAX_CANDIDATES])
+        # The payments closest before the transfer: cash is banked within days, and Zoho's
+        # Undeposited Funds also holds years of older payments that were never deposited.
+        recent = undeposited_payments().filter(date__lte=event.date, amount__lte=total).order_by("-date", "-id")
+        candidates = sorted(recent[:MAX_CANDIDATES], key=lambda p: (p.date, p.pk))
         found = exact_subset([p.amount for p in candidates], total)
         payments = [candidates[i] for i in found] if found is not None else self._paired(event.date, total)
         if not payments:
