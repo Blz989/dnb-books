@@ -585,23 +585,23 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - Save
 - Errors show in the banner and the inputs are kept.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `test_pay_bills_flow`
   - `test_receive_payment_flow_check`
   - `test_mismatch_keeps_inputs`
   - `test_double_post_same_token_one_payment`
   - `test_actions_shown_by_sign`
   - `test_standard_user_can_use_both`
-- [ ] **Step 2:** Run `uv run pytest tests/test_inbox_catchup_views.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement. Match "Ledger paper".
-- [ ] **Step 4:** Run `uv run pytest tests/test_inbox_catchup_views.py -v`. Expect PASS.
-- [ ] **Step 5: Screenshots** in light and dark:
+- [x] **Step 2:** Run `uv run pytest tests/test_inbox_catchup_views.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement. Match "Ledger paper".
+- [x] **Step 4:** Run `uv run pytest tests/test_inbox_catchup_views.py -v`. Expect PASS.
+- [x] **Step 5: Screenshots** in light and dark:
   - the inbox with both actions
   - Pay bills: empty, then a vendor chosen, then filled, then the mismatch error
   - Receive payment with Check chosen
 
   Send each.
-- [ ] **Step 6:** Commit with `feat: catch-up screens in the bank inbox`.
+- [x] **Step 6:** Commit with `feat: catch-up screens in the bank inbox`.
 
 ### Task 13: Acceptance, README, and PR
 

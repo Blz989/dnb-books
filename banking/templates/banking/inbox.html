@@ -33,6 +33,7 @@
           {% if i.suggestion %}<form method="post" action="{% url 'banking:inbox-confirm' i.txn.pk %}" style="display:inline">{% csrf_token %}<input type="hidden" name="token" value="{{ i.token }}"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn primary">Confirm</button></form>{% endif %}
           <a class="btn" href="{% url 'banking:inbox-change' i.txn.pk %}">Change</a>
           <a class="btn" href="{% url 'banking:transfer-new' %}?from_txn={{ i.txn.pk }}">Transfer</a>
+          {% if i.txn.amount < 0 %}<a class="btn" href="{% url 'banking:inbox-pay-bills' i.txn.pk %}">Pay bills</a>{% elif i.can_receive %}<a class="btn" href="{% url 'banking:inbox-receive' i.txn.pk %}">Receive payment</a>{% endif %}
           <details style="display:inline-block;vertical-align:top"><summary class="btn">Exclude</summary>
             <form method="post" action="{% url 'banking:inbox-exclude' i.txn.pk %}" style="margin-top:6px">{% csrf_token %}<input type="hidden" name="token" value="{{ i.token }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
               <input type="text" name="reason" placeholder="Why exclude it?" aria-label="Reason for excluding" maxlength="200"> <button type="submit" class="btn">Exclude</button></form></details>
