@@ -169,6 +169,29 @@ Do these once after `./update.sh`.
 4. **Add the bank accounts** under Banking, Bank accounts, then link or import. Set each checking account's next check number.
 5. **Calibrate the check printing.** Open the layout page for the account, print the calibration page at 100% on plain paper, hold it against a voucher check in front of a light, and nudge the offsets until the boxes sit on the lines. Then print one real check on plain paper held against the stock before using the stock.
 
+### Import from Zoho (Phase 5b, once)
+
+The import replays the whole Zoho history into a new, empty database. It never writes to the live database file directly: it copies the database to `dnb.sqlite3.import-copy`, imports into the copy, and compares the result with Zoho's own reports (the tie-out). A real run replaces the database with the copy only when the tie-out passes, and only after a backup. If anything goes wrong, the copy is deleted and the database is left as it was. Expect it to take tens of minutes.
+
+1. Put the Zoho export zip in `./data/zoho/` (for example `./data/zoho/export.zip`) and Zoho's reports in `./data/zoho/reports/`: `trial_balance.csv`, `pl_2020.csv` to `pl_2026.csv`, `ar_aging.csv`, `ap_aging.csv`, `inventory_summary.csv`, and `inventory_valuation.csv`. Optional: `opening_balances.csv` and `deposit_pairs.csv`.
+2. Stop the app and the scheduler, so nothing writes to the database while it is swapped:
+
+```bash
+docker compose stop app scheduler
+```
+
+3. Dry run. It prints progress per month (`2021-03: 412 events`), writes `report.html` and `report.pdf` next to the export, and keeps nothing else. It exits 0 when the tie-out passes and 1 when it doesn't.
+
+```bash
+docker compose run --rm -u dnb app python manage.py import_zoho /data/zoho/export.zip --reports /data/zoho/reports --user <admin username> --dry-run
+```
+
+   Add `--opening-balances /data/zoho/opening_balances.csv` and `--deposit-pairs /data/zoho/deposit_pairs.csv` when you have them. A transfer out of Undeposited Funds with no exact set of payments stops the run; list its payments in `deposit_pairs.csv` (`date,amount,payment_numbers`, numbers separated by `;`) and run again.
+4. Read the report. When it is clean, run the same command without `--dry-run`. It backs up the database, swaps in the import, and prints `Imported. Restart the app.` To import even though some differences remain, add `--accept-differences`.
+5. Start the app again: `docker compose up -d`.
+
+The command refuses a database that already has documents, and lists every problem in the export (one per line) before anything is imported.
+
 ### Everyday use
 
 | Task | How |

@@ -485,7 +485,7 @@ Flow:
 
 Document in the README that the app and scheduler are stopped first (`docker compose stop app scheduler`) and the command runs with `docker compose run --rm -u dnb app python manage.py import_zoho ...`.
 
-- [ ] **Step 1: Write the failing tests** (the `file_db_with_entries`-style fixture from `tests/conftest.py` gives a real database file):
+- [x] **Step 1: Write the failing tests** (the `file_db_with_entries`-style fixture from `tests/conftest.py` gives a real database file):
   - `test_refuses_non_empty_database`
   - `test_validation_problems_exit_2`
   - `test_dry_run_leaves_database_untouched`: no documents afterwards, and the report files exist.
@@ -493,10 +493,10 @@ Document in the README that the app and scheduler are stopped first (`docker com
   - `test_real_run_swaps_in_copy_after_backup`: documents exist, a backup file exists, and `ImportRun.succeeded`.
   - `test_real_run_refuses_failed_tieout_without_accept`
   - `test_numbers_after_real_run` (Review Focus 2): next PMT `PMT-00001`, and a new invoice gets the highest INV + 1.
-- [ ] **Step 2:** Run `uv run pytest tests/test_import_zoho_command.py -v`. Expect FAIL.
-- [ ] **Step 3:** Implement.
-- [ ] **Step 4:** Run `uv run pytest tests/test_import_zoho_command.py -v`. Expect PASS.
-- [ ] **Step 5:** Commit with `feat: import_zoho command with dry run and safe swap`.
+- [x] **Step 2:** Run `uv run pytest tests/test_import_zoho_command.py -v`. Expect FAIL.
+- [x] **Step 3:** Implement.
+- [x] **Step 4:** Run `uv run pytest tests/test_import_zoho_command.py -v`. Expect PASS.
+- [x] **Step 5:** Commit with `feat: import_zoho command with dry run and safe swap`.
 
 ### Task 10: Feed start date and Plaid history
 
