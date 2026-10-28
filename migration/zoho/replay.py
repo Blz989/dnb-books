@@ -6,9 +6,10 @@ the `post_<kind>` method of the same name. Orders, bills, and invoices are handl
 credits, deposits, entries, and stock adjustments in `replay_money.MoneyReplay`. Every object made gets a
 `ZohoRecord` through `Replay.record`, so any Zoho row can be traced to what it became.
 """
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.contrib.contenttypes.models import ContentType
@@ -644,20 +645,38 @@ class Replay(MoneyReplay):
                 set_sequence(doc_type, prefix=prefix, next_number=highest + 1, user=self.user)
 
     def _unbilled_orders(self) -> list:
-        """Sales orders with no Cordon bill, each with its profit and the handling it would earn at 50% and 55%."""
-        billed = set()
+        """Sales orders with no Cordon bill, each with its profit and the handling it would earn at 50% and 55%.
+
+        Cordon's Zoho bills name the order three ways: the bill's CF.Sales Order (kept in its notes), an order
+        number in a line ("Shipping for Order SO-0006"), or only the customer and the billing date
+        ("Shipping 2024-04-29 Kabayan Foods"). The last kind is matched to that customer's orders dated on or
+        before the line and in the 31 days before it."""
+        billed: set[str] = set()
+        by_customer: list[tuple[date, str]] = []
         bills = Bill.objects.filter(vendor__name__icontains=HANDLING_PAYEE).prefetch_related("expense_lines")
         for bill in bills:
             for line in bill.notes.splitlines():
                 if line.startswith("Sales order "):
                     billed.add(line[len("Sales order "):].strip())
-            # The Zoho handling bill names its order in the expense line ("Shipping for Order SO-0006").
             for expense in bill.expense_lines.all():
-                if "Order " in expense.description:
-                    billed.add(expense.description.rsplit("Order ", 1)[1].strip())
+                numbers = re.findall(r"SO-\d+", expense.description)
+                if numbers:
+                    billed.update(numbers)
+                    continue
+                named = re.match(r"Shipping\s+(\d{4}-\d{2}-\d{2})?\s*(.+)", expense.description.strip())
+                if named:
+                    when = date.fromisoformat(named.group(1)) if named.group(1) else bill.date
+                    by_customer.append((when, mapping.name_key(named.group(2))[:40]))
+        orders = list(SalesOrder.objects.filter(date__gte=UNBILLED_FROM).exclude(notes__contains="Void in Zoho")
+                      .select_related("customer").order_by("date", "number"))
+        for when, customer in by_customer:
+            for order in orders:
+                if (order.number not in billed and when - timedelta(days=31) <= order.date <= when
+                        and mapping.name_key(order.customer.name).startswith(customer)):
+                    billed.add(order.number)
         today = timezone.localdate()
         result = []
-        for order in SalesOrder.objects.filter(date__gte=UNBILLED_FROM).exclude(notes__contains="Void in Zoho").order_by("date", "number"):
+        for order in orders:
             if order.number in billed:
                 continue
             profit = order_profit(order.number, as_of=today).profit

@@ -159,3 +159,21 @@ def test_working_page_blank_balance_then_saved(replay, after, admin_user, client
     assert _bank_rec().statement_balance == Decimal("1234.50")
     client.post(url + "balance/", {"statement_balance": "abc"})
     assert _bank_rec().statement_balance == Decimal("1234.50")
+
+
+def test_cordon_lines_naming_the_customer_or_order_count_as_billed(db, admin_user, tmp_path):
+    """Real Cordon bills also say "Shipping 2024-12-05 Acme Hardware" or name the order in the line text."""
+    from tests.zoho_sample import sample_rows
+
+    cordon = dict(next(r for r in sample_rows()["bills"] if r["Bill Number"] == "BILL-005"))
+    by_customer = {**cordon, "Bill ID": "53000000090", "Bill Number": "PW-90", "Bill Date": "2024-12-05",
+                   "Item Name": "Shipping 2024-12-05 Acme Hardware", "Description": ""}
+    by_text = {**cordon, "Bill ID": "53000000091", "Bill Number": "PW-91", "Bill Date": "2024-09-20",
+               "Item Name": "", "Description": "Shipping SO-0003 Cedar"}
+    r = Replay(read_export(build_sample_export(tmp_path, extra_rows={"bills": [by_customer, by_text]})), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    numbers = [o.number for o, *_ in r.finish().unbilled_orders]
+    # SO-0004 (Acme, 2024-11-20) is within 31 days before Acme's 2024-12-05 line; SO-0003 is named in a line.
+    assert numbers == ["SO-0005", "SO-0007"]
