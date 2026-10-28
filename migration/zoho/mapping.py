@@ -1,6 +1,7 @@
 """Pure mapping functions from Zoho Books export values to DNB Books values."""
 
 import re
+from datetime import date
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -97,7 +98,9 @@ def bank_kind(name: str, zoho_type: str) -> AccountKind | None:
     return None
 
 
-def terms(label: str) -> Terms:
+def terms(label: str, issued: str = "", due: str = "") -> Terms:
+    """Zoho's terms label as DNB Books terms. "Custom" terms carry only a due date, so their length is the gap
+    between the document date and the due date (Net 30 when either date is missing)."""
     text = (label or "").strip()
     if not text:
         return Terms.NET_30
@@ -106,10 +109,21 @@ def terms(label: str) -> Terms:
         return Terms.DUE_ON_RECEIPT
     if lowered == "due end of the month":
         return Terms.NET_30
+    if lowered == "custom":
+        try:
+            days = (date.fromisoformat(due.strip()) - date.fromisoformat(issued.strip())).days
+        except ValueError:
+            return Terms.NET_30
+        if days <= 0:
+            return Terms.DUE_ON_RECEIPT
+        return _net_terms(days)
     match = re.fullmatch(r"net\s+(\d+)", lowered)
     if not match:
         raise ValueError(f"Unknown Zoho payment terms '{label}'.")
-    days = int(match.group(1))
+    return _net_terms(int(match.group(1)))
+
+
+def _net_terms(days: int) -> Terms:
     options = sorted((int(t.value.split("_")[1]), t) for t in Terms if t.value.startswith("NET_"))
     for option_days, term in options:
         if option_days >= days:

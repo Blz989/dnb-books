@@ -84,6 +84,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "Sales Order Number", "Item Name", "SKU", "Item Desc", "Quantity", "Item Price",
         "Item Total", "Total", "Shipping Charge", "Shipping Charge Account", "Adjustment",
         "Adjustment Account", "Item Tax Amount", "Notes", "Payment Terms Label",
+     "Due Date",
     ),
     "purchase_orders": (
         "Purchase Order Date", "Purchase Order Number", "Vendor Name", "Item Name", "SKU",
@@ -95,6 +96,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "Adjustment Account", "Payment Terms Label", "Purchase Order Number",
         "CF.Sales Order",
      "Balance",
+     "Due Date",
     ),
     "customer_payments": (
         "Payment Number", "Mode", "Date", "Amount", "Unused Amount", "Bank Charges",

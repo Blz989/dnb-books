@@ -96,3 +96,10 @@ def test_vendor_method():
     assert vendor_method("Check", AccountSubtype.BANK) == VendorPaymentMethod.CHECK
     assert vendor_method("Bank Transfer", AccountSubtype.BANK) == VendorPaymentMethod.ACH
     assert vendor_method("Cash", None) == VendorPaymentMethod.ACH
+
+
+def test_custom_terms_from_the_due_date_gap():
+    assert terms("Custom", "2020-05-05", "2020-06-05") == Terms.NET_45  # 31 days: the next longer terms
+    assert terms("Custom", "2020-05-05", "2020-06-04") == Terms.NET_30
+    assert terms("Custom", "2020-05-05", "2020-05-05") == Terms.DUE_ON_RECEIPT
+    assert terms("Custom") == Terms.NET_30

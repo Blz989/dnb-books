@@ -10,7 +10,8 @@ CUSTOMER_SHORTS = ("sales_orders", "invoices", "customer_payments", "credit_note
 VENDOR_SHORTS = ("bills", "purchase_orders", "vendor_payments", "vendor_credits")
 CUSTOMER_COLUMN = {s: "Customer Name" for s in CUSTOMER_SHORTS}
 VENDOR_COLUMN = {s: "Vendor Name" for s in VENDOR_SHORTS}
-ITEM_LINES = ("sales_orders", "invoices", "purchase_orders", "bills", "credit_notes", "vendor_credits")
+# Credit notes post to accounts in DNB Books, so their item names are only descriptions.
+ITEM_LINES = ("sales_orders", "invoices", "purchase_orders", "bills", "vendor_credits")
 ACCOUNT_COLUMNS = {
     "invoices": ("Shipping Charge Account", "Adjustment Account"),
     "bills": ("Account", "Adjustment Account"),
@@ -113,7 +114,7 @@ def validate(export: ZohoExport) -> list[str]:
             if sku:
                 if sku not in skus:
                     report(short, row, missing("item", sku))
-            elif name and name not in names:
+            elif name and name not in names and not (short == "bills" and row["Account"]):
                 report(short, row, missing("item", name))
 
     for short, cols in ACCOUNT_COLUMNS.items():
@@ -131,7 +132,8 @@ def validate(export: ZohoExport) -> list[str]:
         if so and so not in sales_orders:
             report("invoices", row, missing("sales order", so))
 
-    for short in ("vendor_payments", "vendor_credits"):
+    # Zoho's vendor credit export has no bill column; its applications are rebuilt from bill balances.
+    for short in ("vendor_payments",):
         for row in rows(short):
             bill, vendor = row["Bill Number"], row["Vendor Name"]
             if not bill:

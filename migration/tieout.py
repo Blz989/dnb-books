@@ -253,7 +253,7 @@ def _counts(export) -> list[Diff]:
         ("Vendor payments", "vendor_payment", "vendor_payments", "VendorPayment ID",
          lambda o: o.amount, lambda r: money(r["Amount"])),
         ("Credit notes", "credit_note", "credit_notes", "CreditNotes ID", credit_total, lambda r: money(r["Total"])),
-        ("Vendor credits", "vendor_credit", "vendor_credits", "VendorCredit ID",
+        ("Vendor credits", "vendor_credit", "vendor_credits", "Vendor Credit ID",
          vendor_credit_total, lambda r: money(r["Total"])),
     )
     diffs = []

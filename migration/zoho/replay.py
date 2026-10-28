@@ -138,6 +138,13 @@ class Replay(MoneyReplay):
     def item_for(self, row: dict) -> Item:
         return self.items[row["SKU"].strip() or row["Item Name"]]
 
+    def is_item_line(self, row: dict) -> bool:
+        """Zoho lets a bill line carry a free-text name with an expense account (Cordon's "Shipping …" lines).
+        Only a SKU, or a name that is a real item, makes it an item line."""
+        if row["SKU"].strip():
+            return True
+        return bool(row["Item Name"].strip()) and row["Item Name"] in self.items
+
     def doc_rows(self, kind: str, zoho_id: str) -> list[dict]:
         """The export rows of one event (all lines of one document)."""
         short = EVENT_SOURCES["transfer" if kind == "undeposited_transfer" else kind][0]
@@ -397,13 +404,14 @@ class Replay(MoneyReplay):
         leftover = Decimal("0.00")
         for row in rows:
             total = mapping.money(row["Item Total"])
-            if row["SKU"].strip() or row["Item Name"].strip():
+            if self.is_item_line(row):
                 quantity = _quantity(row["Quantity"])
                 price, cents = mapping.line_price(total, quantity)
                 leftover += cents
                 item_lines.append(BillItemSpec(self.item_for(row), quantity, price, description=row["Description"]))
             else:
-                expense_lines.append(BillExpenseSpec(self.account(row["Account"]), total, row["Description"]))
+                description = row["Description"].strip() or row["Item Name"].strip()
+                expense_lines.append(BillExpenseSpec(self.account(row["Account"]), total, description))
         # Zoho's own adjustment and every cent lost to 4-dp unit prices, so the bill totals Zoho's Total.
         extra = mapping.money(first["Adjustment"]) + leftover
         if extra:
@@ -415,7 +423,7 @@ class Replay(MoneyReplay):
         bill = create_bill(
             vendor=self.vendors[first["Vendor Name"]], date=event.date, vendor_invoice_number=event.number,
             item_lines=item_lines, expense_lines=expense_lines, user=self.user,
-            terms=mapping.terms(first["Payment Terms Label"]), notes=notes,
+            terms=mapping.terms(first["Payment Terms Label"], first["Bill Date"], first["Due Date"]), notes=notes,
             allow_duplicate=True, allow_negative=True, allow_negative_adjustment=True)
         self.record("bill", event.zoho_id, bill)
         ours = sum((l.amount for l in [*bill.item_lines.all(), *bill.expense_lines.all()]), Decimal("0.00"))
@@ -488,7 +496,7 @@ class Replay(MoneyReplay):
         with transaction.atomic(), use_number(DocType.INV, event.number):
             invoice = create_invoice(
                 customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
-                user=self.user, sales_order=order, terms=mapping.terms(first["Payment Terms Label"]),
+                user=self.user, sales_order=order, terms=mapping.terms(first["Payment Terms Label"], first["Invoice Date"], first["Due Date"]),
                 notes=first["Notes"], allow_negative=True, allow_negative_adjustment=True)
             self.record("invoice", event.zoho_id, invoice)
             if first["Invoice Status"].strip().lower() == "void":

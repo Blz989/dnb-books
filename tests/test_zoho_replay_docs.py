@@ -323,3 +323,18 @@ def test_negative_bill_expense_refused_by_default_allowed_with_flag(master):
     assert _entry(bill) == {"Office Supplies": Decimal("20.00"), "Discount": Decimal("-1.50"),
                             "Accounts Payable": Decimal("-18.50")}
     assert ap_check() == []
+
+
+def test_free_text_bill_line_becomes_an_expense_line(db, admin_user, tmp_path):
+    from tests.zoho_sample import sample_rows
+
+    row = dict(next(r for r in sample_rows()["bills"] if r["Bill Number"] == "BILL-005"))
+    row.update({"Bill ID": "53000000077", "Bill Number": "PW-77", "SKU": "", "Description": "",
+                "Item Name": "Shipping 2024-04-29 Kabayan Foods", "Account": "Shipping Expenses",
+                "Payment Terms Label": "Custom", "Bill Date": "2025-05-20", "Due Date": "2025-06-19"})
+    _replay(admin_user, tmp_path, extra_rows={"bills": [row]})
+    bill = Bill.objects.get(vendor_invoice_number="PW-77")
+    expense = bill.expense_lines.get()
+    assert (expense.account.name, expense.description) == ("Shipping Expenses", "Shipping 2024-04-29 Kabayan Foods")
+    assert not bill.item_lines.exists()
+    assert bill.terms == "NET_30"
