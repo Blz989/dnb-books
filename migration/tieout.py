@@ -114,6 +114,11 @@ def _trial_balance(rows, plan, as_of) -> list[Diff]:
         key = row["account"].casefold()
         names.setdefault(key, row["account"])
         zoho[key] += mapping.money(row.get("debit", "")) - mapping.money(row.get("credit", ""))
+    # Zoho's trial balance for a date lists balance-sheet accounts only (income and expense show 0.00 for the
+    # day, and it leaves equity out apart from Drawings). Income and expense are tied out by the yearly P&L
+    # checks, so here they are left out on both sides; when assets and liabilities tie, equity does too.
+    for key in [k for k in zoho if k in by_name and by_name[k].type in (AccountType.INCOME, AccountType.EXPENSE)]:
+        del zoho[key]
     ours: dict[str, Decimal] = {}
     notes: dict[str, str] = {}
     mapped_numbers = set()
@@ -125,7 +130,7 @@ def _trial_balance(rows, plan, as_of) -> list[Diff]:
         else:
             ours[key], notes[key] = ZERO, "Not in the account map"
     # Accounts that hold a balance here but are missing from Zoho's report
-    for account in Account.objects.all().order_by("number"):
+    for account in Account.objects.filter(type__in=[AccountType.ASSET, AccountType.LIABILITY]).order_by("number"):
         if account.number in mapped_numbers:
             continue
         balance = _net(account, entry__date__lte=as_of)
