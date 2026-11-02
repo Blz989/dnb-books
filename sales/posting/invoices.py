@@ -126,18 +126,19 @@ def post_lines(
         )
 
     entry = None
-    if total != 0:
-        by_account: dict = defaultdict(lambda: Decimal("0.00"))
-        for spec, amount in zip(lines, amounts):
-            by_account[spec.income_account or spec.item.income_account] += amount
+    by_account: dict = defaultdict(lambda: Decimal("0.00"))
+    for spec, amount in zip(lines, amounts):
+        by_account[spec.income_account or spec.item.income_account] += amount
+    income = [_side(account, -amount) for account, amount in by_account.items() if amount != 0]
+    # A $0.00 invoice still posts when its lines move money between income accounts (a free item: full price
+    # to Sales, the same to Discount; only the Zoho import builds those). With nothing to move, no entry.
+    if income:
         settings = SalesSettings.load()
         entry = post_entry(
             date=invoice.date, user=user, memo=f"Invoice {invoice.number} {invoice.customer.name}",
             source_type="sales.invoice", source_id=invoice.number,
             # A negative net (only possible with allow_negative_adjustment) posts on the other side.
-            lines=[_side(settings.ar_account, total)] + [
-                _side(account, -amount) for account, amount in by_account.items() if amount != 0
-            ],
+            lines=([_side(settings.ar_account, total)] if total != 0 else []) + income,
         )
     invoice.journal_entry = entry
     invoice.save()

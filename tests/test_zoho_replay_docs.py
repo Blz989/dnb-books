@@ -432,3 +432,15 @@ def test_write_off_rebuilt_from_zoho_balance(db, admin_user, tmp_path):
     assert note.lines.get().account.name == "Bad Debt" and note.date == invoice.date
     assert any("INV-000014" in w and "written off" in w for w in r.warnings)
     assert ar_check() == []
+
+
+def test_free_item_posts_sales_and_discount(db, admin_user, tmp_path):
+    """A 100% discount: Zoho posts the full price to Sales and the same to Discount, with nothing owing."""
+    row = _invoice_row("INV-000015", "51000000015", "Blue Widget", "WID-A", 1, "12.99", "0.00", "0.00")
+    _replay(admin_user, tmp_path, extra_rows={"invoices": [row]})
+    invoice = Invoice.objects.get(number="INV-000015")
+    assert invoice_total(invoice) == Decimal("0.00")
+    entry = _entry(invoice)
+    assert entry["Discount"] == Decimal("12.99") and sum(entry.values()) == 0
+    assert "Accounts Receivable" not in entry
+    assert ar_check() == []
