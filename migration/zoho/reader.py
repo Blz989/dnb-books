@@ -89,6 +89,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
      "Due Date",
      "Customer ID",
      "Account",
+     "Balance",
     ),
     "purchase_orders": (
         "Purchase Order Date", "Purchase Order Number", "Vendor Name", "Item Name", "SKU",

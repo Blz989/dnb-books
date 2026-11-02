@@ -13,6 +13,7 @@ from items.errors import NegativeStockWarning
 from items.models import Item, MovementKind
 from items.stock import StockLine, record_movements, void_movement
 from core.roles import require_admin
+from ledger.models import Account
 from ledger.periods import assert_open
 from ledger.posting import LineSpec, post_entry, void_entry
 
@@ -37,6 +38,10 @@ class InvoiceLineSpec:
     fulfillment: Fulfillment = Fulfillment.STOCK
     drop_ship_vendor: str = ""
     so_line: SalesOrderLine | None = None
+    # Zoho import only: the income and cost-of-goods accounts Zoho used on this line, when they differ from the
+    # item's current accounts. Screens never set them, and an edit posts with the item's accounts again.
+    income_account: Account | None = None
+    cogs_account: Account | None = None
 
 
 def line_amount(spec: InvoiceLineSpec) -> Decimal:
@@ -103,7 +108,8 @@ def post_lines(
             movements = record_movements(
                 kind=MovementKind.SALE, date=invoice.date, user=user, allow_negative=allow_negative,
                 source_type="sales.invoice", source_id=invoice.number,
-                lines=[StockLine(lines[n - 1].item, -lines[n - 1].quantity, account=lines[n - 1].item.cogs_account)
+                lines=[StockLine(lines[n - 1].item, -lines[n - 1].quantity,
+                                 account=lines[n - 1].cogs_account or lines[n - 1].item.cogs_account)
                        for n in stock_positions],
             )
         except NegativeStockWarning as exc:
@@ -123,7 +129,7 @@ def post_lines(
     if total != 0:
         by_account: dict = defaultdict(lambda: Decimal("0.00"))
         for spec, amount in zip(lines, amounts):
-            by_account[spec.item.income_account] += amount
+            by_account[spec.income_account or spec.item.income_account] += amount
         settings = SalesSettings.load()
         entry = post_entry(
             date=invoice.date, user=user, memo=f"Invoice {invoice.number} {invoice.customer.name}",

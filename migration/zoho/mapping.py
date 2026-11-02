@@ -81,6 +81,15 @@ def clean_sku(text: str) -> str:
     return cleaned[:50].rstrip("-._")
 
 
+def money4(text: str) -> Decimal:
+    """A unit price: money() to 4 decimal places."""
+    cleaned = (text or "").replace(",", "").strip()
+    currency = re.match(r"^([A-Za-z]{3})\s+", cleaned)
+    if currency:
+        cleaned = cleaned[currency.end():]
+    return Decimal(cleaned or "0").quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+
+
 def money(text: str) -> Decimal:
     """Zoho amounts: "1,234.5", "0.000", and on items "USD 2.99". Only US dollars are supported."""
     cleaned = (text or "").replace(",", "").strip()

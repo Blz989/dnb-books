@@ -29,7 +29,8 @@ from purchasing.posting.credits import (
     create_return_credit,
 )
 from purchasing.posting.payments import apply_vendor_payment, pay_vendor
-from sales.models import CreditNote, DocType, Invoice, Payment
+from sales.balances import invoice_balance
+from sales.models import CreditNote, DocStatus, DocType, Invoice, Payment
 from sales.numbering import use_number
 from sales.posting.deposits import make_deposit, undeposited_payments
 from sales.posting.receipts import (
@@ -284,6 +285,34 @@ class MoneyReplay:
                 self.record("vendor_credit", f"{event.zoho_id}:allowance", credits[1])
         if returns:
             self._note_negative([l.item for l in returns], event)
+
+    def write_off_invoices(self) -> None:
+        """Zoho's invoice write-offs are not in the export, but each invoice carries Zoho's balance. An invoice
+        that owes more here than in Zoho, with nothing else to explain it, was written off: a credit note to Bad
+        Debt on the invoice date, applied to it. (On the real export, these match Zoho's Bad Debt by year.)"""
+        bad_debt = self.accounts.get("Bad Debt")
+        zoho_balance = {}
+        for row in self.export.files["invoices"]:
+            if row.get("Balance", "").strip():  # blank: Zoho didn't say, so nothing to compare
+                zoho_balance.setdefault(row["Invoice ID"], mapping.money(row["Balance"]))
+        invoice_type = ContentType.objects.get_for_model(Invoice)
+        for record in ZohoRecord.objects.filter(kind="invoice", content_type=invoice_type).order_by("object_id"):
+            invoice = Invoice.objects.get(pk=record.object_id)
+            if invoice.status == DocStatus.VOID or record.zoho_id not in zoho_balance:
+                continue
+            gap = invoice_balance(invoice) - zoho_balance[record.zoho_id]
+            if gap <= 0:
+                continue
+            if bad_debt is None:
+                self.warnings.append(f"{invoice.number}: {gap:,.2f} more owing than in Zoho, and no Bad Debt account.")
+                continue
+            with transaction.atomic():
+                note = create_credit_note(
+                    customer=invoice.customer, date=invoice.date, reason="Written off in Zoho", user=self.user,
+                    lines=[CreditLineSpec(f"Written off in Zoho: {invoice.number}", gap, bad_debt)])
+                apply_credit(note, invoice, gap, date=invoice.date, user=self.user)
+                self.record("write_off", record.zoho_id, note)
+            self.warnings.append(f"{invoice.number}: {gap:,.2f} written off to Bad Debt, as in Zoho ({note.number}).")
 
     def apply_vendor_credits(self) -> None:
         """Zoho's vendor credit export doesn't say which bills a credit was applied to. Each bill does carry

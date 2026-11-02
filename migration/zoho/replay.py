@@ -49,6 +49,9 @@ ZOHO_SEQUENCES = (
 )
 
 # Non-stock items for the extra amounts on Zoho documents: sku, name, Zoho income account.
+# Zoho pairs each income account with its own cost of goods account.
+COGS_FOR_INCOME = {"Sales": "Cost of Goods Sold", "Wholesale Sales": "Wholesale Cost of Goods Sold"}
+
 SERVICE_ITEMS = (
     ("SHIP", "Shipping charge", "Shipping Charge"),
     ("ADJ", "Adjustment", "Sales"),
@@ -516,6 +519,31 @@ class Replay(MoneyReplay):
             return None
         return self._service_item("SHIP", row["Account"])
 
+    def _is_real_item(self, row: dict) -> bool:
+        return bool(row["SKU"].strip() or row["Item Name"].strip())
+
+    def _discount_item(self) -> Item | None:
+        """Line discounts, posted to Zoho's Discount account; None when the export has no such account."""
+        if "DISC" not in self.items:
+            account = self.accounts.get("Discount")
+            if account is None:
+                return None
+            self.items["DISC"] = Item.objects.create(
+                sku="DISC", name="Discount (Zoho)", item_type=ItemType.NON_STOCK, income_account=account)
+            self.record("service_item", "DISC", self.items["DISC"])
+        return self.items["DISC"]
+
+    def _line_accounts(self, item: Item, row: dict) -> tuple:
+        """The income account Zoho used on this line, and the cost of goods account that goes with it, when they
+        differ from the item's current ones. Zoho moved wholesale items from Sales to Wholesale Sales over time."""
+        if not self._is_real_item(row):
+            return None, None
+        income = self.accounts.get(row["Account"].strip())
+        if income is None or income.pk == item.income_account_id:
+            return None, None
+        cogs = self.accounts.get(COGS_FOR_INCOME.get(income.name, "")) if item.is_stock else None
+        return income, (cogs if cogs is not None and cogs.pk != item.cogs_account_id else None)
+
     def _service_item(self, base_sku: str, account_name: str) -> Item:
         """SHIP or ADJ, or a copy of it that posts to the Zoho account the document names (spec 4.2)."""
         default = self.items[base_sku]
@@ -555,26 +583,36 @@ class Replay(MoneyReplay):
                     self.warnings.append(f"{event.number}: {so_number} is closed; the invoice is not linked to it.")
                     order = None
         lines, taken = [], defaultdict(int)
-        leftover = tax = Decimal("0.00")
+        leftover = tax = discount = Decimal("0.00")
         for row in rows:
             tax += mapping.money(row["Item Tax Amount"])
             item = self.line_item(row)
             if item is None:
                 continue
             quantity = _quantity(row["Quantity"])
-            price, cents = mapping.line_price(mapping.money(row["Item Total"]), quantity)
-            leftover += cents
+            total = mapping.money(row["Item Total"])
+            listed = mapping.money4(row["Item Price"])
+            gross = (quantity * listed).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if self._discount_item() is not None and self._is_real_item(row) and listed >= 0 and gross >= total:
+                # Zoho books the full price to the income account and the line discount to Discount.
+                price = listed
+                discount += gross - total
+            else:
+                price, cents = mapping.line_price(total, quantity)
+                leftover += cents
+            income, cogs = self._line_accounts(item, row)
             so_line = self._so_line(order, item, quantity, taken)
             # Zoho tracked every one of these lines as stock, so fulfillment is STOCK.
             lines.append(InvoiceLineSpec(
                 item, quantity, price, description=row["Item Desc"], fulfillment=Fulfillment.STOCK,
-                so_line=so_line))
+                so_line=so_line, income_account=income, cogs_account=cogs))
         shipping = mapping.money(first["Shipping Charge"])
         adjustment = mapping.money(first["Adjustment"]) + leftover
         extras = (
             (self._service_item("SHIP", first["Shipping Charge Account"]), shipping),
             (self._service_item("ADJ", first["Adjustment Account"]), adjustment),
             (self.items["TAX"], tax),
+            (self._discount_item(), -discount),
         )
         for item, amount in extras:
             if amount:
@@ -606,6 +644,7 @@ class Replay(MoneyReplay):
         for number, waiting in self.pending_applications.items():
             for payment, amount, _ in waiting:
                 self.warnings.append(f"Payment {payment.number}: {amount:,.2f} for {number} was never applied.")
+        self.write_off_invoices()
         self.apply_vendor_credits()
         with transaction.atomic():
             for obj in self.inactive:
