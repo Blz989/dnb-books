@@ -327,3 +327,25 @@ def test_undeposited_transfer_found_among_the_latest_payments(db, admin_user, tm
     assert sorted(p.number for p in deposit.all_payments.all()) == ["CP-401", "CP-402", "CP-403", "CP-404"]
     assert not any("2024-04-27" in w for w in r.warnings)
     assert undeposited_check() == []
+
+
+def test_credit_note_with_a_stock_item_returns_it_to_stock(db, admin_user, tmp_path):
+    """Zoho's credit notes that name a stock item put it back on the shelf (all 19 real quantity differences)."""
+    from items.stock import on_hand
+
+    rows = sample_rows()
+    note = rows["credit_notes"][0]
+    sku = next(r["SKU"] for r in rows["items"] if r["Item Name"] == note["Item Name"])
+    note.update({"SKU": sku, "Quantity": "2"})
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    before = None
+    for event in r.events():
+        if event.kind == "credit_note":
+            before = on_hand(r.items[sku])
+        r.post(event)
+        if event.kind == "credit_note":
+            assert on_hand(r.items[sku]) == before + 2
+    moves = StockMovement.objects.filter(source_type="migration.credit_return")
+    assert [m.quantity for m in moves] == [2] and moves[0].offset_account == r.items[sku].cogs_account
+    assert check_invariants() == []

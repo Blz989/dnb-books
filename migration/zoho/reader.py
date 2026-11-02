@@ -114,7 +114,7 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "Paid Through", "Bill Number", "Bill Amount", "Bill Payment Applied Date",
     ),
     "credit_notes": (
-        "Credit Note Date", "Credit Note Number", "Customer Name", "Item Name", "Account",
+        "Credit Note Date", "Credit Note Number", "Customer Name", "Item Name", "SKU", "Quantity", "Account",
         "Item Total", "Total", "Subject", "Notes",
      "Customer ID",
     ),

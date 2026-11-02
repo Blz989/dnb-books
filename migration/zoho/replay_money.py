@@ -165,6 +165,20 @@ class MoneyReplay:
                     customer=self.customer_for("credit_notes", first), date=event.date, lines=lines,
                     reason=_credit_reason(first), user=self.user)
             self.record("credit_note", event.zoho_id, note)
+            # A Zoho credit note that names a stock item put it back on the shelf; Zoho's stock counts include
+            # it. The return goes back in at current cost against cost of goods, as Zoho booked it.
+            returns = [
+                StockLine(self.item_for(row), _quantity(row["Quantity"]),
+                          reason=f"Returned on Zoho credit note {event.number}",
+                          account=self.item_for(row).cogs_account)
+                for row in rows
+                if row["SKU"].strip() and row["SKU"].strip() in self.items and self.item_for(row).is_stock
+                and _quantity(row["Quantity"]) > 0
+            ]
+            if returns:
+                record_movements(kind=MovementKind.ADJUSTMENT, date=event.date, lines=returns, user=self.user,
+                                 allow_negative=True, source_type="migration.credit_return",
+                                 source_id=event.zoho_id)
 
     def post_credit_application(self, event) -> None:
         with transaction.atomic():
