@@ -60,6 +60,7 @@ class Item(models.Model):
     item_type = models.CharField(max_length=10, choices=ItemType.choices, default=ItemType.STOCK)
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.PROTECT, related_name="items")
     unit = models.CharField(max_length=30, blank=True, default="each")
+    packaging = models.CharField(max_length=50, blank=True)  # printed on invoices, for example 25X16OZ
     sale_price = models.DecimalField(max_digits=14, decimal_places=4, default=0)
     purchase_cost = models.DecimalField(max_digits=14, decimal_places=4, default=0)
     vendor_part_number = models.CharField(max_length=100, blank=True)

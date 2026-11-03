@@ -19,6 +19,7 @@ HEADERS = [
     "sku", "name", "item_type", "category", "unit", "sale_price", "purchase_cost", "vendor_part_number",
     "costing_method", "opening_quantity", "opening_unit_cost", "opening_date",
 ]
+OPTIONAL_HEADERS = ["packaging"]  # may be left out of the file
 ITEM_TYPES = {"stock": ItemType.STOCK, "non-stock": ItemType.NON_STOCK}
 METHODS = {"fifo": CostingMethod.FIFO, "weighted average": CostingMethod.WEIGHTED_AVERAGE}
 
@@ -44,6 +45,7 @@ class ParsedRow:
     opening_quantity: int | None
     opening_unit_cost: Decimal | None
     opening_date: date_type | None
+    packaging: str = ""
 
 
 @dataclass(frozen=True)
@@ -76,7 +78,7 @@ def parse_items_csv(text: str) -> ImportPreview:
     errors: list[RowError] = []
 
     for n, raw in enumerate(reader, start=2):
-        cells = {h: (raw.get(h) or "").strip() for h in HEADERS}
+        cells = {h: (raw.get(h) or "").strip() for h in HEADERS + OPTIONAL_HEADERS}
         if not any(cells.values()):
             continue
         problems: list[str] = []
@@ -146,7 +148,8 @@ def parse_items_csv(text: str) -> ImportPreview:
             unit=cells["unit"] or "each", sale_price=prices["sale_price"], purchase_cost=prices["purchase_cost"],
             vendor_part_number=cells["vendor_part_number"],
             costing_method=method if item_type == ItemType.STOCK else None,
-            opening_quantity=quantity, opening_unit_cost=unit_cost, opening_date=opening_date))
+            opening_quantity=quantity, opening_unit_cost=unit_cost, opening_date=opening_date,
+            packaging=cells["packaging"]))
     return ImportPreview(rows, errors)
 
 
@@ -171,7 +174,7 @@ def apply_import(preview: ImportPreview, *, user) -> list[Item]:
                     category = categories[r.category.lower()] = Category.objects.create(name=r.category)
             stock = r.item_type == ItemType.STOCK
             item = Item.objects.create(
-                sku=r.sku, name=r.name, item_type=r.item_type, category=category, unit=r.unit,
+                sku=r.sku, name=r.name, item_type=r.item_type, category=category, unit=r.unit, packaging=r.packaging,
                 sale_price=r.sale_price, purchase_cost=r.purchase_cost, vendor_part_number=r.vendor_part_number,
                 costing_method=r.costing_method if stock else "", income_account=s.default_income_account,
                 cogs_account=s.default_cogs_account if stock else None,

@@ -5,7 +5,6 @@
 <title>{{ invoice.number }}</title>
 <style>
 @font-face { font-family: "Inter"; font-weight: 100 900; src: url("{{ font_uri }}/inter-latin-wght-normal.woff2") format("woff2"); }
-@font-face { font-family: "Source Serif 4"; font-weight: 600; src: url("{{ font_uri }}/source-serif-4-latin-600-normal.woff2") format("woff2"); }
 </style>
 </head>
 <body>
@@ -15,40 +14,53 @@
     {% if logo_uri %}<div class="logo"><img src="{{ logo_uri }}" alt=""></div>{% endif %}
     <div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div>
   </div>
-  <div>
-    <h1>INVOICE</h1>
-    <table class="meta">
-      <tr><td>Invoice</td><td><b>{{ invoice.number }}</b></td></tr>
-      <tr><td>Date</td><td>{{ invoice.date|date:"M j, Y" }}</td></tr>
-      <tr><td>Terms</td><td>{{ invoice.get_terms_display }}</td></tr>
-      <tr><td>Due</td><td><b>{{ invoice.due_date|date:"M j, Y" }}</b></td></tr>
-      {% if invoice.sales_order %}<tr><td>Sales order</td><td>{{ invoice.sales_order.number }}</td></tr>{% endif %}
-    </table>
-  </div>
+  <h1>INVOICE</h1>
 </div>
 
-<div class="addr">
-  <div><div class="label">Bill to</div><b>{{ bill_name }}</b>{% for line in bill_lines %}<br>{{ line }}{% endfor %}</div>
-  <div><div class="label">Ship to</div><b>{{ ship_first }}</b>{% for line in ship_lines %}<br>{{ line }}{% endfor %}</div>
+<div class="boxes head">
+  <table class="meta">
+    <tr><td>Invoice#</td><td>: <b>{{ invoice.number }}</b></td></tr>
+    <tr><td>Invoice Date</td><td>: {{ invoice.date|date:"j M Y" }}</td></tr>
+    <tr><td>Terms</td><td>: {{ invoice.get_terms_display }}</td></tr>
+    <tr><td>Due Date</td><td>: {{ invoice.due_date|date:"j M Y" }}</td></tr>
+    <tr><td>P.O.#</td><td>: {% if invoice.sales_order %}{{ invoice.sales_order.number }}{% endif %}</td></tr>
+  </table>
+  <div class="empty"></div>
+</div>
+<div class="boxes addr">
+  <div><div class="label">Bill To</div><div class="body"><b>{{ bill_name }}</b>{% for line in bill_lines %}<br>{{ line }}{% endfor %}</div></div>
+  <div><div class="label">Ship To</div><div class="body"><b>{{ ship_first }}</b>{% for line in ship_lines %}<br>{{ line }}{% endfor %}</div></div>
 </div>
 
 <table class="lines">
-  <thead><tr><th style="width:18%">Item</th><th>Description</th><th class="num" style="width:9%">Qty</th><th class="num" style="width:13%">Price</th><th class="num" style="width:14%">Amount</th></tr></thead>
+  <thead><tr><th style="width:4%">#</th><th>Item &amp; Description</th><th style="width:15%">Packaging</th><th class="num" style="width:9%">Qty</th><th class="num" style="width:11%">Price</th><th class="num" style="width:12%">Amount</th><th class="num" style="width:12%">Total</th></tr></thead>
   <tbody>
-  {% for line in lines %}
-    <tr><td class="sku">{{ line.item.sku }}</td>
+  {% for group in groups %}
+    {% if group.heading %}<tr class="cat"><td colspan="7">{{ group.heading }}</td></tr>{% endif %}
+    {% for row in group.rows %}{% with line=row.line %}
+    <tr><td class="n">{{ row.n }}</td>
       <td>{{ line.description|default:line.item.name }}{% if line.fulfillment == drop_ship %}<div class="note">Shipped directly from the manufacturer</div>{% endif %}</td>
-      <td class="num">{{ line.quantity }}</td><td class="num">{{ line.price|floatformat:"2g" }}</td><td class="num">{{ line.amount|floatformat:"2g" }}</td></tr>
+      <td>{{ line.item.packaging }}</td>
+      <td class="num">{{ line.quantity }}{% if line.item.unit %}<div class="unit">{{ line.item.unit|upper }}</div>{% endif %}</td>
+      <td class="num">{{ line.price|floatformat:"2g" }}</td><td class="num">{{ line.amount|floatformat:"2g" }}</td><td class="num">{{ line.amount|floatformat:"2g" }}</td></tr>
+    {% endwith %}{% endfor %}
   {% endfor %}
   </tbody>
 </table>
 
-<table class="totals">
-  <tr><td>Subtotal</td><td class="num">{{ subtotal|floatformat:"2g" }}</td></tr>
-  <tr><td>Payments and credits</td><td class="num">{% if applied %}−{% endif %}{{ applied|floatformat:"2g" }}</td></tr>
-  <tr class="due"><td>Balance due</td><td class="num">${{ balance|floatformat:"2g" }}</td></tr>
-</table>
-
-{% if invoice.notes %}<div class="notes"><div class="label">Notes</div>{{ invoice.notes }}</div>{% endif %}
+<div class="foot">
+  <div class="left">
+    <div>Items in Total {{ items_total }}</div>
+    {% if invoice.notes %}<div class="notes">{{ invoice.notes }}</div>{% endif %}
+  </div>
+  <div class="right">
+    <table class="totals">
+      <tr><td>Total</td><td class="num">${{ subtotal|floatformat:"2g" }}</td></tr>
+      {% if applied %}<tr><td>Payments and credits</td><td class="num">−{{ applied|floatformat:"2g" }}</td></tr>{% endif %}
+      <tr class="due"><td>Balance Due</td><td class="num">${{ balance|floatformat:"2g" }}</td></tr>
+    </table>
+    <div class="sign">Authorized Signature</div>
+  </div>
+</div>
 </body>
 </html>

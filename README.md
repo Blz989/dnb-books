@@ -11,7 +11,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Ledger | Chart of accounts, journal entries, month close, trial balance, P&L, balance sheet, general ledger | 1 |
 | Backups | Nightly encrypted off-site backup, monthly restore drill | 1 |
 | Items and inventory | Item catalog, stock movements, FIFO or weighted average cost per item | 2 |
-| Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging, customer statements (page and PDF, from Customers) | 3 |
+| Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging, customer statements (page and PDF, from Customers), invoice and statement PDFs laid out like the Zoho originals | 3 |
 | Purchasing | Vendors, purchase orders (including drop-ship POs), bills that receive stock at the bill price, vendor payments by check, ACH, or company card, vendor credits and returns, A/P aging, 1099 summary | 4 |
 | Banking | Plaid bank feeds or OFX, QFX, and CSV files, an inbox that suggests matches for you to confirm, transfers and loan payments, reconciliation that locks what it clears, check printing on existing voucher stock | 5a |
 | Order profitability | Profit per order (sales less stock and drop-ship cost), a report with flags, and a profit panel on each order and direct invoice | After 5a |

@@ -171,7 +171,7 @@ def test_pdf_html_and_bytes(script, sales_settings):
     sales_settings.save()
     s = build_statement(script, d(10, 1), d(10, 31))
     html = render_statement_html(s)
-    for text in ("STATEMENT", "DNB Supply Co.", "Acme Builders", "Balance forward", "Aging as of", "Balance due"):
+    for text in ("Statement of Accounts", "DNB Supply Co.", "Acme Builders", "Opening Balance", "Aging Summary", "Balance Due"):
         assert text in html
     assert statement_pdf(s).startswith(b"%PDF")
 
@@ -211,7 +211,7 @@ def test_applications_are_as_of_the_statement_end(script):
     assert next(r for r in s.rows if r.kind == "Payment").applied
     s2 = build_statement(script, d(9, 1), d(10, 31))
     html = render_statement_html(s2)
-    assert "Check" in html and "Payments and credits not yet applied" in html
+    assert "Check" in html and "Not yet applied" in html
 
 
 # ---- invoice-first layout: each invoice, with the payments and credits applied to it below ----
@@ -247,3 +247,25 @@ def test_voided_invoice_and_old_settled_invoice_are_left_out(script):
     assert script.invoices.get(date=d(10, 21)).number not in [b.number for b in s.invoices]
     later = build_statement(script, d(10, 11), d(10, 31))  # inv1 (Sep) is still open, so it stays
     assert len(later.invoices) == 2
+
+
+# ---- Zoho-style summary and layout ----
+def test_account_summary_reconciles(script):
+    s = build_statement(script, d(10, 1), d(10, 31))
+    # opening 100; invoices 250 (+80 voided -80); paid: 60 + 20 credit + 40 payment - 15 refund
+    assert (s.opening, s.invoiced, s.paid) == (D("100.00"), D("250.00"), D("105.00"))
+    assert s.opening + s.invoiced - s.paid == s.closing == D("245.00")
+
+
+@pytest.mark.parametrize("start, end", [(d(1, 1), d(10, 31)), (d(10, 11), d(10, 25)), (d(10, 21), d(10, 22))])
+def test_account_summary_always_reconciles(script, start, end):
+    s = build_statement(script, start, end)
+    assert s.opening + s.invoiced - s.paid == s.closing
+
+
+def test_pdf_html_has_the_zoho_pieces(script, sales_settings):
+    html = render_statement_html(build_statement(script, d(10, 1), d(10, 31)))
+    for text in ("Statement of Accounts", "Account Summary", "Opening Balance", "Invoiced Amount", "Amount Paid",
+                 "Balance Due", "Transactions", "Details", "Payments", "Aging Summary", "Period (in Days)"):
+        assert text in html, text
+    assert "***Opening Balance***" in html

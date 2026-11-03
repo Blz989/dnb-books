@@ -86,6 +86,8 @@ class Statement:
     open_invoices: list[OpenInvoiceRow] = field(default_factory=list)
     invoices: list[InvoiceBlock] = field(default_factory=list)
     unapplied: list[UnappliedRow] = field(default_factory=list)
+    invoiced: Decimal = ZERO  # invoices in the range, less any voided
+    paid: Decimal = ZERO  # payments and credit notes in the range, less refunds and voids
 
 
 def _events(customer: Customer, end: date) -> list[tuple[date, int, str, StatementRow]]:
@@ -144,6 +146,7 @@ def _detail(kind: str, doc) -> str:
 def build_statement(customer: Customer, start: date, end: date) -> Statement:
     balance = ZERO
     opening = None
+    invoiced = paid = ZERO
     rows: list[StatementRow] = []
     for when, _, _, row in _events(customer, end):
         if when > end:
@@ -156,12 +159,25 @@ def build_statement(customer: Customer, start: date, end: date) -> Statement:
         balance = money(balance + (row.charge or ZERO) - (row.credit or ZERO))
         row.balance = balance
         rows.append(row)
+        charge, credit = row.charge or ZERO, row.credit or ZERO
+        if row.kind == "Invoice":
+            invoiced += charge
+        elif row.kind == "Void of invoice":
+            invoiced -= credit
+        elif row.kind in ("Payment", "Credit note"):
+            paid += credit
+        elif row.kind == "Refund":
+            paid -= charge
+        elif row.kind == "Void of refund":
+            paid += credit
+        else:  # void of a payment or credit note
+            paid -= charge
     if opening is None:
         opening = balance
     report: Aging = ar_aging(end, customer=customer)
     aging = report.rows[0] if report.rows else AgingRow(customer)
     return Statement(customer, start, end, money(opening), rows, balance, aging, open_invoices(end, customer),
-                     _invoice_blocks(customer, start, end), _unapplied_rows(customer, end))
+                     _invoice_blocks(customer, start, end), _unapplied_rows(customer, end), money(invoiced), money(paid))
 
 
 def _label(doc) -> str:

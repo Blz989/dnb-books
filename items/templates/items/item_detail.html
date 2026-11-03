@@ -24,6 +24,7 @@
 <div class="card"><div class="body">
   <dl class="facts">
     <dt>Description</dt><dd>{{ item.description|default:"—" }}</dd>
+    <dt>Packaging</dt><dd>{{ item.packaging|default:"—" }}</dd>
     <dt>Vendor part #</dt><dd>{{ item.vendor_part_number|default:"—" }}</dd>
     <dt>Sale price</dt><dd>{{ item.sale_price|floatformat:4 }}</dd>
     <dt>Purchase cost</dt><dd>{{ item.purchase_cost|floatformat:4 }}</dd>

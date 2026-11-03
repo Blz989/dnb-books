@@ -1,88 +1,141 @@
+<!-- Approved invoice reference (Zoho-style layout, 2026-11-03). Company details and data are placeholders. Not app code. Regenerate from sales/pdf.py if the layout changes. -->
 <!doctype html>
-<!-- Approved invoice reference for DNB Books (Phase 3). Company details are placeholders. Not app code. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Invoice mockup</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@600&display=swap" rel="stylesheet">
+<title>INV-000015</title>
 <style>
-@page { size: letter; margin: 0.6in; }
-* { box-sizing: border-box; }
-body { margin: 0; font-family: Inter, sans-serif; font-size: 10pt; color: #2b2620; background: #fff; }
-.page { width: 7.3in; margin: 0 auto; }
-.top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2f6b4f; padding-bottom: 14pt; }
-.brand { display: flex; gap: 12pt; }
-.logo { width: 44pt; height: 44pt; border-radius: 6pt; background: #1f3a2f; color: #f2ede2; display: flex; align-items: center; justify-content: center; font-family: "Source Serif 4"; font-weight: 600; font-size: 15pt; }
-.co { line-height: 1.45; color: #6f655a; }
-.co b { color: #2b2620; font-size: 12pt; font-family: "Source Serif 4"; font-weight: 600; }
-h1 { font-family: "Source Serif 4"; font-weight: 600; font-size: 26pt; margin: 0; color: #1f3a2f; text-align: right; letter-spacing: .02em; }
-.meta { margin-top: 6pt; border-collapse: collapse; margin-left: auto; }
-.meta td { padding: 1.5pt 0 1.5pt 14pt; text-align: right; }
-.meta td:first-child { color: #6f655a; }
-.addr { display: flex; gap: 24pt; margin: 18pt 0 16pt; }
-.addr div { flex: 1; line-height: 1.5; }
-.label { font-size: 8pt; text-transform: uppercase; letter-spacing: .08em; color: #6f655a; margin-bottom: 3pt; }
-table.lines { width: 100%; border-collapse: collapse; }
-.lines th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #6f655a; font-weight: 600; padding: 6pt 6pt; border-bottom: 1px solid #e3dccd; background: #faf6ee; }
-.lines td { padding: 7pt 6pt; border-bottom: 1px solid #eee8db; vertical-align: top; }
-.num { text-align: right; font-variant-numeric: tabular-nums; }
-.sku { color: #2f6b4f; font-weight: 500; }
-.note { color: #6f655a; font-size: 8.5pt; }
-.totals { width: 2.9in; margin: 10pt 0 0 auto; border-collapse: collapse; }
-.totals td { padding: 3pt 6pt; }
-.totals td:first-child { color: #6f655a; }
-.totals .due td { border-top: 2px solid #2f6b4f; padding-top: 7pt; font-weight: 700; font-size: 12pt; color: #1f3a2f; }
-.pay { margin-top: 22pt; display: flex; gap: 24pt; border-top: 1px solid #e3dccd; padding-top: 12pt; line-height: 1.5; }
-.pay div { flex: 1; }
-.notes { margin-top: 22pt; border-top: 1px solid #e3dccd; padding-top: 12pt; line-height: 1.5; }
-.foot { margin-top: 22pt; text-align: center; color: #6f655a; font-size: 8.5pt; }
-.stub { margin-top: 18pt; border-top: 1px dashed #b8ad9b; padding-top: 10pt; display: flex; justify-content: space-between; font-size: 9pt; }
-.stub b { font-family: "Source Serif 4"; font-weight: 600; }
+@font-face { font-family: "Inter"; font-weight: 100 900; src: url("../../core/static/core/fonts/inter-latin-wght-normal.woff2") format("woff2"); }
 </style>
-</head>
+<style>/* Printed invoice styles: black, white, and grey, laid out like the owner's Zoho invoice (docs/design/invoice-mockup.html). */
+@page { size: letter; margin: 0.45in 0.45in 0.6in; @bottom-right { content: counter(page); font-family: Inter, sans-serif; font-size: 7pt; color: #555; } }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, sans-serif; font-size: 8.5pt; line-height: 1.25; color: #222; background: #fff; }
+.top { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 10pt; border: 1px solid #bbb; border-bottom: none; padding: 10pt 10pt 8pt; }
+.brand { display: flex; gap: 10pt; align-items: flex-start; }
+.logo { width: 52pt; height: 52pt; }
+.logo img { width: 52pt; height: 52pt; object-fit: contain; }
+.co { line-height: 1.4; color: #444; }
+.co b { color: #111; font-size: 11pt; }
+h1 { font-weight: 400; font-size: 20pt; margin: 0; color: #111; text-align: right; letter-spacing: .01em; }
+.boxes { display: flex; border: 1px solid #bbb; }
+.boxes > div, .boxes > table { flex: 1; }
+.boxes > * + * { border-left: 1px solid #bbb; }
+.meta { border-collapse: collapse; margin: 0; flex: 1; }
+.meta td { padding: 2pt 8pt; vertical-align: top; }
+.meta td:first-child { width: 33%; color: #444; }
+.empty { min-height: 1pt; }
+.addr { border-top: none; }
+.addr .label { background: #f2f2f2; border-bottom: 1px solid #bbb; font-weight: 700; padding: 3pt 8pt; }
+.addr .body { padding: 5pt 8pt 8pt; line-height: 1.45; }
+.lines { width: 100%; border-collapse: collapse; margin-top: 6pt; border: 1px solid #bbb; }
+.lines thead { display: table-header-group; }
+.lines th { text-align: left; font-weight: 700; padding: 4pt 5pt; background: #f2f2f2; border: 1px solid #bbb; }
+.lines td { padding: 3pt 5pt; border: 1px solid #ccc; vertical-align: top; }
+.lines tr { break-inside: avoid; }
+.lines tr.cat td { font-weight: 700; padding: 4pt 5pt; background: #fff; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.n { width: 4%; }
+.unit { font-size: 7pt; color: #444; }
+.note { color: #555; font-size: 7.5pt; }
+.foot { display: flex; gap: 0; margin-top: 8pt; border: 1px solid #bbb; break-inside: avoid; }
+.foot .left { flex: 1.1; padding: 6pt 8pt; line-height: 1.5; }
+.foot .notes { margin-top: 6pt; white-space: pre-line; }
+.foot .right { flex: 1; border-left: 1px solid #bbb; }
+.totals { width: 100%; border-collapse: collapse; }
+.totals td { padding: 3pt 8pt; }
+.totals .num { font-weight: 700; }
+.totals .due td { font-weight: 700; border-top: 1px solid #bbb; border-bottom: 1px solid #bbb; }
+.sign { margin-top: 62pt; text-align: center; font-size: 7.5pt; padding: 0 8pt 3pt; }
+.void-mark { position: fixed; top: 34%; left: 12%; transform: rotate(-28deg); font-weight: 600; font-size: 130pt; letter-spacing: .08em; color: rgba(156, 42, 42, 0.16); border: 8pt solid rgba(156, 42, 42, 0.16); padding: 0 24pt; }
+body{max-width:8.5in;margin:24px auto;padding:0 .45in} @page{}</style></head>
 <body>
-<div class="page">
-  <div class="top">
-    <div class="brand">
-      <div class="logo">DNB</div>
-      <div class="co"><b>DNB Supply Co.</b><br>1234 Industrial Way, Suite 100<br>Anytown, CA 90000<br>(555) 010-0100 · billing@example.com</div>
-    </div>
-    <div>
-      <h1>INVOICE</h1>
-      <table class="meta">
-        <tr><td>Invoice</td><td><b>INV-004567</b></td></tr>
-        <tr><td>Date</td><td>Oct 27, 2026</td></tr>
-        <tr><td>Terms</td><td>Net 30</td></tr>
-        <tr><td>Due</td><td><b>Nov 26, 2026</b></td></tr>
-        <tr><td>Sales order</td><td>SO-00123</td></tr>
-      </table>
-    </div>
+
+<div class="top">
+  <div class="brand">
+    
+    <div class="co"><b>DNB Supply Co.</b><br>1450 Commerce Drive<br>Springfield, IL 62704<br>555-0100 · billing@dnbsupply.example</div>
   </div>
+  <h1>INVOICE</h1>
+</div>
 
-  <div class="addr">
-    <div><div class="label">Bill to</div><b>Acme Builders, Inc.</b><br>Accounts Payable<br>500 Market Street<br>Springfield, OR 97477</div>
-    <div><div class="label">Ship to</div><b>Acme Builders, Job #212</b><br>88 Riverside Drive<br>Eugene, OR 97401</div>
+<div class="boxes head">
+  <table class="meta">
+    <tr><td>Invoice#</td><td>: <b>INV-000015</b></td></tr>
+    <tr><td>Invoice Date</td><td>: 29 Oct 2026</td></tr>
+    <tr><td>Terms</td><td>: Net 30</td></tr>
+    <tr><td>Due Date</td><td>: 28 Nov 2026</td></tr>
+    <tr><td>P.O.#</td><td>: SO-00004</td></tr>
+  </table>
+  <div class="empty"></div>
+</div>
+<div class="boxes addr">
+  <div><div class="label">Bill To</div><div class="body"><b>Riverside School District</b><br>500 School Way<br>Riverside, CA 92501</div></div>
+  <div><div class="label">Ship To</div><div class="body"><b>Maintenance yard, 12 Depot St</b><br>Riverside, CA 92503</div></div>
+</div>
+
+<table class="lines">
+  <thead><tr><th style="width:4%">#</th><th>Item &amp; Description</th><th style="width:15%">Packaging</th><th class="num" style="width:9%">Qty</th><th class="num" style="width:11%">Price</th><th class="num" style="width:12%">Amount</th><th class="num" style="width:12%">Total</th></tr></thead>
+  <tbody>
+  
+    <tr class="cat"><td colspan="7">Dry Goods</td></tr>
+    
+    <tr><td class="n">1</td>
+      <td>EXCELLENT RICE STICK BIHON (L)</td>
+      <td>25X16OZ</td>
+      <td class="num">2<div class="unit">CASE</div></td>
+      <td class="num">30.00</td><td class="num">60.00</td><td class="num">60.00</td></tr>
+    
+    <tr><td class="n">2</td>
+      <td>GOLDEN FISH CRACKER HOT &amp; SPICY</td>
+      <td>20X200GM</td>
+      <td class="num">2<div class="unit">CASE</div></td>
+      <td class="num">30.00</td><td class="num">60.00</td><td class="num">60.00</td></tr>
+    
+    <tr><td class="n">3</td>
+      <td>ILOCOS CHICHACORN BBQ-350GM</td>
+      <td>24X350GM</td>
+      <td class="num">2<div class="unit">CASE</div></td>
+      <td class="num">30.00</td><td class="num">60.00</td><td class="num">60.00</td></tr>
+    
+    <tr><td class="n">4</td>
+      <td>LUCIA COCONUT JUICE W/PULP (L)</td>
+      <td>24X16.9OZ</td>
+      <td class="num">2<div class="unit">CASE</div></td>
+      <td class="num">30.00</td><td class="num">60.00</td><td class="num">60.00</td></tr>
+    
+  
+    <tr class="cat"><td colspan="7">Refrigerated/Frozen Goods</td></tr>
+    
+    <tr><td class="n">5</td>
+      <td>LUCIA BONELESS MARINATED BABY**</td>
+      <td>30LBS</td>
+      <td class="num">2<div class="unit">CASE</div></td>
+      <td class="num">30.00</td><td class="num">60.00</td><td class="num">60.00</td></tr>
+    
+    <tr><td class="n">6</td>
+      <td>PORK LONGANISA</td>
+      <td>12X1LB</td>
+      <td class="num">2<div class="unit">CASE</div></td>
+      <td class="num">30.00</td><td class="num">60.00</td><td class="num">60.00</td></tr>
+    
+  
+  </tbody>
+</table>
+
+<div class="foot">
+  <div class="left">
+    <div>Items in Total 12</div>
+    <div class="notes">Zelle to: billing@example.com</div>
   </div>
-
-  <table class="lines">
-    <thead><tr><th style="width:16%">Item</th><th>Description</th><th class="num" style="width:9%">Qty</th><th class="num" style="width:13%">Price</th><th class="num" style="width:14%">Amount</th></tr></thead>
-    <tbody>
-      <tr><td class="sku">BOLT-14</td><td>Hex bolt 1/4" zinc</td><td class="num">600</td><td class="num">0.85</td><td class="num">510.00</td></tr>
-      <tr><td class="sku">PNT-WHT-GL</td><td>White latex, gallon</td><td class="num">12</td><td class="num">32.50</td><td class="num">390.00</td></tr>
-      <tr><td class="sku">PUMP-X</td><td>Sump pump 1/2 HP<div class="note">Shipped directly from the manufacturer</div></td><td class="num">1</td><td class="num">1,240.00</td><td class="num">1,240.00</td></tr>
-      <tr><td class="sku">DEL</td><td>Delivery, job site</td><td class="num">1</td><td class="num">75.00</td><td class="num">75.00</td></tr>
-    </tbody>
-  </table>
-
-  <table class="totals">
-    <tr><td>Subtotal</td><td class="num">2,215.00</td></tr>
-    <tr><td>Payments and credits</td><td class="num">−500.00</td></tr>
-    <tr class="due"><td>Balance due</td><td class="num">$1,715.00</td></tr>
-  </table>
-
-  <div class="notes"><div class="label">Notes</div>Please make checks payable to DNB Supply Co. Thank you for your business.<br>Questions about this invoice: billing@example.com</div>
-
-
+  <div class="right">
+    <table class="totals">
+      <tr><td>Total</td><td class="num">$360.00</td></tr>
+      
+      <tr class="due"><td>Balance Due</td><td class="num">$360.00</td></tr>
+    </table>
+    <div class="sign">Authorized Signature</div>
+  </div>
 </div>
 </body>
 </html>

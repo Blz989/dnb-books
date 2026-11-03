@@ -56,6 +56,9 @@ ID_COLUMNS: dict[str, str] = {
     "adjustments": "InventoryAdjustment ID",
 }
 
+# Columns used when the export has them; a file without them still reads.
+OPTIONAL: dict[str, tuple[str, ...]] = {"items": ("CF.Packaging", "Packaging")}
+
 # short name -> the columns read (the ID column is read in addition).
 REQUIRED: dict[str, tuple[str, ...]] = {
     "accounts": ("Account Name", "Account Type", "Account Status", "Description"),
@@ -227,7 +230,7 @@ def read_export(path: Path) -> ZohoExport:
                 continue
             out = []
             for n, row in enumerate(rows, start=1):
-                clean = {col: (row.get(col) or "") for col in wanted}
+                clean = {col: (row.get(col) or "") for col in (*wanted, *OPTIONAL.get(short, ()))}
                 clean["_row"] = str(n)
                 if not ID_COLUMNS[short]:
                     clean["_id"] = f"{filename}:{n}"

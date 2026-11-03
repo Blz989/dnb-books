@@ -313,6 +313,7 @@ class Replay(MoneyReplay):
                 unit=row["Usage unit"].strip() or "each",
                 sale_price=mapping.money(row["Rate"]), purchase_cost=mapping.money(row["Purchase Rate"]),
                 vendor_part_number=row["CF.Vendor SKU"].strip(),
+                packaging=(row.get("CF.Packaging") or row.get("Packaging") or "").strip(),
                 costing_method=CostingMethod.FIFO if stock else "",
                 income_account=self._item_account(
                     row, "Account", (AccountSubtype.INCOME, AccountSubtype.OTHER_INCOME), income),

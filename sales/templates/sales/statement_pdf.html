@@ -5,68 +5,60 @@
 <title>Statement {{ statement.customer.name }}</title>
 <style>
 @font-face { font-family: "Inter"; font-weight: 100 900; src: url("{{ font_uri }}/inter-latin-wght-normal.woff2") format("woff2"); }
-@font-face { font-family: "Source Serif 4"; font-weight: 600; src: url("{{ font_uri }}/source-serif-4-latin-600-normal.woff2") format("woff2"); }
 </style>
 </head>
 <body>
 <div class="top">
-  <div class="brand">
-    {% if logo_uri %}<div class="logo"><img src="{{ logo_uri }}" alt=""></div>{% endif %}
-    <div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div>
-  </div>
-  <div>
-    <h1>STATEMENT</h1>
-    <table class="meta">
-      <tr><td>Period</td><td>{{ statement.start|date:"M j, Y" }} – {{ statement.end|date:"M j, Y" }}</td></tr>
-      <tr><td>Balance due</td><td><b>${{ statement.closing|floatformat:"2g" }}</b></td></tr>
+  <div class="logo">{% if logo_uri %}<img src="{{ logo_uri }}" alt="">{% endif %}</div>
+  <div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div>
+</div>
+
+<div class="mid">
+  <div class="to"><div class="small">To</div><b>{{ statement.customer.name }}</b>{% for line in bill_lines %}<br>{{ line }}{% endfor %}</div>
+  <div class="title">
+    <h1>Statement of Accounts</h1>
+    <div class="range">{{ statement.start|date:"d M Y" }} To {{ statement.end|date:"d M Y" }}</div>
+    <table class="summary">
+      <thead><tr><th colspan="2">Account Summary</th></tr></thead>
+      <tbody>
+        <tr><td>Opening Balance</td><td class="num">${{ statement.opening|floatformat:"2g" }}</td></tr>
+        <tr><td>Invoiced Amount</td><td class="num">${{ statement.invoiced|floatformat:"2g" }}</td></tr>
+        <tr><td>Amount Paid</td><td class="num">${{ statement.paid|floatformat:"2g" }}</td></tr>
+        <tr class="due"><td>Balance Due</td><td class="num">${{ statement.closing|floatformat:"2g" }}</td></tr>
+      </tbody>
     </table>
   </div>
 </div>
 
-<div class="addr">
-  <div><div class="label">Statement for</div><b>{{ statement.customer.name }}</b>{% for line in bill_lines %}<br>{{ line }}{% endfor %}</div>
-  <div></div>
-</div>
-
-<div class="label">Aging as of {{ statement.end|date:"M j, Y" }}</div>
-<table class="aging">
-  <thead><tr><th>Current</th><th>1–30</th><th>31–60</th><th>61–90</th><th>Over 90</th><th>Unapplied credits</th><th>Total</th></tr></thead>
-  <tbody><tr>
-    <td>{{ statement.aging.current|floatformat:"2g" }}</td><td>{{ statement.aging.d1_30|floatformat:"2g" }}</td>
-    <td>{{ statement.aging.d31_60|floatformat:"2g" }}</td><td>{{ statement.aging.d61_90|floatformat:"2g" }}</td>
-    <td>{{ statement.aging.over_90|floatformat:"2g" }}</td><td>{{ statement.aging.unapplied_credits|floatformat:"2g" }}</td>
-    <td>{{ statement.aging.total|floatformat:"2g" }}</td></tr></tbody>
-</table>
-
-
-<table class="lines inv">
-  <thead><tr><th style="width:17%">Invoice</th><th style="width:15%;white-space:nowrap">Date</th><th style="width:15%;white-space:nowrap">Due</th><th class="num">Amount</th><th class="num" style="width:16%">Balance</th></tr></thead>
+<table class="tx">
+  <thead><tr><th style="width:13%">Date</th><th style="width:21%">Transactions</th><th>Details</th><th class="num" style="width:13%">Amount</th><th class="num" style="width:13%">Payments</th><th class="num" style="width:13%">Balance</th></tr></thead>
+  <tbody class="block"><tr><td>{{ statement.start|date:"d M Y" }}</td><td>***Opening Balance***</td><td></td><td class="num">{{ statement.opening|floatformat:"2g" }}</td><td></td><td class="num">{{ statement.opening|floatformat:"2g" }}</td></tr></tbody>
   {% for b in statement.invoices %}
   <tbody class="block">
-    <tr class="head"><td class="sku">{{ b.number }}</td><td>{{ b.date|date:"M j, Y" }}</td><td>{{ b.due_date|date:"M j, Y" }}</td><td class="num">{{ b.total|floatformat:"2g" }}</td><td class="num">{{ b.balance|floatformat:"2g" }}</td></tr>
+    <tr class="inv"><td>{{ b.date|date:"d M Y" }}</td><td>Invoice {{ b.number }}</td><td>Due {{ b.due_date|date:"d M Y" }}</td><td class="num">{{ b.total|floatformat:"2g" }}</td><td></td><td class="num">{{ b.balance|floatformat:"2g" }}</td></tr>
     {% for a in b.applied %}
-    <tr class="app"><td colspan="3">{{ a.date|date:"M j, Y" }} · {{ a.kind }} {{ a.number }}{% if a.detail %} · {{ a.detail }}{% endif %}</td><td class="num">−{{ a.amount|floatformat:"2g" }}</td><td></td></tr>
+    <tr class="app"><td>{{ a.date|date:"d M Y" }}</td><td>{{ a.kind }} {{ a.number }}</td><td>{{ a.detail }}</td><td></td><td class="num">{{ a.amount|floatformat:"2g" }}</td><td></td></tr>
     {% endfor %}
   </tbody>
-  {% empty %}
-  <tbody><tr><td colspan="5" class="note">No invoices in this period.</td></tr></tbody>
   {% endfor %}
-</table>
-
-{% if statement.unapplied %}
-<h2 class="sec">Payments and credits not yet applied to an invoice</h2>
-<table class="lines inv">
-  <tbody>
-  {% for u in statement.unapplied %}
-    <tr class="app"><td style="width:17%">{{ u.date|date:"M j, Y" }}</td><td>{{ u.kind }} {{ u.number }}{% if u.detail %} · {{ u.detail }}{% endif %}</td><td class="num" style="width:16%">−{{ u.amount|floatformat:"2g" }}</td></tr>
-  {% endfor %}
+  {% if statement.unapplied %}
+  <tbody class="block">
+    {% for u in statement.unapplied %}
+    <tr class="app"><td>{{ u.date|date:"d M Y" }}</td><td>{{ u.kind }} {{ u.number }}</td><td>Not yet applied{% if u.detail %} · {{ u.detail }}{% endif %}</td><td></td><td class="num">{{ u.amount|floatformat:"2g" }}</td><td></td></tr>
+    {% endfor %}
   </tbody>
+  {% endif %}
 </table>
-{% endif %}
+<table class="balance"><tr><td>Balance Due</td><td class="num">${{ statement.closing|floatformat:"2g" }}</td></tr></table>
 
-<table class="totals">
-  <tr><td>Balance forward ({{ statement.start|date:"M j, Y" }})</td><td class="num">{{ statement.opening|floatformat:"2g" }}</td></tr>
-  <tr class="due"><td>Balance due</td><td class="num">${{ statement.closing|floatformat:"2g" }}</td></tr>
+<div class="aging-title">Aging Summary (As of {{ statement.end|date:"d M Y" }})</div>
+<table class="aging">
+  <tr><td class="k">Period (in Days)</td><td>Current</td><td>1 - 30</td><td>31 - 60</td><td>61 - 90</td><td>&gt; 90</td><td>Unapplied credits</td><td>Total</td></tr>
+  <tr><td class="k">Amount</td>
+    <td>${{ statement.aging.current|floatformat:"2g" }}</td><td>${{ statement.aging.d1_30|floatformat:"2g" }}</td>
+    <td>${{ statement.aging.d31_60|floatformat:"2g" }}</td><td>${{ statement.aging.d61_90|floatformat:"2g" }}</td>
+    <td>${{ statement.aging.over_90|floatformat:"2g" }}</td><td>${{ statement.aging.unapplied_credits|floatformat:"2g" }}</td>
+    <td>${{ statement.aging.total|floatformat:"2g" }}</td></tr>
 </table>
 </body>
 </html>

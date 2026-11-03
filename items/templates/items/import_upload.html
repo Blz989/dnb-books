@@ -14,6 +14,7 @@
 <h2>Columns</h2>
 <div class="card"><div class="body">
   <p style="margin-top:0"><code>{{ headers|join:", " }}</code></p>
+  <p>Optional extra column: <code>packaging</code> (for example 25X16OZ, printed on invoices).</p>
   <p class="dash">item_type is stock or non-stock. costing_method is fifo or weighted average (blank means FIFO). The three opening_ columns go together and apply to stock items only. Categories are created if missing.</p>
 </div></div>
 {% endblock %}
