@@ -270,6 +270,8 @@ def test_inventory_account_can_change_before_any_movement(std, make_item, inv_se
 
 
 def test_packaging_is_on_the_item_form_and_detail(adm, make_item):
+    from django.urls import reverse
+
     item = make_item("RICE-1")
     r = adm.get(reverse("items:edit", args=[item.sku]))
     assert 'name="packaging"' in r.content.decode()
