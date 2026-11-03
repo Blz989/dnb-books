@@ -31,7 +31,7 @@ class ItemForm(forms.ModelForm):
     class Meta:
         model = Item
         fields = [
-            "sku", "name", "description", "item_type", "category", "unit", "sale_price", "purchase_cost",
+            "sku", "name", "description", "item_type", "category", "unit", "packaging", "sale_price", "purchase_cost",
             "vendor_part_number", "costing_method", "income_account", "cogs_account", "inventory_account",
         ]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}

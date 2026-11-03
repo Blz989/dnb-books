@@ -267,3 +267,12 @@ def test_inventory_account_can_change_before_any_movement(std, make_item, inv_se
     data["inventory_account"] = other.pk
     assert std.post("/items/FRESH-2/edit/", data).status_code == 302
     assert Item.objects.get(sku="FRESH-2").inventory_account == other
+
+
+def test_packaging_is_on_the_item_form_and_detail(adm, make_item):
+    item = make_item("RICE-1")
+    r = adm.get(reverse("items:edit", args=[item.sku]))
+    assert 'name="packaging"' in r.content.decode()
+    item.packaging = "25X16OZ"
+    item.save()
+    assert "25X16OZ" in adm.get(reverse("items:detail", args=[item.sku])).content.decode()

@@ -15,7 +15,7 @@ The invoice and statement PDFs look like the owner's Zoho documents, so customer
 |---|---|
 | Palette | Black, white, and grey like Zoho (the green accent is dropped from these two PDFs). |
 | Invoice header | Logo and company beside it at top left, "INVOICE" at top right. A boxed block: Invoice#, Invoice Date, Terms, Due Date, P.O.# (the sales order number; blank row when there is none). Then Bill To and Ship To boxes (Ship To falls back to the Bill To address, as today). |
-| Invoice table | `#`, Item & Description, Packaging, Qty (unit under the number, e.g. CASE), Price, Amount, Total. Amount and Total are both kept, as in Zoho; with no tax or discounts they are equal. Lines are grouped under the item's category as a heading row whenever the category changes; no heading for uncategorized items. |
+| Invoice table | `#`, Item & Description, Packaging, Qty (unit under the number, e.g. CASE), Price, Amount, Total. Amount and Total are both kept, as in Zoho; with no tax or discounts they are equal. Lines are grouped by the item's category: one heading row per category (each appears once), categories alphabetical, lines within a category in their entered order, numbering continuing across groups. Uncategorized items come first with no heading. ("Item type" in the owner's note is read as the item Category, which is what Zoho's headings show.) |
 | Invoice footer | "Items in Total N" (sum of quantities), the invoice notes at left; at right a box with Total, Payments and credits (only if any), Balance Due; an Authorized Signature box. Page number bottom right. |
 | Packaging | New optional text field on each item (for example 25X16OZ), edited on the item screen. Not part of the CSV import in this change. |
 | Logo | Existing logo upload in Sales settings. The owner supplies the file; it is never committed. |
@@ -28,4 +28,4 @@ The pay-by-QR code and online payment ("Scan the QR code to view and pay"), emai
 
 ## 4. Testing
 
-Rendered HTML and PDF tests for each element above; category headings appear only on change; Items in Total; Packaging field on the item form; Account Summary reconciles to the Balance Due and to the A/R aging row; totals unchanged from before.
+Rendered HTML and PDF tests for each element above; each category heading appears once even when lines were entered out of order; Items in Total; Packaging field on the item form; Account Summary reconciles to the Balance Due and to the A/R aging row; totals unchanged from before.
