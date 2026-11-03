@@ -60,24 +60,28 @@ def bucket_for(days_past_due: int) -> str:
     return "over_90"
 
 
-def ar_aging(as_of: date) -> Aging:
+def ar_aging(as_of: date, customer: Customer | None = None) -> Aging:
+    """With a customer, only that customer's row; the ledger comparison is still for the whole A/R account."""
     rows: dict[int, AgingRow] = {}
 
     def row_for(customer) -> AgingRow:
         return rows.setdefault(customer.pk, AgingRow(customer))
 
-    for invoice in invoices_with_balances():
+    def only(queryset):
+        return queryset.filter(customer=customer) if customer is not None else queryset
+
+    for invoice in only(invoices_with_balances()):
         balance = invoice_balance(invoice, as_of)
         if balance != 0:
             row = row_for(invoice.customer)
             name = bucket_for((as_of - invoice.due_date).days)
             setattr(row, name, money(getattr(row, name) + balance))
-    for payment in payments_with_balances():
+    for payment in only(payments_with_balances()):
         unapplied = payment_unapplied(payment, as_of)
         if unapplied != 0:
             row = row_for(payment.customer)
             row.unapplied_credits = money(row.unapplied_credits - unapplied)
-    for note in credit_notes_with_balances():
+    for note in only(credit_notes_with_balances()):
         unapplied = credit_unapplied(note, as_of)
         if unapplied != 0:
             row = row_for(note.customer)
