@@ -25,6 +25,7 @@
           <a class="btn" href="{% url 'banking:import-file' r.account.pk %}">Import file</a>
           {% if is_admin %}
             {% if r.item %}<form method="post" action="{% url 'banking:sync-now' r.item.pk %}" style="display:inline">{% csrf_token %}<button type="submit" class="btn">Sync now</button></form>{% endif %}
+            {% if r.account.kind == "CHECKING" %}<a class="btn" href="{% url 'banking:layout' r.account.pk %}">Check layout</a>{% endif %}
             <a class="btn" href="{% url 'banking:account-edit' r.account.pk %}">Edit</a>
           {% endif %}
         </td>
