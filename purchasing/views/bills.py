@@ -18,7 +18,7 @@ from ledger.errors import PostingError
 from sales.forms import VoidDocForm
 from sales.models import DocStatus, OrderStatus
 
-from ..balances import bill_applied, bill_balance, bill_total
+from ..balances import bill_applied, bill_balance, bill_total, bills_with_balances
 from ..errors import PurchasingError
 from ..forms import BillFromPOForm, BillHeaderForm
 from ..models import Bill, BillLineKind, BillPaymentApplication, PurchaseOrderLine, VendorCreditApplication
@@ -48,7 +48,7 @@ def _today():
 
 @login_required
 def bill_list(request):
-    bills = Bill.objects.select_related("vendor")
+    bills = bills_with_balances()
     status = request.GET.get("status", "")
     if status in DocStatus.values:
         bills = bills.filter(status=status)

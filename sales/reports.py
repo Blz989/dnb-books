@@ -10,8 +10,8 @@ from contacts.models import Customer
 from ledger.balances import money
 
 from .balances import (
-    _counts, credit_notes_with_balances, credit_unapplied, invoice_balance, invoices_with_balances,
-    payment_unapplied, payments_with_balances,
+    _counts, credit_notes_with_unapplied, credit_unapplied, invoice_balance, invoices_with_open_balance,
+    payment_unapplied, payments_with_unapplied,
 )
 from .checks import _account_balance, customer_balances_total, undeposited_payments_total
 from .models import (
@@ -70,18 +70,18 @@ def ar_aging(as_of: date, customer: Customer | None = None) -> Aging:
     def only(queryset):
         return queryset.filter(customer=customer) if customer is not None else queryset
 
-    for invoice in only(invoices_with_balances()):
+    for invoice in only(invoices_with_open_balance(as_of)):
         balance = invoice_balance(invoice, as_of)
         if balance != 0:
             row = row_for(invoice.customer)
             name = bucket_for((as_of - invoice.due_date).days)
             setattr(row, name, money(getattr(row, name) + balance))
-    for payment in only(payments_with_balances()):
+    for payment in only(payments_with_unapplied(as_of)):
         unapplied = payment_unapplied(payment, as_of)
         if unapplied != 0:
             row = row_for(payment.customer)
             row.unapplied_credits = money(row.unapplied_credits - unapplied)
-    for note in only(credit_notes_with_balances()):
+    for note in only(credit_notes_with_unapplied(as_of)):
         unapplied = credit_unapplied(note, as_of)
         if unapplied != 0:
             row = row_for(note.customer)
@@ -108,7 +108,7 @@ def open_invoices(
     as_of: date | None = None, customer: Customer | None = None, overdue_only: bool = False,
 ) -> list[OpenInvoiceRow]:
     today = as_of or timezone.localdate()
-    invoices = invoices_with_balances().order_by("due_date", "date", "id")
+    invoices = invoices_with_open_balance(as_of).order_by("due_date", "date", "id")
     if customer is not None:
         invoices = invoices.filter(customer=customer)
     rows = []
@@ -132,11 +132,11 @@ class CustomerBalanceRow:
 def customer_balances(as_of: date | None = None) -> list[CustomerBalanceRow]:
     totals: dict[int, Decimal] = {}
     customers = {c.pk: c for c in Customer.objects.all()}
-    for invoice in invoices_with_balances():
+    for invoice in invoices_with_open_balance(as_of):
         totals[invoice.customer_id] = totals.get(invoice.customer_id, ZERO) + invoice_balance(invoice, as_of)
-    for payment in payments_with_balances():
+    for payment in payments_with_unapplied(as_of):
         totals[payment.customer_id] = totals.get(payment.customer_id, ZERO) - payment_unapplied(payment, as_of)
-    for note in credit_notes_with_balances():
+    for note in credit_notes_with_unapplied(as_of):
         totals[note.customer_id] = totals.get(note.customer_id, ZERO) - credit_unapplied(note, as_of)
     rows = [CustomerBalanceRow(customers[pk], money(total)) for pk, total in totals.items() if money(total) != 0]
     return sorted(rows, key=lambda r: r.customer.name.lower())

@@ -1,3 +1,6 @@
+from datetime import timedelta
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
@@ -14,6 +17,7 @@ from sales.models import DocStatus
 from ..balances import (
     bill_balance, bills_with_balances, vendor_balance, vendor_credit_unapplied, vendor_payment_unapplied,
 )
+from .. import reports
 from ..forms import VendorForm
 
 PAGE_SIZE = 50
@@ -50,8 +54,10 @@ def vendor_list(request):
         vendors = vendors.filter(is_active=True)
     page = Paginator(vendors, PAGE_SIZE).get_page(request.GET.get("page"))
     today = timezone.localdate()
+    balances = {r.vendor.pk: r.balance for r in reports.vendor_balances()}
+    overdue = {r.bill.vendor_id for r in reports.bills_due(today - timedelta(days=1), today)}
     rows = [
-        {"vendor": v, "balance": vendor_balance(v), "overdue": any(r["days_overdue"] > 0 for r in _open_bills(v, today))}
+        {"vendor": v, "balance": balances.get(v.pk, Decimal("0.00")), "overdue": v.pk in overdue}
         for v in page
     ]
     querystring = "&".join(f"{k}={v}" for k, v in (("q", q), ("inactive", "1" if show_inactive else "")) if v)
