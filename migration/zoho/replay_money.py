@@ -19,8 +19,8 @@ from items.stock import StockLine, record_movements, record_value_adjustment
 from ledger.posting import LineSpec, post_entry
 from migration.models import ZohoRecord
 from migration.zoho import mapping
-from purchasing.balances import bill_balance
-from purchasing.models import Bill, VendorPaymentMethod
+from purchasing.balances import bill_balance, vendor_credit_unapplied
+from purchasing.models import Bill, VendorCredit, VendorPaymentMethod
 from purchasing.posting.credits import (
     AllowanceLineSpec,
     ReturnLineSpec,
@@ -28,8 +28,9 @@ from purchasing.posting.credits import (
     create_allowance_credit,
     create_return_credit,
 )
-from purchasing.posting.payments import pay_vendor
-from sales.models import CreditNote, DocType, Invoice, Payment
+from purchasing.posting.payments import apply_vendor_payment, pay_vendor
+from sales.balances import invoice_balance
+from sales.models import CreditNote, DocStatus, DocType, Invoice, Payment
 from sales.numbering import use_number
 from sales.posting.deposits import make_deposit, undeposited_payments
 from sales.posting.receipts import (
@@ -43,6 +44,11 @@ from sales.posting.receipts import (
 OPENING_DATE = date(2020, 2, 1)
 MAX_CANDIDATES = 20
 ZERO = Decimal("0.00")
+
+
+def _credit_reason(row: dict) -> str:
+    """Zoho's credit note export has no reason column; Subject, then Notes, says why."""
+    return (row["Subject"].strip() or row["Notes"].strip())[:200]
 
 
 def _quantity(text: str) -> int:
@@ -110,7 +116,7 @@ class MoneyReplay:
         with transaction.atomic():
             with use_number(DocType.PMT, event.number):
                 payment = receive_payment(
-                    customer=self.customers[first["Customer Name"]], date=event.date,
+                    customer=self.customer_for("customer_payments", first), date=event.date,
                     method=mapping.customer_method(mode, deposit_to), amount=mapping.money(first["Amount"]),
                     user=self.user,
                     # Straight to the bank it becomes ACH, so Zoho's Mode is kept in the reference (spec 4.2).
@@ -120,10 +126,16 @@ class MoneyReplay:
             # Unused Amount is simply what is not applied here; it stays on the payment.
             for row in rows:
                 applied = mapping.money(row["Amount Applied to Invoice"])
-                if applied > 0:
-                    apply_payment(
-                        payment, self._invoice(row["Invoice Number"]), applied,
-                        date=_date(row["Invoice Payment Applied Date"], event.date), user=self.user)
+                if applied <= 0:
+                    continue
+                when = _date(row["Invoice Payment Applied Date"], event.date)
+                number = row["Invoice Number"].strip()
+                if Invoice.objects.filter(number=number).exists():
+                    invoice = self._invoice(number)
+                    apply_payment(payment, invoice, applied, date=max(when, invoice.date), user=self.user)
+                else:
+                    # Paid before the invoice existed (online orders): applied when the invoice posts.
+                    self.pending_applications.setdefault(number, []).append((payment, applied, when))
             charges = mapping.money(first["Bank Charges"])
             if charges > 0 and not to_bank:
                 # No payment backs a charge taken out of Undeposited Funds, so posting it would break
@@ -143,16 +155,30 @@ class MoneyReplay:
         first = rows[0]
         lines = [
             CreditLineSpec(
-                row["Item Name"].strip() or first["Reason"].strip() or "Credit", mapping.money(row["Item Total"]),
+                row["Item Name"].strip() or _credit_reason(first) or "Credit", mapping.money(row["Item Total"]),
                 self.account(row["Account"]) if row["Account"].strip() else None)
             for row in rows if mapping.money(row["Item Total"])
         ]
         with transaction.atomic():
             with use_number(DocType.CN, event.number):
                 note = create_credit_note(
-                    customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
-                    reason=first["Reason"].strip(), user=self.user)
+                    customer=self.customer_for("credit_notes", first), date=event.date, lines=lines,
+                    reason=_credit_reason(first), user=self.user)
             self.record("credit_note", event.zoho_id, note)
+            # A Zoho credit note that names a stock item put it back on the shelf; Zoho's stock counts include
+            # it. The return goes back in at current cost against cost of goods, as Zoho booked it.
+            returns = [
+                StockLine(self.item_for(row), _quantity(row["Quantity"]),
+                          reason=f"Returned on Zoho credit note {event.number}",
+                          account=self.item_for(row).cogs_account)
+                for row in rows
+                if row["SKU"].strip() and row["SKU"].strip() in self.items and self.item_for(row).is_stock
+                and _quantity(row["Quantity"]) > 0
+            ]
+            if returns:
+                record_movements(kind=MovementKind.ADJUSTMENT, date=event.date, lines=returns, user=self.user,
+                                 allow_negative=True, source_type="migration.credit_return",
+                                 source_id=event.zoho_id)
 
     def post_credit_application(self, event) -> None:
         with transaction.atomic():
@@ -167,8 +193,10 @@ class MoneyReplay:
         """Zoho moved cash out of Undeposited Funds by transfer; here it becomes a real deposit (spec 4.2)."""
         row = self.doc_rows(event.kind, event.zoho_id)[0]
         total = mapping.money(row["Total"])
-        candidates = list(
-            undeposited_payments().filter(date__lte=event.date, amount__lte=total)[:MAX_CANDIDATES])
+        # The payments closest before the transfer: cash is banked within days, and Zoho's
+        # Undeposited Funds also holds years of older payments that were never deposited.
+        recent = undeposited_payments().filter(date__lte=event.date, amount__lte=total).order_by("-date", "-id")
+        candidates = sorted(recent[:MAX_CANDIDATES], key=lambda p: (p.date, p.pk))
         found = exact_subset([p.amount for p in candidates], total)
         payments = [candidates[i] for i in found] if found is not None else self._paired(event.date, total)
         if not payments:
@@ -207,12 +235,21 @@ class MoneyReplay:
         paid_from = self.account(first["Paid Through"])
         method = mapping.vendor_method(first["Mode"], paid_from.subtype)
         ref = first["Reference Number"].strip()
-        applications = []
+        applications, later = [], []
         for row in rows:
             amount = mapping.money(row["Bill Amount"])
-            if row["Bill Number"].strip() and amount > 0:
-                applications.append((self._bill(vendor, row["Bill Number"], amount), amount))
+            number = row["Bill Number"].strip()
+            if not number or amount <= 0:
+                continue
+            if self._bill_imported(vendor, number):
+                applications.append((self._bill(vendor, number, amount), amount))
+            else:
+                later.append((number, amount))  # paid before the bill's date: applied when the bill posts
         is_check = method == VendorPaymentMethod.CHECK
+        if is_check and not ref:
+            # A check with no number is "waiting to be printed" in DNB Books; these were written long ago.
+            ref = f"none-{event.number}"
+            self.warnings.append(f"Vendor payment {event.number}: Zoho has no check number; recorded as {ref}.")
         with transaction.atomic():
             with use_number(DocType.VP, event.number):
                 # pay_vendor registers the check number as handwritten.
@@ -221,6 +258,8 @@ class MoneyReplay:
                     paid_from=paid_from, user=self.user, check_number=ref if is_check else "",
                     reference="" if is_check else ref, applications=applications)
             self.record("vendor_payment", event.zoho_id, payment)
+            for number, amount in later:
+                self.pending_bill_applications.setdefault((vendor.pk, number), []).append((payment, amount))
 
     def post_vendor_credit(self, event) -> None:
         rows = self.doc_rows(event.kind, event.zoho_id)
@@ -258,23 +297,87 @@ class MoneyReplay:
             self.record("vendor_credit", event.zoho_id, credits[0])
             if len(credits) > 1:
                 self.record("vendor_credit", f"{event.zoho_id}:allowance", credits[1])
-            applied = {}
-            for row in rows:
-                number = row["Bill Number"].strip()
-                amount = mapping.money(row["Amount Applied"])
-                if number and amount > 0 and number not in applied:
-                    applied[number] = amount
-            left = {c.pk: sum((l.amount for l in c.lines.all()), ZERO) for c in credits}
-            for number, amount in applied.items():
-                bill = self._bill(vendor, number, amount)
-                for credit in credits:
-                    take = min(amount, left[credit.pk])
-                    if take > 0:
-                        apply_vendor_credit(credit, bill, take, date=event.date, user=self.user)
-                        left[credit.pk] -= take
-                        amount -= take
         if returns:
             self._note_negative([l.item for l in returns], event)
+
+    def write_off_invoices(self) -> None:
+        """Zoho's invoice write-offs are not in the export, but each invoice carries Zoho's balance. An invoice
+        that owes more here than in Zoho, with nothing else to explain it, was written off: a credit note to Bad
+        Debt on the invoice date, applied to it. (On the real export, these match Zoho's Bad Debt by year.)"""
+        bad_debt = self.accounts.get("Bad Debt")
+        zoho_balance = {}
+        for row in self.export.files["invoices"]:
+            if row.get("Balance", "").strip():  # blank: Zoho didn't say, so nothing to compare
+                zoho_balance.setdefault(row["Invoice ID"], mapping.money(row["Balance"]))
+        invoice_type = ContentType.objects.get_for_model(Invoice)
+        for record in ZohoRecord.objects.filter(kind="invoice", content_type=invoice_type).order_by("object_id"):
+            invoice = Invoice.objects.get(pk=record.object_id)
+            if invoice.status == DocStatus.VOID or record.zoho_id not in zoho_balance:
+                continue
+            gap = invoice_balance(invoice) - zoho_balance[record.zoho_id]
+            if gap <= 0:
+                continue
+            if bad_debt is None:
+                self.warnings.append(f"{invoice.number}: {gap:,.2f} more owing than in Zoho, and no Bad Debt account.")
+                continue
+            with transaction.atomic():
+                note = create_credit_note(
+                    customer=invoice.customer, date=invoice.date, reason="Written off in Zoho", user=self.user,
+                    lines=[CreditLineSpec(f"Written off in Zoho: {invoice.number}", gap, bad_debt)])
+                apply_credit(note, invoice, gap, date=invoice.date, user=self.user)
+                self.record("write_off", record.zoho_id, note)
+            self.warnings.append(f"{invoice.number}: {gap:,.2f} written off to Bad Debt, as in Zoho ({note.number}).")
+
+    def apply_vendor_credits(self) -> None:
+        """Zoho's vendor credit export doesn't say which bills a credit was applied to. Each bill does carry
+        Zoho's remaining balance, so after everything else has posted, each credit's applied part (Total minus
+        Balance) goes to that vendor's bills that still owe more here than in Zoho, oldest bill first."""
+        zoho_balance = {}
+        for row in self.export.files["bills"]:
+            zoho_balance.setdefault(row["Bill ID"], mapping.money(row["Balance"]))
+        bill_type = ContentType.objects.get_for_model(Bill)
+        bills = {r.object_id: r.zoho_id for r in ZohoRecord.objects.filter(kind="bill", content_type=bill_type)}
+        excess = {}
+        for bill in Bill.objects.filter(pk__in=bills).order_by("date", "id"):
+            over = bill_balance(bill) - zoho_balance[bills[bill.pk]]
+            if over > 0:
+                excess[bill.pk] = [bill, over]
+        credit_type = ContentType.objects.get_for_model(VendorCredit)
+        records = ZohoRecord.objects.filter(kind="vendor_credit", content_type=credit_type)
+        credits = VendorCredit.objects.filter(pk__in=records.values("object_id")).order_by("date", "id")
+        zoho_id = {r.object_id: r.zoho_id.split(":")[0] for r in records}
+        for credit in credits:
+            first = self.doc_rows("vendor_credit", zoho_id[credit.pk])[0]
+            wanted = min(mapping.money(first["Total"]) - mapping.money(first["Balance"]),
+                         vendor_credit_unapplied(credit))
+            with transaction.atomic():
+                for bill_pk, slot in excess.items():
+                    bill, over = slot
+                    if wanted <= 0:
+                        break
+                    if bill.vendor_id != credit.vendor_id or over <= 0:
+                        continue
+                    take = min(wanted, over)
+                    apply_vendor_credit(credit, bill, take, date=max(credit.date, bill.date), user=self.user)
+                    slot[1] -= take
+                    wanted -= take
+            if wanted > 0:
+                self.warnings.append(f"{credit.number}: {wanted:,.2f} of the credit matched no bill.")
+
+    def _bill_imported(self, vendor, number: str) -> bool:
+        imported = ZohoRecord.objects.filter(
+            kind="bill", content_type=ContentType.objects.get_for_model(Bill)).values("object_id")
+        return Bill.objects.filter(pk__in=imported, vendor=vendor, vendor_invoice_number=number).exists()
+
+    def apply_pending_bill(self, bill) -> None:
+        """Vendor payments Zoho made before this bill's date, applied on the bill date at the earliest."""
+        for payment, amount in self.pending_bill_applications.pop((bill.vendor_id, bill.vendor_invoice_number), []):
+            apply_vendor_payment(payment, bill, amount, date=max(payment.date, bill.date), user=self.user)
+
+    def apply_pending(self, invoice) -> None:
+        """Payments Zoho received before this invoice existed, applied on the invoice date at the earliest."""
+        for payment, amount, when in self.pending_applications.pop(invoice.number, []):
+            apply_payment(payment, invoice, amount, date=max(when, invoice.date), user=self.user)
 
     # ---- entries ----
     def _post(self, event, source_type: str, lines: list[LineSpec], *, memo: str, reference: str = "") -> None:

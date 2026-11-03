@@ -118,3 +118,19 @@ def test_all_problems_listed_at_once(tmp_path):
     }
     _, problems = _check(tmp_path, extra_rows=extra)
     assert len(problems) == 3
+
+
+def test_free_text_bill_line_with_an_account_is_an_expense_line(tmp_path):
+    """Zoho's Cordon bills name each line "Shipping <date> <customer>" with no SKU and an expense account."""
+    bill = dict(next(r for r in sample_rows()["bills"] if r["Bill Number"] == "BILL-005"))
+    bill.update({"Bill ID": "X9", "Bill Number": "PW-77", "SKU": "",
+                 "Item Name": "Shipping 2024-04-29 Kabayan Foods", "Account": "Shipping Expenses"})
+    _, problems = _check(tmp_path, extra_rows={"bills": [bill]})
+    assert problems == []
+
+
+def test_credit_note_item_names_are_descriptions(tmp_path):
+    note = dict(sample_rows()["credit_notes"][0])
+    note.update({"CreditNotes ID": "X8", "Credit Note Number": "CN-X8", "Item Name": "Nagaraya Cracker Nuts-BBQ"})
+    _, problems = _check(tmp_path, extra_rows={"credit_notes": [note]})
+    assert problems == []

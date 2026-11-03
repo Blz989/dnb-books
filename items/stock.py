@@ -312,8 +312,12 @@ def replay_item(item: Item, *, trigger_date: date_type, user) -> list[CostRevisi
     with transaction.atomic():
         result = _replay(item)
         revisions = []
+        # One query for every movement's corrections so far (effective_total would query once per movement).
+        corrections = dict(
+            CostRevision.objects.filter(movement__item=item).values("movement_id")
+            .annotate(s=Sum("delta")).values_list("movement_id", "s"))
         for m in _live_movements(item).filter(quantity__lt=0):
-            difference = result.costed[m.pk].total_cost - effective_total(m)
+            difference = result.costed[m.pk].total_cost - (m.total_cost + money(corrections.get(m.pk)))
             if difference == 0:
                 continue
             when = m.date if not is_closed(m.date) else trigger_date

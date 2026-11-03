@@ -1,6 +1,7 @@
 """Pure mapping functions from Zoho Books export values to DNB Books values."""
 
 import re
+from datetime import date
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -51,8 +52,52 @@ class AccountPlan:
     is_active: bool
 
 
-def money(text: str) -> Decimal:
+# Zoho has customers that share a name, so documents are linked to customers by contact ID.
+CUSTOMER_ID_COLUMN = {
+    "sales_orders": "Customer ID", "invoices": "Customer ID", "customer_payments": "CustomerID",
+    "credit_notes": "Customer ID",
+}
+
+
+def valid_email(text: str) -> bool:
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_email
+
+    try:
+        validate_email(text)
+    except ValidationError:
+        return False
+    return True
+
+
+def name_key(name: str) -> str:
+    return " ".join(name.split()).casefold()
+
+
+def clean_sku(text: str) -> str:
+    """A Zoho SKU made to fit DNB Books' SKU rule: "&" becomes "and", any other character outside letters,
+    numbers, dots, dashes, and underscores becomes "-", and it is cut to 50 characters."""
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", text.strip().replace("&", "and")).strip("-._")
+    return cleaned[:50].rstrip("-._")
+
+
+def money4(text: str) -> Decimal:
+    """A unit price: money() to 4 decimal places."""
     cleaned = (text or "").replace(",", "").strip()
+    currency = re.match(r"^([A-Za-z]{3})\s+", cleaned)
+    if currency:
+        cleaned = cleaned[currency.end():]
+    return Decimal(cleaned or "0").quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+
+
+def money(text: str) -> Decimal:
+    """Zoho amounts: "1,234.5", "0.000", and on items "USD 2.99". Only US dollars are supported."""
+    cleaned = (text or "").replace(",", "").strip()
+    currency = re.match(r"^([A-Za-z]{3})\s+", cleaned)
+    if currency:
+        if currency.group(1).upper() != "USD":
+            raise ValueError(f"Only US dollar amounts can be imported, not '{text}'.")
+        cleaned = cleaned[currency.end():]
     if not cleaned:
         return Decimal("0.00")
     return Decimal(cleaned).quantize(CENT, rounding=ROUND_HALF_UP)
@@ -97,7 +142,9 @@ def bank_kind(name: str, zoho_type: str) -> AccountKind | None:
     return None
 
 
-def terms(label: str) -> Terms:
+def terms(label: str, issued: str = "", due: str = "") -> Terms:
+    """Zoho's terms label as DNB Books terms. "Custom" terms carry only a due date, so their length is the gap
+    between the document date and the due date (Net 30 when either date is missing)."""
     text = (label or "").strip()
     if not text:
         return Terms.NET_30
@@ -106,10 +153,21 @@ def terms(label: str) -> Terms:
         return Terms.DUE_ON_RECEIPT
     if lowered == "due end of the month":
         return Terms.NET_30
+    if lowered == "custom":
+        try:
+            days = (date.fromisoformat(due.strip()) - date.fromisoformat(issued.strip())).days
+        except ValueError:
+            return Terms.NET_30
+        if days <= 0:
+            return Terms.DUE_ON_RECEIPT
+        return _net_terms(days)
     match = re.fullmatch(r"net\s+(\d+)", lowered)
     if not match:
         raise ValueError(f"Unknown Zoho payment terms '{label}'.")
-    days = int(match.group(1))
+    return _net_terms(int(match.group(1)))
+
+
+def _net_terms(days: int) -> Terms:
     options = sorted((int(t.value.split("_")[1]), t) for t in Terms if t.value.startswith("NET_"))
     for option_days, term in options:
         if option_days >= days:

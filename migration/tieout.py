@@ -114,6 +114,11 @@ def _trial_balance(rows, plan, as_of) -> list[Diff]:
         key = row["account"].casefold()
         names.setdefault(key, row["account"])
         zoho[key] += mapping.money(row.get("debit", "")) - mapping.money(row.get("credit", ""))
+    # Zoho's trial balance for a date lists balance-sheet accounts only (income and expense show 0.00 for the
+    # day, and it leaves equity out apart from Drawings). Income and expense are tied out by the yearly P&L
+    # checks, so here they are left out on both sides; when assets and liabilities tie, equity does too.
+    for key in [k for k in zoho if k in by_name and by_name[k].type in (AccountType.INCOME, AccountType.EXPENSE)]:
+        del zoho[key]
     ours: dict[str, Decimal] = {}
     notes: dict[str, str] = {}
     mapped_numbers = set()
@@ -125,7 +130,7 @@ def _trial_balance(rows, plan, as_of) -> list[Diff]:
         else:
             ours[key], notes[key] = ZERO, "Not in the account map"
     # Accounts that hold a balance here but are missing from Zoho's report
-    for account in Account.objects.all().order_by("number"):
+    for account in Account.objects.filter(type__in=[AccountType.ASSET, AccountType.LIABILITY]).order_by("number"):
         if account.number in mapped_numbers:
             continue
         balance = _net(account, entry__date__lte=as_of)
@@ -224,11 +229,11 @@ def _inventory_value(rows, after, warnings) -> list[Diff]:
 
 
 # ---- document counts and totals ----
-def _export_docs(export, short, id_column, total_of) -> tuple[int, Decimal]:
+def _export_docs(export, short, id_column, total_of, skipped=frozenset()) -> tuple[int, Decimal]:
     seen, total = set(), ZERO
     for row in export.files.get(short, []):
         key = row[id_column]
-        if key not in seen:
+        if key not in seen and key not in skipped:
             seen.add(key)
             total += total_of(row)
     return len(seen), total
@@ -243,7 +248,7 @@ def _ours(kind, total_of) -> tuple[int, Decimal]:
     return len(ids), total
 
 
-def _counts(export) -> list[Diff]:
+def _counts(export, skipped: dict) -> list[Diff]:
     money = mapping.money
     types = (
         ("Invoices", "invoice", "invoices", "Invoice ID", invoice_total, lambda r: money(r["Total"])),
@@ -253,14 +258,17 @@ def _counts(export) -> list[Diff]:
         ("Vendor payments", "vendor_payment", "vendor_payments", "VendorPayment ID",
          lambda o: o.amount, lambda r: money(r["Amount"])),
         ("Credit notes", "credit_note", "credit_notes", "CreditNotes ID", credit_total, lambda r: money(r["Total"])),
-        ("Vendor credits", "vendor_credit", "vendor_credits", "VendorCredit ID",
+        ("Vendor credits", "vendor_credit", "vendor_credits", "Vendor Credit ID",
          vendor_credit_total, lambda r: money(r["Total"])),
     )
     diffs = []
     for label, kind, short, id_column, ours_total, zoho_total in types:
         count, total = _ours(kind, ours_total)
-        zoho_count, zoho_sum = _export_docs(export, short, id_column, zoho_total)
-        diffs.append(Diff(f"{label}: count", Decimal(count), Decimal(zoho_count)))
+        # $0.00 Zoho documents with nothing to post were not created (listed in the warnings), so not counted.
+        left_out = skipped.get(short, set())
+        zoho_count, zoho_sum = _export_docs(export, short, id_column, zoho_total, left_out)
+        name = f"{label}: count" + (f" (not counting {len(left_out)} empty $0.00)" if left_out else "")
+        diffs.append(Diff(name, Decimal(count), Decimal(zoho_count)))
         diffs.append(Diff(f"{label}: total", total, zoho_sum))
     return diffs
 
@@ -290,7 +298,7 @@ def compare(reports_dir: Path, as_of: date, after, plan, warnings, export) -> Ti
     checks.append(_check("Inventory quantities", None if rows is None else _quantities(rows)))
     value_rows = _read(folder / "inventory_valuation.csv")
     return TieOut(
-        checks=checks, inventory_value=_inventory_value(value_rows, after, warnings), counts=_counts(export),
+        checks=checks, inventory_value=_inventory_value(value_rows, after, warnings), counts=_counts(export, getattr(after, "skipped", {}) or {}),
         after=after, account_map=list(plan), warnings=list(warnings), as_of=as_of,
         inventory_value_provided=value_rows is not None)
 

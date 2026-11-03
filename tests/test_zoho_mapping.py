@@ -96,3 +96,26 @@ def test_vendor_method():
     assert vendor_method("Check", AccountSubtype.BANK) == VendorPaymentMethod.CHECK
     assert vendor_method("Bank Transfer", AccountSubtype.BANK) == VendorPaymentMethod.ACH
     assert vendor_method("Cash", None) == VendorPaymentMethod.ACH
+
+
+def test_custom_terms_from_the_due_date_gap():
+    assert terms("Custom", "2020-05-05", "2020-06-05") == Terms.NET_45  # 31 days: the next longer terms
+    assert terms("Custom", "2020-05-05", "2020-06-04") == Terms.NET_30
+    assert terms("Custom", "2020-05-05", "2020-05-05") == Terms.DUE_ON_RECEIPT
+    assert terms("Custom") == Terms.NET_30
+
+
+def test_money_reads_a_usd_prefix_and_refuses_other_currencies():
+    assert money("USD 2.99") == Decimal("2.99")
+    assert money("USD 1,250.00") == Decimal("1250.00")
+    with pytest.raises(ValueError, match="Only US dollar amounts"):
+        money("EUR 5.00")
+
+
+def test_clean_sku_fits_the_sku_rule():
+    from migration.zoho.mapping import clean_sku
+
+    assert clean_sku("j&jpotatochipsbbq") == "jandjpotatochipsbbq"
+    assert clean_sku("Skyflake/800g") == "Skyflake-800g"
+    assert clean_sku("Shipping Charges : Standard") == "Shipping-Charges-Standard"
+    assert clean_sku("WID-A") == "WID-A"

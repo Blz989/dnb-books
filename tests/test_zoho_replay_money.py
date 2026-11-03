@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -23,7 +23,7 @@ from sales.balances import invoice_balance, payment_unapplied
 from sales.checks import ar_check, undeposited_check
 from sales.models import CreditNote, Deposit, Invoice, Payment, PaymentMethod
 from sales.posting.deposits import undeposited_payments
-from tests.zoho_sample import BANK, CARD, EXPECTED, UNDEPOSITED, build_sample_export
+from tests.zoho_sample import BANK, CARD, EXPECTED, UNDEPOSITED, build_sample_export, sample_rows
 
 
 def _replay(admin_user, tmp_path, *, extra_rows=None, pairs=None, after_each=None):
@@ -111,6 +111,8 @@ def test_vendor_payment_check_number_registered_handwritten(replay):
 
 
 def test_credit_note_and_vendor_credit_applied(replay):
+    # Zoho's export has no vendor credit applications; finish() rebuilds them from Zoho's bill balances.
+    replay.finish()
     note = CreditNote.objects.get(number="CN-000001")
     line = note.lines.get()
     assert (line.description, line.amount, line.account.name) == ("Red Widget", Decimal("60.00"), "Sales")
@@ -235,3 +237,115 @@ def test_bank_charges_on_undeposited_payment_warn_and_post_nothing(db, admin_use
     assert not ZohoRecord.objects.filter(kind="bank_charges", zoho_id="54200000001")
     assert Payment.objects.get(number="CP-3001").amount == Decimal("50.00")
     assert undeposited_check() == [] and ar_check() == [] and check_invariants() == []
+
+
+def test_vendor_credit_with_no_bill_owing_more_is_warned(db, admin_user, tmp_path):
+    rows = sample_rows()
+    for row in rows["bills"]:
+        if row["Bill Number"] == "BILL-003":
+            row["Balance"] = row["Total"]  # Zoho shows BILL-003 unpaid, so the credit went nowhere we can see
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    r.finish()
+    credit = VendorCredit.objects.get(number="VC-0001")
+    assert not credit.applications.exists()
+    assert "VC-0001: 120.00 of the credit matched no bill." in r.warnings
+
+
+def test_payment_before_its_invoice_applies_on_the_invoice_date(db, admin_user, tmp_path):
+    """Online orders: Zoho records the payment days before the invoice."""
+    rows = sample_rows()
+    inv = next(r for r in rows["invoices"] if r["Invoice Number"] == "INV-000006")
+    early = dict(next(r for r in rows["customer_payments"] if r["Invoice Number"] == "INV-000006"))
+    paid_on = date.fromisoformat(inv["Invoice Date"]).replace(day=1).isoformat()
+    for r in rows["customer_payments"]:
+        if r["CustomerPayment ID"] == early["CustomerPayment ID"]:
+            r.update({"Date": paid_on, "Invoice Payment Applied Date": ""})
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    r.finish()
+    payment = Payment.objects.get(number=early["Payment Number"])
+    app = payment.applications.get(invoice__number="INV-000006")
+    assert payment.date == date.fromisoformat(paid_on) < app.applied_on
+    assert app.applied_on == date.fromisoformat(inv["Invoice Date"])
+    assert not r.pending_applications
+    assert ar_check() == [] and undeposited_check() == []
+
+
+def test_check_payment_without_a_number_is_not_left_to_print(db, admin_user, tmp_path):
+    from banking.checknumbers import is_to_print
+    from purchasing.models import VendorPayment
+
+    rows = sample_rows()
+    for r in rows["vendor_payments"]:
+        if r["Mode"] == "Check":
+            r["Reference Number"] = ""
+            number = r["Payment Number"]
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    payment = VendorPayment.objects.get(number=number)
+    assert payment.check_number == f"none-{number}" and not is_to_print(payment)
+    assert any("has no check number" in w for w in r.warnings)
+
+
+def test_vendor_payment_before_its_bill_applies_on_the_bill_date(db, admin_user, tmp_path):
+    from purchasing.models import VendorPayment
+
+    rows = sample_rows()
+    vp = next(r for r in rows["vendor_payments"] if r["Bill Number"] == "BILL-002")
+    bill_date = next(r for r in rows["bills"] if r["Bill Number"] == "BILL-002")["Bill Date"]
+    paid_on = (date.fromisoformat(bill_date) - timedelta(days=3)).isoformat()
+    vp.update({"Date": paid_on, "Bill Payment Applied Date": paid_on})
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    r.finish()
+    payment = VendorPayment.objects.get(number=vp["Payment Number"])
+    app = payment.applications.get()
+    assert payment.date == date.fromisoformat(paid_on) < app.applied_on == date.fromisoformat(bill_date)
+    assert not r.pending_bill_applications and ap_check() == []
+
+
+def test_undeposited_transfer_found_among_the_latest_payments(db, admin_user, tmp_path):
+    """Real case: years of older cash sit in Undeposited Funds; the transfer banks the last few days' cash."""
+    old_cash = [dict(SMALL_CASH[0], **{"CustomerPayment ID": f"5420000000{n:02d}", "Payment Number": f"CP-30{n:02d}",
+                                       "Date": f"2024-02-{n:02d}", "Amount": "7.00", "Unused Amount": "7.00"})
+                for n in range(1, 26)]
+    recent = [dict(SMALL_CASH[0], **{"CustomerPayment ID": f"5430000000{n}", "Payment Number": f"CP-40{n}",
+                                     "Date": f"2024-04-2{n}", "Amount": amt, "Unused Amount": amt})
+              for n, amt in ((1, "165.00"), (2, "1234.00"), (3, "2000.00"), (4, "1000.00"))]
+    transfer = dict(LATE_TRANSFER, **{"Transaction Date": "2024-04-27", "Total": "4,399.00"})
+    r = _replay(admin_user, tmp_path, extra_rows={"customer_payments": old_cash + recent, "transfers": [transfer]})
+    deposit = Deposit.objects.get(date=date(2024, 4, 27))
+    assert sorted(p.number for p in deposit.all_payments.all()) == ["CP-401", "CP-402", "CP-403", "CP-404"]
+    assert not any("2024-04-27" in w for w in r.warnings)
+    assert undeposited_check() == []
+
+
+def test_credit_note_with_a_stock_item_returns_it_to_stock(db, admin_user, tmp_path):
+    """Zoho's credit notes that name a stock item put it back on the shelf (all 19 real quantity differences)."""
+    from items.stock import on_hand
+
+    rows = sample_rows()
+    note = rows["credit_notes"][0]
+    sku = next(r["SKU"] for r in rows["items"] if r["Item Name"] == note["Item Name"])
+    note.update({"SKU": sku, "Quantity": "2"})
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    before = None
+    for event in r.events():
+        if event.kind == "credit_note":
+            before = on_hand(r.items[sku])
+        r.post(event)
+        if event.kind == "credit_note":
+            assert on_hand(r.items[sku]) == before + 2
+    moves = StockMovement.objects.filter(source_type="migration.credit_return")
+    assert [m.quantity for m in moves] == [2] and moves[0].offset_account == r.items[sku].cogs_account
+    assert check_invariants() == []

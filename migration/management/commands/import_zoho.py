@@ -46,6 +46,8 @@ class Command(BaseCommand):
         parser.add_argument("--dry-run", action="store_true", help="Write the report and keep nothing else")
         parser.add_argument("--opening-balances", help="opening_balances.csv (account,debit,credit)")
         parser.add_argument("--deposit-pairs", help="deposit_pairs.csv (date,amount,payment_numbers)")
+        parser.add_argument("--keep-going", action="store_true",
+                            help="Dry run only: skip a document that fails, list it, and carry on")
         parser.add_argument("--accept-differences", action="store_true",
                             help="Swap the import in even though the tie-out did not pass")
         parser.add_argument("--_into-copy", dest="into_copy", action="store_true", help=argparse.SUPPRESS)
@@ -73,6 +75,8 @@ class Command(BaseCommand):
 
         if any(m.objects.exists() for m in (Invoice, Bill, Payment, VendorPayment, JournalEntry)):
             return self._fail(2, NON_EMPTY)
+        if opts["keep_going"] and not opts["dry_run"]:
+            return self._fail(2, "--keep-going only works with --dry-run.")
         user = get_user_model().objects.filter(username=opts["user"]).first()
         if user is None:
             return self._fail(2, f'There is no user named "{opts["user"]}".')
@@ -128,7 +132,7 @@ class Command(BaseCommand):
             sys.executable, str(Path(settings.BASE_DIR) / "manage.py"), "import_zoho", str(export),
             "--_into-copy", "--reports", str(Path(opts["reports"]).resolve()), "--user", opts["user"],
         ]
-        for flag in ("dry_run", "accept_differences"):
+        for flag in ("dry_run", "accept_differences", "keep_going"):
             if opts[flag]:
                 cmd.append("--" + flag.replace("_", "-"))
         for option in ("opening_balances", "deposit_pairs"):

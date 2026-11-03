@@ -89,11 +89,12 @@ def test_invoice_totals_equal_zoho(replay):
 
 
 def test_discount_leftover_goes_on_adjustment_line(db, admin_user, tmp_path):
+    # No list price (0.00), so the price is netted from Item Total (the fallback to gross-plus-discount):
     # 300 x 0.3333 = 99.99, so one cent is left over from Zoho's Item Total of 100.00.
-    up = _invoice_row("INV-000010", "51000000010", "Gift Wrap", "WRAP", 300, "5.00", "100.00", "100.00")
+    up = _invoice_row("INV-000010", "51000000010", "Gift Wrap", "WRAP", 300, "0.00", "100.00", "100.00")
     # 300 x 0.3333 = 99.99 against 99.98: one cent too many, so the adjustment line takes -0.01
     # on top of Zoho's own adjustment of 0.50.
-    down = _invoice_row("INV-000011", "51000000011", "Gift Wrap", "WRAP", 300, "5.00", "99.98", "100.48",
+    down = _invoice_row("INV-000011", "51000000011", "Gift Wrap", "WRAP", 300, "0.00", "99.98", "100.48",
                         adjustment="0.50", adjustment_account="Other Charges")
     r = _replay(admin_user, tmp_path, extra_rows={"invoices": [up, down]})
     first = Invoice.objects.get(number="INV-000010")
@@ -106,12 +107,14 @@ def test_discount_leftover_goes_on_adjustment_line(db, admin_user, tmp_path):
     assert _lines(second)["ADJ"].amount == Decimal("0.49")
     # Same account as INV-000006's adjustment: the one ADJ copy for Other Charges is reused.
     assert _lines(second)["ADJ"].item == _lines(Invoice.objects.get(number="INV-000006"))["ADJ"].item
-    assert ZohoRecord.objects.filter(kind="service_item").count() == 1
+    # The ADJ copy for Other Charges, and the DISC item for the sample's discounted invoice.
+    assert ZohoRecord.objects.filter(kind="service_item").count() == 2
     assert invoice_total(second) == Decimal("100.48")
-    # The discounted sample invoice needs no adjustment: 712.50 / 30 is exactly 23.75.
+    # The discounted sample invoice: the full price to Sales and the 37.50 discount to Discount, as Zoho books it.
     inv2 = _lines(Invoice.objects.get(number="INV-000002"))
-    assert "ADJ" not in inv2 and inv2["WID-A"].price == Decimal("23.7500")
-    assert inv2["WID-A"].amount == Decimal("712.50")
+    assert "ADJ" not in inv2 and inv2["WID-A"].price == Decimal("25.0000")
+    assert inv2["DISC"].amount == Decimal("-37.50") and inv2["DISC"].item.income_account.name == "Discount"
+    assert inv2["WID-A"].amount == Decimal("750.00")
     assert not [w for w in r.warnings if "vs Zoho" in w]
 
 
@@ -201,7 +204,7 @@ def test_ledger_checks_zero_after_docs(replay):
 
 def test_negative_leftover_only_goes_on_adjustment_line(db, admin_user, tmp_path):
     # 300 x 0.3333 = 99.99 against 99.98, and no Zoho adjustment: the ADJ line is -0.01.
-    row = _invoice_row("INV-000012", "51000000012", "Gift Wrap", "WRAP", 300, "5.00", "99.98", "99.98")
+    row = _invoice_row("INV-000012", "51000000012", "Gift Wrap", "WRAP", 300, "0.00", "99.98", "99.98")
     _replay(admin_user, tmp_path, extra_rows={"invoices": [row]})
     invoice = Invoice.objects.get(number="INV-000012")
     assert _lines(invoice)["ADJ"].amount == Decimal("-0.01")
@@ -276,7 +279,7 @@ def _one_line(r, sku, price):
 def test_negative_invoice_price_refused_by_default(master):
     from sales.errors import InvoiceError
     from sales.posting.invoices import InvoiceLineSpec, create_invoice
-    customer = master.customers["Acme Hardware"]
+    customer = master.customers_by_name["Acme Hardware"]
     with pytest.raises(InvoiceError, match=r"^Line 2: price can't be negative\.$"):
         create_invoice(customer=customer, date=date(2026, 3, 1), lines=_invoice_lines(master, Decimal("-1.00")),
                        user=master.user)
@@ -290,12 +293,12 @@ def test_negative_invoice_price_refused_by_default(master):
 def test_negative_invoice_price_allowed_with_flag(master):
     from sales.posting.invoices import create_invoice
     invoice = create_invoice(
-        customer=master.customers["Acme Hardware"], date=date(2026, 3, 1), user=master.user,
+        customer=master.customers_by_name["Acme Hardware"], date=date(2026, 3, 1), user=master.user,
         lines=_invoice_lines(master, Decimal("-1.00")), allow_negative_adjustment=True)
     assert invoice_total(invoice) == Decimal("9.00")
     assert _entry(invoice) == {"Accounts Receivable": Decimal("9.00"), "Sales": Decimal("-9.00")}
     other = create_invoice(
-        customer=master.customers["Acme Hardware"], date=date(2026, 3, 1), user=master.user,
+        customer=master.customers_by_name["Acme Hardware"], date=date(2026, 3, 1), user=master.user,
         lines=[*_invoice_lines(master, Decimal("0.00"))[:1],
                _one_line(master, "TAX", Decimal("1.00")),
                _one_line(master, "SHIP", Decimal("-2.00"))],
@@ -323,3 +326,121 @@ def test_negative_bill_expense_refused_by_default_allowed_with_flag(master):
     assert _entry(bill) == {"Office Supplies": Decimal("20.00"), "Discount": Decimal("-1.50"),
                             "Accounts Payable": Decimal("-18.50")}
     assert ap_check() == []
+
+
+def test_free_text_bill_line_becomes_an_expense_line(db, admin_user, tmp_path):
+    from tests.zoho_sample import sample_rows
+
+    row = dict(next(r for r in sample_rows()["bills"] if r["Bill Number"] == "BILL-005"))
+    row.update({"Bill ID": "53000000077", "Bill Number": "PW-77", "SKU": "", "Description": "",
+                "Item Name": "Shipping 2024-04-29 Kabayan Foods", "Account": "Shipping Expenses",
+                "Payment Terms Label": "Custom", "Bill Date": "2025-05-20", "Due Date": "2025-06-19"})
+    _replay(admin_user, tmp_path, extra_rows={"bills": [row]})
+    bill = Bill.objects.get(vendor_invoice_number="PW-77")
+    expense = bill.expense_lines.get()
+    assert (expense.account.name, expense.description) == ("Shipping Expenses", "Shipping 2024-04-29 Kabayan Foods")
+    assert not bill.item_lines.exists()
+    assert bill.terms == "NET_30"
+
+
+def test_same_name_customers_stay_apart_and_invoices_follow_the_contact_id(db, admin_user, tmp_path):
+    from contacts.models import Customer
+    from tests.zoho_sample import sample_rows
+
+    twin = dict(sample_rows()["customers"][2])
+    twin.update({"Contact ID": "4800000009999", "Display Name": "cedar ridge  Outfitters", "EmailID": "x@y.example"})
+    invoice = _invoice_row("INV-T1", "61000000999", "Blue Widget", "WID-A", 1, "12.00", "12.00", "12.00")
+    invoice["Customer ID"] = "4800000009999"
+    r = _replay(admin_user, tmp_path, extra_rows={"customers": [twin], "invoices": [invoice]})
+    second = Customer.objects.get(name="cedar ridge Outfitters (2)")
+    assert Invoice.objects.get(number="INV-T1").customer == second
+    assert Customer.objects.filter(name="Cedar Ridge Outfitters").exists()
+    assert any("share a name" in w for w in r.warnings)
+
+
+def test_item_less_lines_zero_skipped_and_shipping_kept(db, admin_user, tmp_path):
+    """Zoho's Shopify orders carry $0.00 placeholder lines and shipping charges booked straight to Sales."""
+    base = _invoice_row("INV-S1", "61000000888", "Blue Widget", "WID-A", 1, "12.00", "12.00", "17.99")
+    blank = {**base, "Item Name": "", "SKU": "", "Quantity": "1", "Item Price": "0.00", "Item Total": "0.00",
+             "Item Desc": ""}
+    ship = {**base, "Item Name": "", "SKU": "", "Quantity": "1", "Item Price": "5.99", "Item Total": "5.99",
+            "Item Desc": "Shipping Charges : Standard", "Account": "Sales"}
+    _replay(admin_user, tmp_path, extra_rows={"invoices": [base, blank, ship]})
+    invoice = Invoice.objects.get(number="INV-S1")
+    assert invoice_total(invoice) == Decimal("17.99")
+    shipping = invoice.lines.get(description="Shipping Charges : Standard")
+    assert (shipping.amount, shipping.item.income_account.name) == (Decimal("5.99"), "Sales")
+    assert invoice.lines.count() == 2
+
+
+def test_free_goods_on_a_bill_become_a_zero_cost_adjustment(db, admin_user, tmp_path):
+    from items.models import StockMovement
+    from tests.zoho_sample import sample_rows
+
+    base = dict(next(r for r in sample_rows()["bills"] if r["Bill Number"] == "BILL-003"))
+    paid = {**base, "Bill ID": "53000000088", "Bill Number": "FREE-1", "Bill Date": "2025-04-02",
+            "Quantity": "5", "Rate": "12.00", "Item Total": "60.00", "Total": "60.00", "Balance": "60.00"}
+    free = {**paid, "Quantity": "40", "Rate": "0.00", "Item Total": "0.00"}
+    all_free = {**free, "Bill ID": "53000000089", "Bill Number": "FREE-2", "Total": "0.00", "Balance": "0.00"}
+    r = _replay(admin_user, tmp_path, extra_rows={"bills": [paid, free, all_free]})
+    bill = Bill.objects.get(vendor_invoice_number="FREE-1")
+    assert [l.quantity for l in bill.item_lines.all()] == [5]
+    moves = StockMovement.objects.filter(source_type="migration.free_goods")
+    assert sorted(m.quantity for m in moves) == [40, 40]
+    assert all(m.total_cost == 0 and m.journal_entry_id is None for m in moves)
+    assert not Bill.objects.filter(vendor_invoice_number="FREE-2").exists()
+    assert any("FREE-2" in w and "$0.00" in w for w in r.warnings)
+    assert check_invariants() == []
+
+
+def test_empty_zero_invoice_is_skipped_and_reported(db, admin_user, tmp_path):
+    base = _invoice_row("INV-E1", "61000000777", "", "", 1, "0.00", "0.00", "0.00")
+    r = _replay(admin_user, tmp_path, extra_rows={"invoices": [base]})
+    assert not Invoice.objects.filter(number="INV-E1").exists()
+    assert r.skipped["invoices"] == {"61000000777"}
+    assert any("INV-E1" in w for w in r.warnings)
+    assert r.finish().skipped["invoices"] == {"61000000777"}
+
+
+def test_line_income_account_from_zoho_and_matching_cost_account(db, admin_user, tmp_path):
+    """Zoho moved items between Sales and Wholesale Sales over time; each line keeps the account Zoho used."""
+    from ledger.models import Account
+
+    row = _invoice_row("INV-000013", "51000000013", "Blue Widget", "WID-A", 2, "25.00", "50.00", "50.00")
+    row["Account"] = "Other Charges"
+    r = _replay(admin_user, tmp_path, extra_rows={"invoices": [row]})
+    invoice = Invoice.objects.get(number="INV-000013")
+    entry = _entry(invoice)
+    assert entry["Other Charges"] == Decimal("-50.00") and "Sales" not in entry
+    assert r.items["WID-A"].income_account.name != "Other Charges"
+    assert ar_check() == []
+
+
+def test_write_off_rebuilt_from_zoho_balance(db, admin_user, tmp_path):
+    from sales.balances import invoice_balance
+    from sales.models import CreditNote
+
+    row = _invoice_row("INV-000014", "51000000014", "Blue Widget", "WID-A", 2, "25.00", "50.00", "50.00")
+    row["Balance"] = "0.00"  # nothing paid, yet nothing owing in Zoho: written off
+    bad_debt = {"Account ID": "47000000099", "Account Name": "Bad Debt", "Account Type": "Expense",
+                "Account Status": "Active", "Description": ""}
+    r = _replay(admin_user, tmp_path, extra_rows={"invoices": [row], "accounts": [bad_debt]})
+    r.finish()
+    invoice = Invoice.objects.get(number="INV-000014")
+    assert invoice_balance(invoice) == Decimal("0.00")
+    note = CreditNote.objects.get(reason="Written off in Zoho")
+    assert note.lines.get().account.name == "Bad Debt" and note.date == invoice.date
+    assert any("INV-000014" in w and "written off" in w for w in r.warnings)
+    assert ar_check() == []
+
+
+def test_free_item_posts_sales_and_discount(db, admin_user, tmp_path):
+    """A 100% discount: Zoho posts the full price to Sales and the same to Discount, with nothing owing."""
+    row = _invoice_row("INV-000015", "51000000015", "Blue Widget", "WID-A", 1, "12.99", "0.00", "0.00")
+    _replay(admin_user, tmp_path, extra_rows={"invoices": [row]})
+    invoice = Invoice.objects.get(number="INV-000015")
+    assert invoice_total(invoice) == Decimal("0.00")
+    entry = _entry(invoice)
+    assert entry["Discount"] == Decimal("12.99") and sum(entry.values()) == 0
+    assert "Accounts Receivable" not in entry
+    assert ar_check() == []

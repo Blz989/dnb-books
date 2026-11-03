@@ -6,6 +6,7 @@ output; the parent decides whether the copy is kept.
 """
 from pathlib import Path
 
+from auditlog.context import disable_auditlog
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -68,6 +69,13 @@ def _summary(t, replay, events: int, accepted: bool) -> dict:
 
 
 def run_child(command, opts) -> int:
+    # The import keeps its own trail (ImportRun, and a ZohoRecord per document); an audit-log row for each of
+    # the hundreds of thousands of imported objects would cost a sixth of the run and add nothing.
+    with disable_auditlog():
+        return _run_child(command, opts)
+
+
+def _run_child(command, opts) -> int:
     out, err = command.stdout, command.stderr
     if not str(settings.DNB_DB_PATH).endswith(COPY_SUFFIX):
         err.write("--_into-copy only runs against the import copy.")
@@ -90,7 +98,7 @@ def run_child(command, opts) -> int:
         return FAILED
 
     events = replay.events()
-    month, in_month = None, 0
+    month, in_month, skipped = None, 0, 0
     for event in events:
         key = f"{event.date:%Y-%m}"
         if key != month:
@@ -101,8 +109,13 @@ def run_child(command, opts) -> int:
             with transaction.atomic():
                 replay.post(event)
         except Exception as exc:  # noqa: BLE001
-            err.write(f"Stopped at {_where(event)}: {_message(exc)}")
-            return FAILED
+            if not opts.get("keep_going"):
+                err.write(f"Stopped at {_where(event)}: {_message(exc)}")
+                return FAILED
+            # Dry run only: list every failing document in one pass instead of stopping at the first.
+            err.write(f"Skipped {_where(event)}: {_message(exc)}")
+            skipped += 1
+            continue
         in_month += 1
     if month:
         out.write(f"{month}: {in_month} events")

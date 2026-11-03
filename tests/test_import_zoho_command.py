@@ -229,3 +229,25 @@ def test_numbers_after_real_run(empty_file_db, tmp_path, admin_user):
         customer=Customer.objects.get(name=CUSTOMERS[0]), date=date(2026, 10, 1), user=admin_user,
         lines=[InvoiceLineSpec(Item.objects.get(sku="SHIP"), 1, D("5.00"))])
     assert invoice.number == f"INV-{highest + 1:06d}"
+
+
+def test_keep_going_lists_every_failure_in_one_dry_run(empty_file_db, tmp_path):
+    broken = []
+    for zid in ("59000000009", "59000000010"):
+        broken += [
+            {"Journal ID": zid, "Journal Date": "2025-12-31", "Journal Number": zid[-2:], "Notes": "Broken",
+             "Account": "Office Supplies", "Debit": "10.00", "Credit": "0.00", "Description": ""},
+            {"Journal ID": zid, "Journal Date": "2025-12-31", "Journal Number": zid[-2:], "Notes": "Broken",
+             "Account": "Bank Fees and Charges", "Debit": "0.00", "Credit": "5.00", "Description": ""},
+        ]
+    export = _export(tmp_path, extra_rows={"journals": broken})
+    before = _fingerprint(empty_file_db)
+    code, out, err = _run(export, "--reports", tmp_path / "none", "--user", "admin", "--dry-run", "--keep-going")
+    assert err.count("Skipped Journal.csv") == 2
+    assert "59000000009" in err and "59000000010" in err
+    assert _fingerprint(empty_file_db) == before and _no_documents()
+
+
+def test_keep_going_needs_dry_run(empty_file_db, tmp_path):
+    code, out, err = _run(_export(tmp_path), "--reports", tmp_path / "none", "--user", "admin", "--keep-going")
+    assert code == 2 and "--keep-going only works with --dry-run." in err

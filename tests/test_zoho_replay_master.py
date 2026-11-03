@@ -103,12 +103,13 @@ def test_items_customers_vendors_and_zoho_records(replay):
     assert (tax.name, tax.income_account.name) == ("Sales tax (Zoho)", "Tax Payable")
     assert not ship.is_stock and not adj.is_stock and not tax.is_stock
 
-    assert set(replay.customers) == {"Acme Hardware", "Birch Lane Supply", "Cedar Ridge Outfitters"}
-    acme = replay.customers["Acme Hardware"]
+    assert set(replay.customers_by_name) == {"Acme Hardware", "Birch Lane Supply", "Cedar Ridge Outfitters"}
+    assert len(replay.customers) == 3  # keyed by Zoho contact ID
+    acme = replay.customers_by_name["Acme Hardware"]
     assert acme.terms == Terms.NET_30 and acme.email == "ap@acme.example"
     assert acme.billing_address == "12 Main St\nAustin, TX 78701"
     assert "Dock 2" in acme.ship_to_address
-    assert replay.customers["Cedar Ridge Outfitters"].terms == Terms.DUE_ON_RECEIPT
+    assert replay.customers_by_name["Cedar Ridge Outfitters"].terms == Terms.DUE_ON_RECEIPT
     assert set(replay.vendors) == {"Mr. Joseph Cordon", "Pioneer Wholesale", "Summit Packaging"}
     assert replay.vendors["Mr. Joseph Cordon"].terms == Terms.DUE_ON_RECEIPT
     from handling.models import HandlingSettings
@@ -143,3 +144,54 @@ def test_opening_stock_value_drift_warns(db, admin_user, tmp_path):
     r.load_master()
     assert r.warnings == ["Opening stock UNEVEN: value 1000.00 vs Zoho 1000.01"]
     assert StockMovement.objects.get(item=r.items["UNEVEN"]).unit_cost == Decimal("0.1000")
+
+
+def test_sku_outside_the_rule_is_cleaned_and_still_found(db, admin_user, tmp_path):
+    from migration.zoho.reader import read_export
+    from migration.zoho.replay import Replay
+    from tests.zoho_sample import build_sample_export, sample_rows
+
+    rows = sample_rows()
+    rows["items"][0] = {**rows["items"][0], "SKU": "Skyflake/800g"}
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    item = r.items["Skyflake/800g"]
+    assert item.sku == "Skyflake-800g"
+    assert 'SKU "Skyflake/800g" was imported as Skyflake-800g.' in r.warnings
+
+
+def test_invalid_customer_email_kept_in_notes(db, admin_user, tmp_path):
+    from migration.zoho.reader import read_export
+    from migration.zoho.replay import Replay
+    from tests.zoho_sample import build_sample_export, sample_rows
+
+    rows = sample_rows()
+    rows["customers"][0] = {**rows["customers"][0], "EmailID": "someone52.@gmail.com"}
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    acme = r.customers_by_name["Acme Hardware"]
+    assert acme.email == "" and "Zoho email: someone52.@gmail.com" in acme.notes
+    assert any("is not valid" in w for w in r.warnings)
+
+
+def test_inactive_item_with_history_imports_then_goes_inactive(db, admin_user, tmp_path):
+    from items.stock import on_hand
+    from migration.zoho.reader import read_export
+    from migration.zoho.replay import Replay
+    from tests.zoho_sample import build_sample_export, sample_rows
+
+    rows = sample_rows()
+    stocked = next(i for i, r in enumerate(rows["items"]) if r["Opening Stock"] not in ("", "0", "0.00"))
+    rows["items"][stocked] = {**rows["items"][stocked], "Status": "Inactive"}
+    rows["customers"][0] = {**rows["customers"][0], "Status": "Inactive"}
+    r = Replay(read_export(build_sample_export(tmp_path, rows=rows)), admin_user)
+    r.load_master()
+    for event in r.events():
+        r.post(event)
+    r.finish()
+    item = r.items[rows["items"][stocked]["SKU"]]
+    item.refresh_from_db()
+    assert not item.is_active and on_hand(item) != 0 or not item.is_active
+    customer = r.customers_by_name["Acme Hardware"]
+    customer.refresh_from_db()
+    assert not customer.is_active

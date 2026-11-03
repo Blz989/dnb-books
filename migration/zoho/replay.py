@@ -6,9 +6,10 @@ the `post_<kind>` method of the same name. Orders, bills, and invoices are handl
 credits, deposits, entries, and stock adjustments in `replay_money.MoneyReplay`. Every object made gets a
 `ZohoRecord` through `Replay.record`, so any Zoho row can be traced to what it became.
 """
+import re
 from collections import defaultdict
-from dataclasses import dataclass
-from datetime import date
+from dataclasses import dataclass, field
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.contrib.contenttypes.models import ContentType
@@ -18,8 +19,8 @@ from django.utils import timezone
 from banking.models import BankAccount, Reconciliation, ReconciliationItem, ReconStatus
 from contacts.models import Customer, Vendor
 from items.costing import unit_4dp
-from items.models import Category, CostingMethod, InventorySettings, Item, ItemType
-from items.stock import StockLine, on_hand, record_opening_batch
+from items.models import Category, CostingMethod, InventorySettings, Item, ItemType, MovementKind
+from items.stock import StockLine, on_hand, record_movements, record_opening_batch
 from handling.profit import order_profit
 from ledger.models import Account, AccountSubtype, JournalLine
 from migration.models import ZohoRecord
@@ -48,6 +49,9 @@ ZOHO_SEQUENCES = (
 )
 
 # Non-stock items for the extra amounts on Zoho documents: sku, name, Zoho income account.
+# Zoho pairs each income account with its own cost of goods account.
+COGS_FOR_INCOME = {"Sales": "Cost of Goods Sold", "Wholesale Sales": "Wholesale Cost of Goods Sold"}
+
 SERVICE_ITEMS = (
     ("SHIP", "Shipping charge", "Shipping Charge"),
     ("ADJ", "Adjustment", "Sales"),
@@ -64,6 +68,7 @@ class AfterSummary:
     unbilled_orders: list  # (SalesOrder, profit, at_50, at_55)
     undeposited_by_year: dict  # year -> (count, total)
     negative_items: list  # (Item, on_hand)
+    skipped: dict = field(default_factory=dict)  # short name -> Zoho IDs of $0.00 documents not created
 
 
 @dataclass(frozen=True)
@@ -110,7 +115,17 @@ class Replay(MoneyReplay):
         self.user = user
         self.accounts: dict[str, Account] = {}
         self.items: dict[str, Item] = {}
-        self.customers: dict[str, Customer] = {}
+        self.customers: dict[str, Customer] = {}  # by Zoho contact ID
+        self.customers_by_name: dict[str, Customer] = {}
+        # Zoho's inactive accounts, items, and contacts still have history. They stay active while it replays,
+        # since posting refuses inactive ones, and are switched off in finish().
+        self.inactive: list = []
+        # Invoice number -> [(payment, amount, Zoho applied date)] for payments made before the invoice existed.
+        self.pending_applications: dict[str, list] = {}
+        # (vendor pk, Zoho bill number) -> [(vendor payment, amount)] for payments made before the bill's date.
+        self.pending_bill_applications: dict[tuple, list] = {}
+        # Zoho documents with nothing to post ($0.00, no lines): short name -> Zoho IDs. The tie-out skips them.
+        self.skipped: dict[str, set] = {}
         self.vendors: dict[str, Vendor] = {}
         self.bank_accounts: dict[str, BankAccount] = {}
         self.warnings: list[str] = []
@@ -135,8 +150,22 @@ class Replay(MoneyReplay):
         except KeyError:
             raise ValueError(f'The export has no account named "{name}".') from None
 
+    def customer_for(self, short: str, row: dict) -> Customer:
+        """By Zoho contact ID; by name only when the document has no ID."""
+        contact_id = row.get(mapping.CUSTOMER_ID_COLUMN[short], "").strip()
+        if contact_id:
+            return self.customers[contact_id]
+        return self.customers_by_name[row["Customer Name"]]
+
     def item_for(self, row: dict) -> Item:
         return self.items[row["SKU"].strip() or row["Item Name"]]
+
+    def is_item_line(self, row: dict) -> bool:
+        """Zoho lets a bill line carry a free-text name with an expense account (Cordon's "Shipping …" lines).
+        Only a SKU, or a name that is a real item, makes it an item line."""
+        if row["SKU"].strip():
+            return True
+        return bool(row["Item Name"].strip()) and row["Item Name"] in self.items
 
     def doc_rows(self, kind: str, zoho_id: str) -> list[dict]:
         """The export rows of one event (all lines of one document)."""
@@ -201,8 +230,10 @@ class Replay(MoneyReplay):
             row = rows[plan.name]
             account = Account.objects.create(
                 number=plan.number, name=plan.name, type=plan.type, subtype=plan.subtype,
-                is_active=plan.is_active, description=row.get("Description", ""),
+                description=row.get("Description", ""),
             )
+            if not plan.is_active:
+                self.inactive.append(account)
             self.accounts[plan.name] = account
             self.record("account", row["Account ID"], account)
 
@@ -257,7 +288,15 @@ class Replay(MoneyReplay):
         categories: dict[str, Category] = {}
         for row in self.rows("items"):
             stock = row["Item Type"].strip().lower() == "inventory"
-            sku = row["SKU"].strip()
+            zoho_sku = row["SKU"].strip()
+            sku = mapping.clean_sku(zoho_sku)
+            if sku and sku != zoho_sku:
+                taken = {i.sku for i in self.items.values()}
+                base, n = sku, 2
+                while sku in taken:
+                    sku = f"{base[:47]}-{n}"
+                    n += 1
+                self.warnings.append(f'SKU "{zoho_sku}" was imported as {sku}.')
             if not sku:
                 sku = f"ZOHO-{row['Item ID']}"
                 self.warnings.append(f'Item "{row["Item Name"]}" has no SKU; {sku} was used.')
@@ -281,9 +320,11 @@ class Replay(MoneyReplay):
                     row, "Purchase Account", (AccountSubtype.COST_OF_GOODS_SOLD,), cogs) if stock else None,
                 inventory_account=self._item_account(
                     row, "Inventory Account", (AccountSubtype.INVENTORY,), inventory) if stock else None,
-                is_active=row["Status"].strip().lower() != "inactive",
+                is_active=True,
             )
-            self.items[sku if row["SKU"].strip() else row["Item Name"]] = item
+            if row["Status"].strip().lower() == "inactive":
+                self.inactive.append(item)
+            self.items[zoho_sku or row["Item Name"]] = item
             self.record("item", row["Item ID"], item)
         for sku, name, account_name in SERVICE_ITEMS:
             target = self.account(account_name)
@@ -299,26 +340,47 @@ class Replay(MoneyReplay):
             self.items[sku] = item
 
     def _load_contacts(self) -> None:
+        taken: dict[str, int] = {}
+        renamed = 0
         for row in self.rows("customers"):
-            name = row["Display Name"].strip()
+            name = " ".join(row["Display Name"].split())
+            # The owner keeps Zoho's same-name contacts apart: the first keeps the name, the next is "Name (2)".
+            key = mapping.name_key(name)
+            taken[key] = taken.get(key, 0) + 1
+            if taken[key] > 1:
+                name = f"{name} ({taken[key]})"
+                renamed += 1
             company = row["Company Name"].strip()
+            email, notes = row["EmailID"].strip(), row["Notes"]
+            if email and not mapping.valid_email(email):
+                self.warnings.append(f'Customer "{name}": email "{email}" is not valid; it was kept in the notes.')
+                notes = f"{notes}\nZoho email: {email}".strip()
+                email = ""
             customer = Customer.objects.create(
                 name=name, contact_name=company if company != name else "",
-                email=row["EmailID"].strip(), phone=row["Phone"].strip(),
+                email=email, phone=row["Phone"].strip(),
                 billing_address=mapping.address(row, "Billing"),
                 ship_to_address=mapping.address(row, "Shipping"),
-                terms=mapping.terms(row["Payment Terms Label"]), notes=row["Notes"],
-                is_active=row["Status"].strip().lower() != "inactive",
+                terms=mapping.terms(row["Payment Terms Label"]), notes=notes,
+                is_active=True,
             )
-            self.customers[row["Display Name"]] = customer
+            if row["Status"].strip().lower() == "inactive":
+                self.inactive.append(customer)
+            self.customers[row["Contact ID"]] = customer
+            self.customers_by_name.setdefault(row["Display Name"], customer)
             self.record("customer", row["Contact ID"], customer)
+        if renamed:
+            self.warnings.append(f"{renamed} customers share a name with another Zoho contact and were "
+                                 "imported as \"Name (2)\" and so on.")
         for row in self.rows("vendors"):
             vendor = Vendor.objects.create(
                 name=row["Display Name"].strip(), email=row["EmailID"].strip(),
                 phone=row["Phone"].strip(), address=mapping.address(row, "Billing"),
                 terms=mapping.terms(row["Payment Terms Label"]),
-                is_active=row["Status"].strip().lower() != "inactive",
+                is_active=True,
             )
+            if row["Status"].strip().lower() == "inactive":
+                self.inactive.append(vendor)
             self.vendors[row["Display Name"]] = vendor
             self.record("vendor", row["Contact ID"], vendor)
 
@@ -358,9 +420,16 @@ class Replay(MoneyReplay):
         first = rows[0]
         lines = []
         for row in rows:
+            item = self.line_item(row)
+            if item is None:
+                continue
             quantity = _quantity(row["QuantityOrdered"])
             price, _ = mapping.line_price(mapping.money(row["Item Total"]), quantity)
-            lines.append(OrderLineSpec(self.item_for(row), quantity, price, description=row["Item Desc"]))
+            lines.append(OrderLineSpec(item, quantity, price, description=row["Item Desc"]))
+        if not lines:
+            self.skipped.setdefault("sales_orders", set()).add(event.zoho_id)
+            self.warnings.append(f"Sales order {event.number} has no lines in Zoho ($0.00); it was not created.")
+            return
         void = first["Status"].strip().lower() == "void"
         notes = first["Notes"].strip()
         if void:
@@ -368,7 +437,7 @@ class Replay(MoneyReplay):
             notes = "\n".join(p for p in (notes, "Void in Zoho") if p)
         with transaction.atomic(), use_number(DocType.SO, event.number):
             order = create_order(
-                customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
+                customer=self.customer_for("sales_orders", first), date=event.date, lines=lines,
                 user=self.user, notes=notes)
             if void:
                 close_order(order, self.user)
@@ -393,36 +462,87 @@ class Replay(MoneyReplay):
     def post_bill(self, event: Event) -> None:
         rows = self.doc_rows(event.kind, event.zoho_id)
         first = rows[0]
-        item_lines, expense_lines = [], []
+        item_lines, expense_lines, free = [], [], []
         leftover = Decimal("0.00")
         for row in rows:
             total = mapping.money(row["Item Total"])
-            if row["SKU"].strip() or row["Item Name"].strip():
+            if not total:
+                # Bills refuse $0.00 lines. Free goods still came in, so they become a zero-cost stock
+                # adjustment; a $0.00 line with no item moves nothing and is dropped.
+                if self.is_item_line(row) and self.item_for(row).is_stock:
+                    free.append(StockLine(self.item_for(row), _quantity(row["Quantity"]),
+                                          reason=f"Free goods on Zoho bill {event.number}", unit_cost=Decimal("0")))
+                continue
+            if self.is_item_line(row):
                 quantity = _quantity(row["Quantity"])
                 price, cents = mapping.line_price(total, quantity)
                 leftover += cents
                 item_lines.append(BillItemSpec(self.item_for(row), quantity, price, description=row["Description"]))
             else:
-                expense_lines.append(BillExpenseSpec(self.account(row["Account"]), total, row["Description"]))
+                description = row["Description"].strip() or row["Item Name"].strip()
+                expense_lines.append(BillExpenseSpec(self.account(row["Account"]), total, description))
         # Zoho's own adjustment and every cent lost to 4-dp unit prices, so the bill totals Zoho's Total.
         extra = mapping.money(first["Adjustment"]) + leftover
         if extra:
             name = first["Adjustment Account"].strip() or "Cost of Goods Sold"
             expense_lines.append(BillExpenseSpec(self.account(name), extra, "Adjustment"))
+        if free:
+            record_movements(kind=MovementKind.ADJUSTMENT, date=event.date, lines=free, user=self.user,
+                             allow_negative=True, source_type="migration.free_goods", source_id=event.zoho_id)
+        if not item_lines and not expense_lines:
+            self.skipped.setdefault("bills", set()).add(event.zoho_id)
+            self.warnings.append(f"Bill {event.number} ({event.date}) is $0.00 in Zoho; no bill was created.")
+            self._note_negative([l.item for l in free], event)
+            return
         notes = f"Imported from Zoho (ID {event.zoho_id})"
         if first["CF.Sales Order"].strip():
             notes += f"\nSales order {first['CF.Sales Order'].strip()}"
         bill = create_bill(
             vendor=self.vendors[first["Vendor Name"]], date=event.date, vendor_invoice_number=event.number,
             item_lines=item_lines, expense_lines=expense_lines, user=self.user,
-            terms=mapping.terms(first["Payment Terms Label"]), notes=notes,
+            terms=mapping.terms(first["Payment Terms Label"], first["Bill Date"], first["Due Date"]), notes=notes,
             allow_duplicate=True, allow_negative=True, allow_negative_adjustment=True)
         self.record("bill", event.zoho_id, bill)
+        self.apply_pending_bill(bill)
         ours = sum((l.amount for l in [*bill.item_lines.all(), *bill.expense_lines.all()]), Decimal("0.00"))
         theirs = mapping.money(first["Total"])
         if ours != theirs:
             self.warnings.append(f"{event.number}: total {ours} vs Zoho {theirs}")
         self._note_negative([s.item for s in item_lines], event)
+
+    def line_item(self, row: dict) -> Item | None:
+        """The item for a Zoho order or invoice line. Zoho has item-less lines: $0.00 placeholders (skipped,
+        None) and Shopify shipping charges booked straight to an account (a SHIP line on that account)."""
+        if row["SKU"].strip() or row["Item Name"].strip():
+            return self.item_for(row)
+        if not mapping.money(row["Item Total"]):
+            return None
+        return self._service_item("SHIP", row["Account"])
+
+    def _is_real_item(self, row: dict) -> bool:
+        return bool(row["SKU"].strip() or row["Item Name"].strip())
+
+    def _discount_item(self) -> Item | None:
+        """Line discounts, posted to Zoho's Discount account; None when the export has no such account."""
+        if "DISC" not in self.items:
+            account = self.accounts.get("Discount")
+            if account is None:
+                return None
+            self.items["DISC"] = Item.objects.create(
+                sku="DISC", name="Discount (Zoho)", item_type=ItemType.NON_STOCK, income_account=account)
+            self.record("service_item", "DISC", self.items["DISC"])
+        return self.items["DISC"]
+
+    def _line_accounts(self, item: Item, row: dict) -> tuple:
+        """The income account Zoho used on this line, and the cost of goods account that goes with it, when they
+        differ from the item's current ones. Zoho moved wholesale items from Sales to Wholesale Sales over time."""
+        if not self._is_real_item(row):
+            return None, None
+        income = self.accounts.get(row["Account"].strip())
+        if income is None or income.pk == item.income_account_id:
+            return None, None
+        cogs = self.accounts.get(COGS_FOR_INCOME.get(income.name, "")) if item.is_stock else None
+        return income, (cogs if cogs is not None and cogs.pk != item.cogs_account_id else None)
 
     def _service_item(self, base_sku: str, account_name: str) -> Item:
         """SHIP or ADJ, or a copy of it that posts to the Zoho account the document names (spec 4.2)."""
@@ -463,34 +583,51 @@ class Replay(MoneyReplay):
                     self.warnings.append(f"{event.number}: {so_number} is closed; the invoice is not linked to it.")
                     order = None
         lines, taken = [], defaultdict(int)
-        leftover = tax = Decimal("0.00")
+        leftover = tax = discount = Decimal("0.00")
         for row in rows:
-            item = self.item_for(row)
-            quantity = _quantity(row["Quantity"])
-            price, cents = mapping.line_price(mapping.money(row["Item Total"]), quantity)
-            leftover += cents
             tax += mapping.money(row["Item Tax Amount"])
+            item = self.line_item(row)
+            if item is None:
+                continue
+            quantity = _quantity(row["Quantity"])
+            total = mapping.money(row["Item Total"])
+            listed = mapping.money4(row["Item Price"])
+            gross = (quantity * listed).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if self._discount_item() is not None and self._is_real_item(row) and listed >= 0 and gross >= total:
+                # Zoho books the full price to the income account and the line discount to Discount.
+                price = listed
+                discount += gross - total
+            else:
+                price, cents = mapping.line_price(total, quantity)
+                leftover += cents
+            income, cogs = self._line_accounts(item, row)
             so_line = self._so_line(order, item, quantity, taken)
             # Zoho tracked every one of these lines as stock, so fulfillment is STOCK.
             lines.append(InvoiceLineSpec(
                 item, quantity, price, description=row["Item Desc"], fulfillment=Fulfillment.STOCK,
-                so_line=so_line))
+                so_line=so_line, income_account=income, cogs_account=cogs))
         shipping = mapping.money(first["Shipping Charge"])
         adjustment = mapping.money(first["Adjustment"]) + leftover
         extras = (
             (self._service_item("SHIP", first["Shipping Charge Account"]), shipping),
             (self._service_item("ADJ", first["Adjustment Account"]), adjustment),
             (self.items["TAX"], tax),
+            (self._discount_item(), -discount),
         )
         for item, amount in extras:
             if amount:
                 lines.append(InvoiceLineSpec(item, 1, amount, description=item.name))
+        if not lines:
+            self.skipped.setdefault("invoices", set()).add(event.zoho_id)
+            self.warnings.append(f"Invoice {event.number} has no lines in Zoho ($0.00); it was not created.")
+            return
         with transaction.atomic(), use_number(DocType.INV, event.number):
             invoice = create_invoice(
-                customer=self.customers[first["Customer Name"]], date=event.date, lines=lines,
-                user=self.user, sales_order=order, terms=mapping.terms(first["Payment Terms Label"]),
+                customer=self.customer_for("invoices", first), date=event.date, lines=lines,
+                user=self.user, sales_order=order, terms=mapping.terms(first["Payment Terms Label"], first["Invoice Date"], first["Due Date"]),
                 notes=first["Notes"], allow_negative=True, allow_negative_adjustment=True)
             self.record("invoice", event.zoho_id, invoice)
+            self.apply_pending(invoice)
             if first["Invoice Status"].strip().lower() == "void":
                 # Created, then voided on the same date: the number stays used and the ledger nets to zero.
                 void_invoice(invoice, user=self.user, reason="Void in Zoho", date=event.date)
@@ -501,13 +638,24 @@ class Replay(MoneyReplay):
 
     # ---- after the replay (Task 7) ----
     def finish(self) -> AfterSummary:
+        for (_, number), waiting in self.pending_bill_applications.items():
+            for payment, amount in waiting:
+                self.warnings.append(f"Vendor payment {payment.number}: {amount:,.2f} for bill {number} was never applied.")
+        for number, waiting in self.pending_applications.items():
+            for payment, amount, _ in waiting:
+                self.warnings.append(f"Payment {payment.number}: {amount:,.2f} for {number} was never applied.")
+        self.write_off_invoices()
+        self.apply_vendor_credits()
         with transaction.atomic():
+            for obj in self.inactive:
+                type(obj).objects.filter(pk=obj.pk).update(is_active=False)
             self._open_reconciliations()
             self._set_sequences()
         return AfterSummary(
             unbilled_orders=self._unbilled_orders(),
             undeposited_by_year=self._undeposited_by_year(),
             negative_items=self._negative_items(),
+            skipped={short: set(ids) for short, ids in self.skipped.items()},
         )
 
     def _open_reconciliations(self) -> None:
@@ -536,20 +684,41 @@ class Replay(MoneyReplay):
                 set_sequence(doc_type, prefix=prefix, next_number=highest + 1, user=self.user)
 
     def _unbilled_orders(self) -> list:
-        """Sales orders with no Cordon bill, each with its profit and the handling it would earn at 50% and 55%."""
-        billed = set()
+        """Sales orders with no Cordon bill, each with its profit and the handling it would earn at 50% and 55%.
+
+        Cordon's Zoho bills name the order three ways: the bill's CF.Sales Order (kept in its notes), an order
+        number in a line ("Shipping for Order SO-0006"), or only the customer and the billing date
+        ("Shipping 2024-04-29 Kabayan Foods"). The last kind is matched to that customer's orders dated on or
+        before the line and in the 31 days before it, one order per line."""
+        billed: set[str] = set()
+        by_customer: list[tuple[date, str]] = []
         bills = Bill.objects.filter(vendor__name__icontains=HANDLING_PAYEE).prefetch_related("expense_lines")
         for bill in bills:
-            for line in bill.notes.splitlines():
-                if line.startswith("Sales order "):
-                    billed.add(line[len("Sales order "):].strip())
-            # The Zoho handling bill names its order in the expense line ("Shipping for Order SO-0006").
+            noted = [line[len("Sales order "):].strip() for line in bill.notes.splitlines()
+                     if line.startswith("Sales order ")]
+            if noted:
+                billed.update(noted)
+                continue  # the bill's own order field names its order; its lines only describe it
             for expense in bill.expense_lines.all():
-                if "Order " in expense.description:
-                    billed.add(expense.description.rsplit("Order ", 1)[1].strip())
+                numbers = re.findall(r"SO-\d+", expense.description)
+                if numbers:
+                    billed.update(numbers)
+                    continue
+                named = re.match(r"Shipping\s+(\d{4}-\d{2}-\d{2})?\s*(.+)", expense.description.strip())
+                if named:
+                    when = date.fromisoformat(named.group(1)) if named.group(1) else bill.date
+                    by_customer.append((when, mapping.name_key(named.group(2))[:40]))
+        orders = list(SalesOrder.objects.filter(date__gte=UNBILLED_FROM).exclude(notes__contains="Void in Zoho")
+                      .select_related("customer").order_by("date", "number"))
+        for when, customer in sorted(by_customer):
+            # Each line pays for one order: that customer's latest order not yet accounted for.
+            hits = [o for o in orders if o.number not in billed and when - timedelta(days=31) <= o.date <= when
+                    and mapping.name_key(o.customer.name).startswith(customer)]
+            if hits:
+                billed.add(hits[-1].number)
         today = timezone.localdate()
         result = []
-        for order in SalesOrder.objects.filter(date__gte=UNBILLED_FROM).exclude(notes__contains="Void in Zoho").order_by("date", "number"):
+        for order in orders:
             if order.number in billed:
                 continue
             profit = order_profit(order.number, as_of=today).profit

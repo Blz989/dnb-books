@@ -14,7 +14,7 @@ from migration.zoho.replay import Replay
 from migration.tieout import Check, Diff, TieOut, compare, render_html, render_pdf
 from purchasing.reports import ap_aging
 from sales.reports import ar_aging
-from tests.zoho_sample import build_sample_export
+from tests.zoho_sample import BANK, build_sample_export
 
 D = Decimal
 AS_OF = date(2026, 12, 31)
@@ -100,18 +100,33 @@ def test_matching_reports_pass(run, tmp_path):
 def test_wrong_trial_balance_account_fails_and_is_named(run, tmp_path):
     folder = make_reports(tmp_path / "reports", run[3])
     rows = list(csv.reader(open(folder / "trial_balance.csv")))
-    target = next(r for r in rows[1:] if r[0] == "Sales")
-    target[1] = str(D(target[1]) + D("10.00"))
+    target = next(r for r in rows[1:] if r[0] == BANK)
+    target[1] = str(D(target[1] or "0") + D("10.00"))
     _write(folder / "trial_balance.csv", rows[0], rows[1:])
     t = run_compare(run, folder)
     tb = by_name(t, "Trial balance")
     assert not tb.passed and not t.passed
-    assert tb.rows[0].label == "Sales"  # failing rows first
+    assert tb.rows[0].label == BANK  # failing rows first
     assert tb.rows[0].zoho - tb.rows[0].ours == D("10.00")
-    assert [r.label for r in tb.rows if r.ours != r.zoho] == ["Sales"]
+    assert [r.label for r in tb.rows if r.ours != r.zoho] == [BANK]
     assert by_name(t, "Profit and loss 2025").passed
     html = render_html(t)
-    assert "Failed" in html and "Sales" in html
+    assert "Failed" in html and BANK in html
+
+
+def test_trial_balance_checks_balance_sheet_accounts_only(run, tmp_path):
+    """Zoho's trial balance for a date shows income and expense at 0.00 and leaves out most equity; the yearly
+    P&L checks cover income and expense."""
+    folder = make_reports(tmp_path / "reports", run[3])
+    rows = list(csv.reader(open(folder / "trial_balance.csv")))
+    kept = [r for r in rows[1:] if r[0] != "Owner's Equity"]
+    for r in kept:
+        if r[0] == "Sales":
+            r[1], r[2] = "0", "0"
+    _write(folder / "trial_balance.csv", rows[0], kept)
+    tb = by_name(run_compare(run, folder), "Trial balance")
+    assert tb.passed
+    assert "Sales" not in [r.label for r in tb.rows]
 
 
 def test_missing_report_not_provided(run, tmp_path):
