@@ -85,10 +85,10 @@ class Command(BaseCommand):
             made, problems = self._link(who, wanted)
             if problems:
                 raise CommandError("Totals changed since the dry run; nothing was changed.")
-        out.write(f"Linked {sum(len(p) for _, p in made)} payments to {len(made)} entries.")
+        out.write(f"Linked {sum(len(p) for _, p, _ in made)} payments to {len(made)} entries.")
         self._remaining()
 
-    def _read_pairs(self, path: Path) -> list[tuple[int, list[str]]]:
+    def _read_pairs(self, path: Path) -> list[tuple[int, list[str], list[int]]]:
         if not path.is_file():
             raise CommandError(f"{path} is not a file.")
         rows = []
@@ -96,11 +96,13 @@ class Command(BaseCommand):
             for row in csv.DictReader(f):
                 if (row.get("entry") or "").strip():
                     numbers = [n.strip() for n in row["payment_numbers"].split(";") if n.strip()]
-                    rows.append((_entry_ref(row["entry"]), numbers))
+                    others = [_entry_ref(n) for n in (row.get("other_entries") or "").split(";") if n.strip()]
+                    rows.append((_entry_ref(row["entry"]), numbers, others))
         return rows
 
     def _claimed(self) -> set[int]:
         return set(UndepositedClearing.objects.values_list("journal_entry_id", flat=True)) | set(
+            UndepositedClearing.objects.values_list("other_entries", flat=True)) - {None} | set(
             Deposit.objects.exclude(journal_entry=None).values_list("journal_entry_id", flat=True))
 
     def _link(self, who, wanted) -> tuple[list, list]:
@@ -128,32 +130,36 @@ class Command(BaseCommand):
                 continue
             self._clear(entry, waiting, who, made, problems)
         # 2. Entries named in the pairs file.
-        for ref, numbers in wanted:
+        for ref, numbers, other_refs in wanted:
             entry = JournalEntry.objects.filter(pk=ref).first()
             payments = list(Payment.objects.filter(number__in=numbers))
-            if entry is None or len(payments) != len(set(numbers)):
-                problems.append(f"JE-{ref:06d}: the entry or one of the payments {';'.join(numbers)} was not found.")
+            others = list(JournalEntry.objects.filter(pk__in=other_refs))
+            if entry is None or len(payments) != len(set(numbers)) or len(others) != len(set(other_refs)):
+                problems.append(
+                    f"JE-{ref:06d}: the entry, a payment ({';'.join(numbers)}), or an other entry was not found.")
                 continue
-            if entry.pk in self._claimed() and Payment.objects.filter(
+            if Payment.objects.filter(
                     pk__in=[p.pk for p in payments], clearing__journal_entry=entry).count() == len(payments):
                 continue  # done by an earlier run
-            self._clear(entry, payments, who, made, problems)
+            self._clear(entry, payments, who, made, problems, others)
         return made, problems
 
-    def _clear(self, entry, payments, who, made, problems) -> None:
+    def _clear(self, entry, payments, who, made, problems, others=()) -> None:
         try:
             with transaction.atomic():
-                clear_with_entry(payments=payments, entry=entry, user=who, note=entry.memo.strip() or "Cleared outside a deposit")
+                clear_with_entry(payments=payments, entry=entry, user=who, other_entries=others,
+                                 note=entry.memo.strip() or "Cleared outside a deposit")
         except DepositError as exc:
             problems.append(f"{entry.display_number}: {exc}")
             return
-        made.append((entry, payments))
+        made.append((entry, payments, list(others)))
 
     def _report(self, made, problems) -> None:
         out = self.stdout
-        for entry, payments in made:
+        for entry, payments, others in made:
             total = sum((p.amount for p in payments), ZERO)
-            out.write(f"{len(payments)} payments, {total:,.2f}, cleared by {entry.display_number} "
+            extra = "".join(f" + {-taken_out_of_undeposited(o):,.2f} from {o.display_number}" for o in others)
+            out.write(f"{len(payments)} payments, {total:,.2f}{extra}, cleared by {entry.display_number} "
                       f"({entry.date}, {entry.memo.strip() or entry.source_type}).")
         for problem in problems:
             self.stderr.write(f"Problem: {problem}")

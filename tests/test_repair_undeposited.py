@@ -92,3 +92,48 @@ def test_a_bad_pairs_row_stops_everything(imported, backups, tmp_path):
     with pytest.raises(CommandError):
         run("--apply", "--pairs", str(pairs))
     assert not UndepositedClearing.objects.exists()
+
+
+@pytest.fixture
+def drawn(customer, admin_user, sales_settings, bank, expense, equity, backups):
+    pays = [receive_payment(customer=customer, date=date(2024, 6, day), method=PaymentMethod.CASH, amount=D(a), user=admin_user)
+            for day, a in ((14, "626.00"), (20, "250.00"))]
+    und = sales_settings.undeposited_account
+    draw = post_entry(
+        date=date(2024, 6, 30), user=admin_user, memo="Draw", source_type="migration.journal", source_id="J2",
+        lines=[LineSpec(expense, debit=D("1000.00")), LineSpec(equity, debit=D("1000.00")),
+               LineSpec(und, debit=D("590.00")), LineSpec(bank, credit=D("2590.00"))])
+    vendor = post_entry(
+        date=date(2024, 7, 2), user=admin_user, memo="Payment VP-279", source_type="migration.vendor_payment",
+        source_id="V1", lines=[LineSpec(expense, debit=D("1466.00")), LineSpec(und, credit=D("1466.00"))])
+    return pays, draw, vendor
+
+
+def _pairs(tmp_path, vendor, pays, draw):
+    path = tmp_path / "pairs.csv"
+    path.write_text(
+        "entry,payment_numbers,other_entries\n"
+        f"{vendor.display_number},{';'.join(p.number for p in pays)},{draw.display_number}\n", encoding="utf-8")
+    return str(path)
+
+
+def test_other_entries_dry_run_then_apply_then_again(drawn, backups, tmp_path):
+    pays, draw, vendor = drawn
+    pairs = _pairs(tmp_path, vendor, pays, draw)
+    entries = JournalEntry.objects.count()
+    text = run("--pairs", pairs)
+    assert "2 payments, 876.00 + 590.00 from " + draw.display_number in text
+    assert not UndepositedClearing.objects.exists() and backups == []
+    run("--apply", "--pairs", pairs)
+    assert backups == [1] and JournalEntry.objects.count() == entries
+    assert undeposited_check() == []
+    assert "Nothing to link" in run("--apply", "--pairs", pairs) and backups == [1]
+
+
+def test_without_the_other_entries_column_the_same_row_is_refused(drawn, backups, tmp_path):
+    pays, draw, vendor = drawn
+    path = tmp_path / "pairs.csv"
+    path.write_text(f"entry,payment_numbers\n{vendor.display_number},{';'.join(p.number for p in pays)}\n", encoding="utf-8")
+    with pytest.raises(CommandError, match="did not match"):
+        run("--apply", "--pairs", str(path))
+    assert not UndepositedClearing.objects.exists() and backups == []

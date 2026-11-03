@@ -204,7 +204,7 @@ docker compose exec -u dnb app python manage.py repair_undeposited
 docker compose exec -u dnb app python manage.py repair_undeposited --apply
 ```
 
-Payments it cannot explain are listed with the unlinked entries that took money out of Undeposited Funds. Put each pair in a file (`entry,payment_numbers`, for example `JE-112345,PMT-04321`) and add `--pairs <file>`.
+Payments it cannot explain are listed with the unlinked entries that took money out of Undeposited Funds. Put each pair in a file (`entry,payment_numbers`, for example `JE-112345,PMT-04321`) and add `--pairs <file>`. If the clearing entry also paid out money that a journal had put into Undeposited Funds, name that journal in a third column, `other_entries` (`;`-separated): payments plus those debits must equal the entry's Undeposited Funds credit to the cent. If either entry is voided, the payments are waiting again.
 
 ### Catch-up after the import
 

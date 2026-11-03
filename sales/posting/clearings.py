@@ -22,7 +22,12 @@ def taken_out_of_undeposited(entry: JournalEntry) -> Decimal:
         (l.credit - l.debit for l in entry.lines.all() if l.account_id == settings.undeposited_account_id), ZERO)
 
 
-def clear_with_entry(*, payments: Sequence[Payment], entry: JournalEntry, user, note: str = "") -> UndepositedClearing:
+def clear_with_entry(
+    *, payments: Sequence[Payment], entry: JournalEntry, user, note: str = "",
+    other_entries: Sequence[JournalEntry] = (),
+) -> UndepositedClearing:
+    """other_entries: entries whose net debit to Undeposited Funds the clearing entry also paid out; the payments
+    plus those debits must equal what the clearing entry takes out, to the cent."""
     with transaction.atomic():
         entry = JournalEntry.objects.get(pk=entry.pk)
         if entry.status != EntryStatus.POSTED:
@@ -45,10 +50,27 @@ def clear_with_entry(*, payments: Sequence[Payment], entry: JournalEntry, user, 
             if payment.date > entry.date:
                 raise DepositError(f"{payment.number} is dated after {entry.display_number}.")
         total = sum((p.amount for p in current), ZERO)
+        others = list(JournalEntry.objects.filter(pk__in={o.pk for o in other_entries}))
+        claimed_others = set(UndepositedClearing.objects.filter(
+            other_entries__in=others).values_list("other_entries", flat=True))
+        for other in others:
+            if other.pk == entry.pk:
+                raise DepositError(f"{other.display_number} can't be both the clearing entry and an offsetting one.")
+            if other.status != EntryStatus.POSTED:
+                raise DepositError(f"{other.display_number} is not a posted entry.")
+            if other.date > entry.date:
+                raise DepositError(f"{other.display_number} is dated after {entry.display_number}.")
+            if other.pk in claimed_others or UndepositedClearing.objects.filter(journal_entry=other).exists():
+                raise DepositError(f"{other.display_number} already accounts for payments.")
+            debit = -taken_out_of_undeposited(other)
+            if debit <= 0:
+                raise DepositError(f"{other.display_number} does not put money into Undeposited Funds.")
+            total += debit
         taken = taken_out_of_undeposited(entry)
         if total != taken:
             raise DepositError(
                 f"The payments add up to {total:,.2f} but the entry takes out {taken:,.2f} from Undeposited Funds.")
         clearing = UndepositedClearing.objects.create(journal_entry=entry, note=note[:200], created_by=user)
+        clearing.other_entries.set(others)
         Payment.objects.filter(pk__in=[p.pk for p in current]).update(clearing=clearing)
         return clearing
