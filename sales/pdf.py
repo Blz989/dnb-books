@@ -25,6 +25,25 @@ def _logo_uri(config: SalesSettings) -> str | None:
     return path.as_uri() if path.is_file() else None
 
 
+def _grouped_lines(invoice: Invoice) -> list[dict]:
+    """Lines grouped by item category: uncategorized first with no heading, then each category once, A to Z.
+    Within a group lines keep their entered order; numbering runs on across groups."""
+    lines = list(invoice.lines.select_related("item", "item__category"))
+    groups: dict[str, list] = {}
+    for line in lines:
+        category = line.item.category
+        groups.setdefault(category.name if category else "", []).append(line)
+    number = 0
+    result = []
+    for name in sorted(groups, key=lambda n: (n != "", n.lower())):
+        rows = []
+        for line in groups[name]:
+            number += 1
+            rows.append({"n": number, "line": line})
+        result.append({"heading": name, "rows": rows})
+    return result
+
+
 def render_invoice_html(invoice: Invoice) -> str:
     config = SalesSettings.load()
     subtotal = invoice_total(invoice)
@@ -41,7 +60,8 @@ def render_invoice_html(invoice: Invoice) -> str:
         "bill_lines": _address(customer.billing_address),
         "ship_first": ship_lines[0] if ship_lines else customer.name,
         "ship_lines": ship_lines[1:],
-        "lines": list(invoice.lines.select_related("item")),
+        "groups": _grouped_lines(invoice),
+        "items_total": sum(l.quantity for l in invoice.lines.all()),
         "drop_ship": Fulfillment.DROP_SHIP,
         "subtotal": subtotal,
         "applied": applied,

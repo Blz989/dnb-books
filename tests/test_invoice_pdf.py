@@ -39,8 +39,8 @@ def invoice(service, customer, admin_user, sales_settings):
 
 def test_html_has_the_invoice_facts(invoice):
     html = render_invoice_html(invoice)
-    for text in ("INV-000001", "Acme Builders", "SVC", "Balance due", "Please pay promptly.", "DNB Supply Co.",
-                 "Net 30", "Oct 27, 2026", "Nov 26, 2026", "1,320.00"):
+    for text in ("INV-000001", "Acme Builders", "Consulting hour", "Balance Due", "Please pay promptly.", "DNB Supply Co.",
+                 "Net 30", "27 Oct 2026", "26 Nov 2026", "1,320.00"):
         assert text in html, text
     assert "VOID" not in html
 
@@ -60,8 +60,51 @@ def test_payments_and_credits_reduce_the_balance(invoice, customer, admin_user):
     assert "−500.00" in html and "$820.00" in html
 
 
-def test_sales_order_row_only_when_there_is_an_order(invoice):
-    assert "Sales order" not in render_invoice_html(invoice)
+def test_po_row_is_always_there_and_shows_the_sales_order(invoice, service, customer, admin_user):
+    from sales.posting.invoices import invoice_from_order
+    from sales.posting.orders import OrderLineSpec, create_order
+
+    assert "P.O.#" in render_invoice_html(invoice)
+    order = create_order(customer=customer, date=d(10, 20), user=admin_user, lines=[OrderLineSpec(service, 1, D("10.00"))])
+    inv = invoice_from_order(order, date=d(10, 27), user=admin_user, quantities={order.lines.first().pk: 1})
+    assert order.number in render_invoice_html(inv)
+
+
+def _category_invoice(service, make_item, customer, admin_user):
+    from items.models import Category
+
+    dry, frozen = Category.objects.create(name="Dry Goods"), Category.objects.create(name="Refrigerated/Frozen Goods")
+    kw = dict(item_type=ItemType.NON_STOCK, costing_method="", cogs_account=None, inventory_account=None)
+    a = make_item("RICE", category=frozen, packaging="30LBS", unit="CASE", name="Marinated baby", **kw)
+    b = make_item("BEAN", category=dry, packaging="25X16OZ", unit="CASE", name="Rice stick", **kw)
+    c = make_item("TOWEL", name="Shop towel", **kw)
+    e = make_item("CHIP", category=dry, packaging="50X60GM", unit="CASE", name="Chips", **kw)
+    specs = [InvoiceLineSpec(a, 1, D("145.00")), InvoiceLineSpec(b, 2, D("80.00")), InvoiceLineSpec(c, 3, D("5.00")),
+             InvoiceLineSpec(e, 1, D("51.00"))]
+    return create_invoice(customer=customer, date=d(10, 27), user=admin_user, lines=specs)
+
+
+def test_lines_are_grouped_by_category_with_one_heading_each(service, make_item, customer, admin_user):
+    html = render_invoice_html(_category_invoice(service, make_item, customer, admin_user))
+    assert html.count("Dry Goods") == 1 and html.count("Refrigerated/Frozen Goods") == 1
+    # uncategorized first (no heading), then Dry Goods (BEAN, CHIP), then Refrigerated (RICE)
+    order = [html.index(x) for x in ("Shop towel", "Dry Goods", "Rice stick", "Chips", "Refrigerated/Frozen Goods", "Marinated baby")]
+    assert order == sorted(order)
+
+
+def test_table_has_packaging_unit_amount_and_total_and_numbers_run_on(service, make_item, customer, admin_user):
+    html = render_invoice_html(_category_invoice(service, make_item, customer, admin_user))
+    for text in ("Packaging", "25X16OZ", "30LBS", "CASE", "Amount", "Total", "Items in Total", "Authorized Signature"):
+        assert text in html, text
+    assert "Items in Total 7" in " ".join(html.split())  # 1 + 2 + 3 + 1 units
+    from re import findall
+    assert [int(n) for n in findall(r'class="n">(\d+)<', html)] == [1, 2, 3, 4]
+
+
+def test_boxed_header_and_bill_ship_boxes(invoice):
+    html = render_invoice_html(invoice)
+    for text in ("Invoice#", "Invoice Date", "Terms", "Due Date", "P.O.#", "Bill To", "Ship To", "INVOICE"):
+        assert text in html, text
 
 
 def test_pdf_bytes(invoice):
