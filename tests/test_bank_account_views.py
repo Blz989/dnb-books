@@ -378,3 +378,10 @@ def test_import_result_page_shows_counts(adm, checking):
     page = text(adm.get(f"/banking/{checking.pk}/import/result/?added=4&skipped=2&dups=1"))
     assert "4 added" in page and "2 skipped" in page and "1 possible duplicate" in page
     assert f"/banking/inbox/?account={checking.pk}" in page
+
+
+def test_account_list_links_check_layout_for_checking_accounts_to_admins(adm, std, checking, card_account):
+    link = f'href="/banking/layout/{checking.pk}/"'
+    assert link in text(adm.get("/banking/"))
+    assert f'href="/banking/layout/{card_account.pk}/"' not in text(adm.get("/banking/"))
+    assert link not in text(std.get("/banking/"))
