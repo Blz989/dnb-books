@@ -4,6 +4,7 @@
 {% block page_subtitle %}<div class="sub"><span class="tag">{{ customer.get_terms_display }}</span>{% if not customer.is_active %} <span class="tag ns">Inactive</span>{% endif %}</div>{% endblock %}
 {% block page_actions %}
   <a class="btn" href="{% url 'contacts:edit' customer.pk %}">Edit</a>
+  <a class="btn" href="{% url 'sales:statement' customer.pk %}">Statement</a>
   <a class="btn" href="/sales/orders/new/?customer={{ customer.pk }}">New sales order</a>
   <a class="btn" href="/sales/invoices/new/?customer={{ customer.pk }}">New invoice</a>
   <a class="btn primary" href="/sales/payments/new/?customer={{ customer.pk }}">Receive payment</a>

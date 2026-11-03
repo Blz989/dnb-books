@@ -58,3 +58,25 @@ def invoice_document(invoice: Invoice):
 
 def invoice_pdf(invoice: Invoice) -> bytes:
     return invoice_document(invoice).write_pdf()
+
+
+STATEMENT_CSS = Path(settings.BASE_DIR) / "sales" / "static" / "sales" / "statement_pdf.css"
+
+
+def render_statement_html(statement) -> str:
+    config = SalesSettings.load()
+    customer = statement.customer
+    context = {
+        "statement": statement,
+        "company": config,
+        "company_address": _address(config.company_address),
+        "logo_uri": _logo_uri(config),
+        "font_uri": FONT_DIR.as_uri(),
+        "bill_lines": _address(customer.billing_address),
+    }
+    return render_to_string("sales/statement_pdf.html", context)
+
+
+def statement_pdf(statement) -> bytes:
+    html = HTML(string=render_statement_html(statement), base_url=Path(settings.BASE_DIR).as_uri() + "/")
+    return html.render(stylesheets=[CSS(filename=str(INVOICE_CSS)), CSS(filename=str(STATEMENT_CSS))]).write_pdf()

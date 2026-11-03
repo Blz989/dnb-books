@@ -1,0 +1,74 @@
+{% extends "core/base.html" %}
+{% block title %}Statement: {{ customer.name }}{% endblock %}
+{% block page_title %}Statement{% endblock %}
+{% block page_subtitle %}<div class="sub"><a href="{% url 'contacts:detail' customer.pk %}">{{ customer.name }}</a></div>{% endblock %}
+{% block page_actions %}{% if statement %}<a class="btn primary" href="{% url 'sales:statement-pdf' customer.pk %}?start={{ statement.start|date:'Y-m-d' }}&amp;end={{ statement.end|date:'Y-m-d' }}">Download PDF</a>{% endif %}{% endblock %}
+{% block content %}
+<style>.aging-grid td, .aging-grid th { border: 1px solid var(--border); } .applied { font-size: 12px; color: var(--muted); margin-top: 2px; }</style>
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+</div>
+{% if statement %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Balance forward</div><div class="v">{{ statement.opening|floatformat:"2g" }}</div><div class="note">Before {{ statement.start|date:"Y-m-d" }}</div></div>
+  <div class="kpi{% if statement.closing > 0 %} warn{% endif %}"><div class="l">Balance due</div><div class="v">{{ statement.closing|floatformat:"2g" }}</div><div class="note">As of {{ statement.end|date:"Y-m-d" }}</div></div>
+</div>
+<h2>Aging as of {{ statement.end|date:"Y-m-d" }}</h2>
+<div class="card aging-grid">
+<table class="data">
+  <thead><tr><th class="num">Current</th><th class="num">1-30</th><th class="num">31-60</th><th class="num">61-90</th><th class="num">Over 90</th><th class="num">Unapplied credits</th><th class="num">Total</th></tr></thead>
+  <tbody><tr>
+    <td class="num">{{ statement.aging.current|floatformat:"2g" }}</td><td class="num">{{ statement.aging.d1_30|floatformat:"2g" }}</td>
+    <td class="num">{{ statement.aging.d31_60|floatformat:"2g" }}</td><td class="num">{{ statement.aging.d61_90|floatformat:"2g" }}</td>
+    <td class="num{% if statement.aging.over_90 %} neg{% endif %}">{{ statement.aging.over_90|floatformat:"2g" }}</td>
+    <td class="num">{{ statement.aging.unapplied_credits|floatformat:"2g" }}</td><td class="num">{{ statement.aging.total|floatformat:"2g" }}</td></tr></tbody>
+</table>
+</div>
+<h2>Invoices and payments applied</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Invoice</th><th>Date</th><th>Due</th><th class="num">Amount</th><th class="num">Balance</th></tr></thead>
+  {% for b in statement.invoices %}
+  <tbody class="block">
+    <tr><td><a class="sku" href="{{ b.url }}">{{ b.number }}</a></td><td>{{ b.date|date:"Y-m-d" }}</td><td>{{ b.due_date|date:"Y-m-d" }}</td><td class="num">{{ b.total|floatformat:"2g" }}</td><td class="num"><b>{{ b.balance|floatformat:"2g" }}</b></td></tr>
+    {% for a in b.applied %}
+    <tr class="applied-row"><td colspan="3" style="padding-left:28px">{{ a.date|date:"Y-m-d" }} · <a class="sku" href="{{ a.url }}">{{ a.number }}</a> {{ a.kind }}{% if a.detail %} · {{ a.detail }}{% endif %}</td><td class="num">−{{ a.amount|floatformat:"2g" }}</td><td></td></tr>
+    {% endfor %}
+  </tbody>
+  {% empty %}<tbody><tr><td colspan="5" class="empty">No invoices in this period.</td></tr></tbody>
+  {% endfor %}
+</table>
+</div>
+{% if statement.unapplied %}
+<h2>Payments and credits not yet applied to an invoice</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Date</th><th>Document</th><th>Details</th><th class="num">Unapplied</th></tr></thead>
+  <tbody>
+  {% for u in statement.unapplied %}
+    <tr><td>{{ u.date|date:"Y-m-d" }}</td><td><a class="sku" href="{{ u.url }}">{{ u.number }}</a> <span class="dash">{{ u.kind }}</span></td><td>{{ u.detail }}</td><td class="num">−{{ u.amount|floatformat:"2g" }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+<h2>Account activity</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Date</th><th>Document</th><th>Details</th><th class="num">Charges</th><th class="num">Credits</th><th class="num">Balance</th></tr></thead>
+  <tbody>
+    <tr class="total"><td colspan="5">Balance forward</td><td class="num">{{ statement.opening|floatformat:"2g" }}</td></tr>
+  {% for r in statement.rows %}
+    <tr{% if r.is_void %} style="text-decoration: line-through"{% endif %}><td>{{ r.date|date:"Y-m-d" }}</td>
+      <td><a class="sku" href="{{ r.url }}">{{ r.number }}</a> <span class="dash">{{ r.kind }}</span></td><td>{{ r.description }}</td>
+      <td class="num">{% if r.charge is not None %}{{ r.charge|floatformat:"2g" }}{% endif %}</td>
+      <td class="num">{% if r.credit is not None %}{{ r.credit|floatformat:"2g" }}{% endif %}</td>
+      <td class="num">{{ r.balance|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">No activity in this period.</td></tr>
+  {% endfor %}
+    <tr class="total"><td colspan="5">Balance as of {{ statement.end|date:"Y-m-d" }}</td><td class="num">{{ statement.closing|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

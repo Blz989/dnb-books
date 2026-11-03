@@ -11,7 +11,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Ledger | Chart of accounts, journal entries, month close, trial balance, P&L, balance sheet, general ledger | 1 |
 | Backups | Nightly encrypted off-site backup, monthly restore drill | 1 |
 | Items and inventory | Item catalog, stock movements, FIFO or weighted average cost per item | 2 |
-| Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging | 3 |
+| Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging, customer statements (page and PDF, from Customers) | 3 |
 | Purchasing | Vendors, purchase orders (including drop-ship POs), bills that receive stock at the bill price, vendor payments by check, ACH, or company card, vendor credits and returns, A/P aging, 1099 summary | 4 |
 | Banking | Plaid bank feeds or OFX, QFX, and CSV files, an inbox that suggests matches for you to confirm, transfers and loan payments, reconciliation that locks what it clears, check printing on existing voucher stock | 5a |
 | Order profitability | Profit per order (sales less stock and drop-ship cost), a report with flags, and a profit panel on each order and direct invoice | After 5a |
@@ -45,6 +45,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Take checks to the bank | Deposits, New deposit. Tick the payments going in this deposit |
 | Give a credit or money back | Credit notes, New credit note, then Apply to an invoice. A refund is admin only, from a payment or credit with an unapplied amount |
 | Void a sales document | Admin only, with a reason. Voided documents keep their numbers |
+| Send a customer their statement | Customers, Statement. Pick the dates (default last 90 days), check the aging grid and which invoices each payment paid, then Download PDF. The balance equals that customer's row in A/R aging |
 | Check A/R against the books | Reports, A/R aging and Undeposited funds. Both show a Difference that must be 0.00 |
 
 ### Purchasing (Phase 4)

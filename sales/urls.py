@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import deposits, invoices, orders, receipts, settings as settings_views
+from .views import deposits, invoices, orders, receipts, settings as settings_views, statements
 
 app_name = "sales"
 
@@ -35,6 +35,8 @@ urlpatterns = [
     path("credits/<str:number>/", receipts.credit_detail, name="credit-detail"),
     path("credits/<str:number>/apply/", receipts.credit_apply, name="credit-apply"),
     path("credits/<str:number>/void/", receipts.credit_void, name="credit-void"),
+    path("customers/<int:pk>/statement/", statements.statement, name="statement"),
+    path("customers/<int:pk>/statement/pdf/", statements.statement_pdf_view, name="statement-pdf"),
     path("refunds/new/", receipts.refund_new, name="refund-new"),
     path("refunds/<str:number>/", receipts.refund_detail, name="refund-detail"),
     path("refunds/<str:number>/void/", receipts.refund_void, name="refund-void"),
