@@ -36,12 +36,8 @@ def is_deposited(payment: Payment, as_of: date | None = None) -> bool:
     return False
 
 
-def is_cleared(payment: Payment, as_of: date | None = None) -> bool:
-    """Taken out of Undeposited Funds by an existing entry (not a deposit) by the given date, and not voided since."""
-    clearing = payment.clearing
-    if clearing is None:
-        return False
-    entry = clearing.journal_entry
+def _entry_counts(entry, as_of: date | None) -> bool:
+    """A ledger entry is in effect by the date: it exists by then and was not voided on or before it."""
     if as_of is not None and entry.date > as_of:
         return False
     if entry.status == EntryStatus.VOID:
@@ -50,11 +46,21 @@ def is_cleared(payment: Payment, as_of: date | None = None) -> bool:
     return True
 
 
+def is_cleared(payment: Payment, as_of: date | None = None) -> bool:
+    """Taken out of Undeposited Funds by an existing entry (not a deposit) by the given date, and not voided since.
+    If an offsetting entry of the clearing was voided, the arithmetic no longer holds and the payment is open again."""
+    clearing = payment.clearing
+    if clearing is None:
+        return False
+    entries = [clearing.journal_entry, *clearing.other_entries.all()]
+    return all(_entry_counts(e, as_of) for e in entries)
+
+
 def undeposited_payments_total(as_of: date | None = None) -> Decimal:
     total = ZERO
     payments = Payment.objects.filter(method__in=(PaymentMethod.CHECK, PaymentMethod.CASH))
     for payment in payments.select_related("clearing__journal_entry").prefetch_related(
-            "all_deposits", "clearing__journal_entry__reversals"):
+            "all_deposits", "clearing__journal_entry__reversals", "clearing__other_entries__reversals"):
         if _counts(payment, as_of) and not is_deposited(payment, as_of) and not is_cleared(payment, as_of):
             total += payment.amount
     return money(total)

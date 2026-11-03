@@ -220,6 +220,9 @@ class UndepositedClearing(models.Model):
     (Zoho's manual "Move Undeposited to Bank" journal, a vendor payment paid from Undeposited Funds). Nothing is
     posted here: the entry is the proof, and the payments it covers stop showing as waiting to be banked."""
     journal_entry = models.OneToOneField(JournalEntry, on_delete=models.PROTECT, related_name="+")
+    # Entries that put non-payment money into Undeposited Funds (a journal debit) which journal_entry then paid out
+    # along with the payments: payments + these debits = what journal_entry takes out. Named by hand, never guessed.
+    other_entries = models.ManyToManyField(JournalEntry, blank=True, related_name="+")
     note = models.CharField(max_length=200, blank=True)
     created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)

@@ -22,7 +22,9 @@ def undeposited_payments() -> QuerySet[Payment]:
     return (
         Payment.objects.filter(status=DocStatus.OPEN, method__in=CASH_METHODS)
         .filter(Q(deposit__isnull=True) | Q(deposit__status=DocStatus.VOID))
-        .filter(Q(clearing__isnull=True) | Q(clearing__journal_entry__status=EntryStatus.VOID))
+        .filter(Q(clearing__isnull=True) | Q(clearing__journal_entry__status=EntryStatus.VOID)
+                | Q(clearing__other_entries__status=EntryStatus.VOID))
+        .distinct()
         .select_related("customer")
         .order_by("date", "id")
     )
