@@ -39,3 +39,5 @@
 
 - [x] README status/feature line; render screenshots from a throwaway demo database; send them; list in PR.
 - Commit: `docs: README mentions customer statements`
+
+**Deviation (owner request mid-build):** Task 3-4 layout changed to invoice-first with applied payments listed per invoice, split by amount, and a boxed aging grid; added `InvoiceBlock`, `AppliedLine`, `UnappliedRow` to `sales/statements.py`.

@@ -11,7 +11,7 @@
     <button type="submit" class="btn primary">Search</button>
   </form>
   <table class="data">
-    <thead><tr><th>Customer</th><th>Contact</th><th>Terms</th><th class="num">Balance</th><th></th></tr></thead>
+    <thead><tr><th>Customer</th><th>Contact</th><th>Terms</th><th class="num">Balance</th><th></th><th></th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr>
@@ -20,8 +20,9 @@
         <td>{{ r.customer.get_terms_display }}</td>
         <td class="num{% if r.balance < 0 %} neg{% endif %}">{{ r.balance|floatformat:"2g" }}</td>
         <td>{% if r.overdue %}<span class="tag overdue">Overdue</span>{% endif %}</td>
+        <td><a href="{% url 'sales:statement' r.customer.pk %}">Statement</a></td>
       </tr>
-    {% empty %}<tr><td colspan="5" class="empty">{% if q %}No customers match.{% else %}No customers yet. Add the first one.{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">{% if q %}No customers match.{% else %}No customers yet. Add the first one.{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table>

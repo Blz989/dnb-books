@@ -1,7 +1,7 @@
 # Customer statements
 
 - **Date:** 2026-11-03
-- **Status:** Draft for review
+- **Status:** Approved by the owner 2026-11-03
 - **Parent spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md`. Customer statements were listed as out of scope in `docs/superpowers/specs/2026-10-27-phase-3-sales-design.md` (section 2). This feature is new; where they differ, this document wins. Emailing stays out of scope.
 - **Builds on:** Phase 3 (sales), the A/R aging report, the invoice PDF.
 - **Visual reference:** `docs/design/items-mockup.html` (screen) and `docs/design/invoice-mockup.html` (PDF).
@@ -47,9 +47,11 @@ Applying a payment or credit to an invoice moves nothing on the statement: the p
 - **Running balance** after each event in the range = opening + events so far. Events on the same day sort invoices, credit notes, payments, refunds, then number.
 - **Closing balance** = opening + all events through To. Must equal `customer_balance(customer, To)`.
 - **Aging summary** = the customer's A/R aging row as of To: Current, 1 to 30, 31 to 60, 61 to 90, Over 90, Unapplied credits, Total. Buckets use days past due, as the report does.
-- Open invoices as of To are listed under the aging summary on the page and the PDF (number, date, due date, balance), so the customer sees what to pay.
+- **Layout (owner, after review):** invoice first. Each invoice shows date, due date, amount, and balance, with a line under it for every payment or credit note applied to it, at the amount applied to that invoice (one check that paid two invoices appears under both, split). Payments and credits not applied to an invoice are listed after, at what is left (after refunds). Balance forward and balance due close the statement. The page also keeps the chronological running-balance table as "Account activity"; the PDF omits it.
+- An invoice is listed if it counts at To and is dated in the range, has an application in the range, or is still open. Open invoices less unapplied amounts equal the balance due.
+- The aging summary is a boxed grid placed above the activity (near the top of the PDF).
 
-If From is after To, the page shows "From must be on or before To." and no statement. A customer with no activity and a zero balance shows an empty-state message and still produces a PDF stating zero.
+If From is after To, the page shows "The start date must be on or before the end date." (the existing range-form message) and no statement. A customer with no activity and a zero balance shows an empty-state message and still produces a PDF stating zero.
 
 ## 4. Screens and routes
 

@@ -1,0 +1,17 @@
+/* Statement additions to invoice_pdf.css. */
+.lines .opening td, .lines .closing td { font-weight: 600; background: #faf6ee; }
+.lines .closing td { border-top: 2px solid #2f6b4f; }
+.lines tr.void td { color: #9c2a2a; }
+.aging { width: 100%; border-collapse: collapse; margin: 0 0 16pt; break-inside: avoid; border: 1px solid #cfc6b3; }
+.aging th, .aging td { border: 1px solid #e3dccd; }
+.applied { color: #6f655a; font-size: 8.5pt; margin-top: 1pt; }
+.aging th { font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; color: #6f655a; font-weight: 600; padding: 6pt; text-align: right; border-bottom: 1px solid #e3dccd; background: #faf6ee; }
+.aging td { padding: 7pt 6pt; text-align: right; font-variant-numeric: tabular-nums; }
+.aging td:last-child { font-weight: 700; color: #1f3a2f; }
+h2.sec { font-family: "Source Serif 4"; font-weight: 600; font-size: 12pt; color: #1f3a2f; margin: 18pt 0 4pt; }
+.lines { margin-top: 4pt; }
+.lines thead { display: table-header-group; }
+.inv tbody.block { break-inside: avoid; }
+.inv tr.head td { font-weight: 600; background: #faf6ee; border-top: 1px solid #e3dccd; }
+.inv tr.app td { padding: 3pt 6pt 3pt 18pt; border-bottom: none; color: #4a4339; font-size: 9pt; }
+.inv tr.app td.num { padding-left: 6pt; }
