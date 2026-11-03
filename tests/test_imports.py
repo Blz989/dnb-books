@@ -134,3 +134,13 @@ def test_apply_is_admin_only(standard_user, inv_settings):
 def test_blank_rows_skipped(inv_settings):
     p = parse_items_csv(HEAD + "\n\nA-1,A,stock,,,1,1,,,,,\n,,,,,,,,,,,\n")
     assert p.errors == [] and len(p.rows) == 1
+
+
+def test_packaging_column_is_optional_and_imported(admin_user, inv_settings):
+    without = parse_items_csv(GOOD)
+    assert without.errors == [] and all(r.packaging == "" for r in without.rows)
+    csv_text = HEAD + ",packaging\nPKG-1,Rice stick,stock,Dry Goods,CASE,80,50,,fifo,,,,25X16OZ\n"
+    p = parse_items_csv(csv_text)
+    assert p.errors == [] and p.rows[0].packaging == "25X16OZ"
+    apply_import(p, user=admin_user)
+    assert Item.objects.get(sku="PKG-1").packaging == "25X16OZ"

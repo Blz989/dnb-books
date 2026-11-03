@@ -99,4 +99,4 @@ def render_statement_html(statement) -> str:
 
 def statement_pdf(statement) -> bytes:
     html = HTML(string=render_statement_html(statement), base_url=Path(settings.BASE_DIR).as_uri() + "/")
-    return html.render(stylesheets=[CSS(filename=str(INVOICE_CSS)), CSS(filename=str(STATEMENT_CSS))]).write_pdf()
+    return html.render(stylesheets=[CSS(filename=str(STATEMENT_CSS))]).write_pdf()
