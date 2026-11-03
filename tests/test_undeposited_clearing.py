@@ -52,7 +52,7 @@ def test_before_the_entry_date_they_still_count_as_undeposited(old_payments, ban
 
 def test_total_must_match_the_entry_exactly(old_payments, bank, admin_user, sales_settings):
     entry = journal(admin_user, bank, sales_settings, amount="140.51")
-    with pytest.raises(DepositError, match="adds up to 140.50 but the entry takes out 140.51"):
+    with pytest.raises(DepositError, match="add up to 140.50 but the entry takes out 140.51"):
         clear_with_entry(payments=old_payments, entry=entry, user=admin_user)
     assert len(undeposited_payments()) == 2
 

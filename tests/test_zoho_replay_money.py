@@ -21,7 +21,7 @@ from purchasing.models import (
 )
 from sales.balances import invoice_balance, payment_unapplied
 from sales.checks import ar_check, undeposited_check
-from sales.models import CreditNote, Deposit, Invoice, Payment, PaymentMethod
+from sales.models import CreditNote, Deposit, Invoice, Payment, PaymentMethod, UndepositedClearing
 from sales.posting.deposits import undeposited_payments
 from tests.zoho_sample import BANK, CARD, EXPECTED, UNDEPOSITED, build_sample_export, sample_rows
 
@@ -349,3 +349,41 @@ def test_credit_note_with_a_stock_item_returns_it_to_stock(db, admin_user, tmp_p
     moves = StockMovement.objects.filter(source_type="migration.credit_return")
     assert [m.quantity for m in moves] == [2] and moves[0].offset_account == r.items[sku].cogs_account
     assert check_invariants() == []
+
+
+def _journal(journal_id, day, bank_side, other, amount, notes="Move Undeposited to Bank"):
+    base = {"Journal ID": journal_id, "Journal Date": day, "Journal Number": journal_id[-3:], "Notes": notes,
+            "Description": ""}
+    return [dict(base, Account=bank_side[0], Debit=amount, Credit="0.00") if bank_side else None,
+            dict(base, Account=other, Debit="0.00", Credit=amount)]
+
+
+# The sample's payments "2" (1012.50) and "4" (295.00) are never deposited by a transfer.
+def test_journal_moving_all_older_undeposited_to_the_bank_clears_them(db, admin_user, tmp_path):
+    rows = {"journals": _journal("59000000050", "2025-12-31", (BANK,), UNDEPOSITED, "1,307.50")}
+    r = _replay(admin_user, tmp_path, extra_rows=rows)
+    clearing = UndepositedClearing.objects.get()
+    assert set(clearing.payments.values_list("number", flat=True)) == {"2", "4"}
+    assert clearing.journal_entry.source_type == "migration.journal" and clearing.journal_entry.source_id == "59000000050"
+    assert list(undeposited_payments()) == []
+    assert undeposited_check() == []
+    assert not [w for w in r.warnings if w.startswith("Undeposited")]
+    assert Deposit.objects.count() == 1  # still only the 2024 transfer deposit
+
+
+def test_journal_that_does_not_match_leaves_the_payments_alone(db, admin_user, tmp_path):
+    rows = {"journals": _journal("59000000050", "2025-12-31", (BANK,), UNDEPOSITED, "1,300.00")}
+    _replay(admin_user, tmp_path, extra_rows=rows)
+    assert not UndepositedClearing.objects.exists()
+    assert {p.number for p in undeposited_payments()} == {"2", "4"}
+
+
+def test_deposit_pairs_clear_payments_taken_out_by_an_expense(db, admin_user, tmp_path):
+    pairs = tmp_path / "deposit_pairs.csv"
+    pairs.write_text('date,amount,payment_numbers\n2025-07-01,"295.00",4\n', encoding="utf-8")
+    rows = {"journals": _journal("59000000051", "2025-07-01", (), UNDEPOSITED, "295.00")}
+    rows["journals"][0] = dict(rows["journals"][1], Account="Office Supplies", Debit="295.00", Credit="0.00")
+    _replay(admin_user, tmp_path, extra_rows=rows, pairs=pairs)
+    clearing = UndepositedClearing.objects.get()
+    assert [p.number for p in clearing.payments.all()] == ["4"]
+    assert {p.number for p in undeposited_payments()} == {"2"}

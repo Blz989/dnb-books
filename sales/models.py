@@ -341,6 +341,6 @@ class Refund(models.Model):
 
 for _model in (
     SalesSettings, DocumentSequence, SalesOrder, SalesOrderLine, Invoice, InvoiceLine, InvoiceRevision, Deposit,
-    Payment, PaymentApplication, CreditNote, CreditNoteLine, CreditApplication, Refund,
+    Payment, PaymentApplication, CreditNote, CreditNoteLine, CreditApplication, Refund, UndepositedClearing,
 ):
     auditlog.register(_model)
