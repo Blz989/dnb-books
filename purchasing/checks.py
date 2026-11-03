@@ -6,8 +6,8 @@ from decimal import Decimal
 from ledger.balances import account_totals, money
 
 from .balances import (
-    bill_balance, bills_with_balances, vendor_credit_unapplied, vendor_credits_with_balances,
-    vendor_payment_unapplied, vendor_payments_with_balances,
+    bill_balance, bills_with_open_balance, vendor_credit_unapplied, vendor_credits_with_unapplied,
+    vendor_payment_unapplied, vendor_payments_with_unapplied,
 )
 from .models import PurchasingSettings
 
@@ -15,9 +15,9 @@ ZERO = Decimal("0.00")
 
 
 def vendor_balances_total(as_of: date | None = None) -> Decimal:
-    owed = sum((bill_balance(b, as_of) for b in bills_with_balances()), ZERO)
-    paid = sum((vendor_payment_unapplied(p, as_of) for p in vendor_payments_with_balances()), ZERO)
-    credits = sum((vendor_credit_unapplied(c, as_of) for c in vendor_credits_with_balances()), ZERO)
+    owed = sum((bill_balance(b, as_of) for b in bills_with_open_balance(as_of)), ZERO)
+    paid = sum((vendor_payment_unapplied(p, as_of) for p in vendor_payments_with_unapplied(as_of)), ZERO)
+    credits = sum((vendor_credit_unapplied(c, as_of) for c in vendor_credits_with_unapplied(as_of)), ZERO)
     return money(owed - paid - credits)
 
 

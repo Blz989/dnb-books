@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
@@ -32,12 +34,10 @@ def customer_list(request):
     if not show_inactive:
         customers = customers.filter(is_active=True)
     page = Paginator(customers, PAGE_SIZE).get_page(request.GET.get("page"))
+    balances = {r.customer.pk: r.balance for r in reports.customer_balances()}
+    overdue = {r.invoice.customer_id for r in reports.open_invoices(overdue_only=True)}
     rows = [
-        {
-            "customer": c,
-            "balance": customer_balance(c),
-            "overdue": bool(reports.open_invoices(customer=c, overdue_only=True)),
-        }
+        {"customer": c, "balance": balances.get(c.pk, Decimal("0.00")), "overdue": c.pk in overdue}
         for c in page
     ]
     querystring = "&".join(f"{k}={v}" for k, v in (("q", q), ("inactive", "1" if show_inactive else "")) if v)

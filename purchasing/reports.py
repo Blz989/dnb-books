@@ -13,8 +13,8 @@ from sales.models import DocStatus, OrderStatus
 from sales.reports import BUCKETS, bucket_for
 
 from .balances import (
-    bill_balance, bills_with_balances, vendor_credit_unapplied, vendor_credits_with_balances,
-    vendor_payment_unapplied, vendor_payments_with_balances,
+    bill_balance, bills_with_open_balance, vendor_credit_unapplied, vendor_credits_with_unapplied,
+    vendor_payment_unapplied, vendor_payments_with_unapplied,
 )
 from .checks import ap_ledger_balance
 from .models import Bill, BillItemLine, PurchaseOrder, Threshold1099, VendorPayment, VendorPaymentMethod
@@ -53,18 +53,18 @@ def ap_aging(as_of: date) -> APAging:
     def row_for(vendor) -> APAgingRow:
         return rows.setdefault(vendor.pk, APAgingRow(vendor))
 
-    for bill in bills_with_balances():
+    for bill in bills_with_open_balance(as_of):
         balance = bill_balance(bill, as_of)
         if balance != 0:
             row = row_for(bill.vendor)
             name = bucket_for((as_of - bill.due_date).days)
             setattr(row, name, money(getattr(row, name) + balance))
-    for payment in vendor_payments_with_balances():
+    for payment in vendor_payments_with_unapplied(as_of):
         unapplied = vendor_payment_unapplied(payment, as_of)
         if unapplied != 0:
             row = row_for(payment.vendor)
             row.unapplied_credits = money(row.unapplied_credits - unapplied)
-    for credit in vendor_credits_with_balances():
+    for credit in vendor_credits_with_unapplied(as_of):
         unapplied = vendor_credit_unapplied(credit, as_of)
         if unapplied != 0:
             row = row_for(credit.vendor)
@@ -90,7 +90,7 @@ def bills_due(through: date, today: date | None = None) -> list[BillDueRow]:
     """Open bills due on or before `through`, soonest first. Overdue bills are included."""
     today = today or timezone.localdate()
     rows = []
-    for bill in bills_with_balances().filter(status=DocStatus.OPEN, due_date__lte=through).order_by(
+    for bill in bills_with_open_balance().filter(status=DocStatus.OPEN, due_date__lte=through).order_by(
             "due_date", "date", "id"):
         balance = bill_balance(bill)
         if balance > 0:
@@ -107,11 +107,11 @@ class VendorBalanceRow:
 def vendor_balances(as_of: date | None = None) -> list[VendorBalanceRow]:
     totals: dict[int, Decimal] = {}
     vendors = {v.pk: v for v in Vendor.objects.all()}
-    for bill in bills_with_balances():
+    for bill in bills_with_open_balance(as_of):
         totals[bill.vendor_id] = totals.get(bill.vendor_id, ZERO) + bill_balance(bill, as_of)
-    for payment in vendor_payments_with_balances():
+    for payment in vendor_payments_with_unapplied(as_of):
         totals[payment.vendor_id] = totals.get(payment.vendor_id, ZERO) - vendor_payment_unapplied(payment, as_of)
-    for credit in vendor_credits_with_balances():
+    for credit in vendor_credits_with_unapplied(as_of):
         totals[credit.vendor_id] = totals.get(credit.vendor_id, ZERO) - vendor_credit_unapplied(credit, as_of)
     rows = [VendorBalanceRow(vendors[pk], money(total)) for pk, total in totals.items() if money(total) != 0]
     return sorted(rows, key=lambda r: r.vendor.name.lower())

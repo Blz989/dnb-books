@@ -7,8 +7,8 @@ from ledger.balances import account_totals, money
 from ledger.models import Account
 
 from .balances import (
-    _counts, credit_notes_with_balances, credit_unapplied, invoice_balance, invoices_with_balances, payment_unapplied,
-    payments_with_balances,
+    _counts, credit_notes_with_unapplied, credit_unapplied, invoice_balance, invoices_with_open_balance,
+    payment_unapplied, payments_with_unapplied,
 )
 from .models import Payment, PaymentMethod, SalesSettings
 
@@ -22,9 +22,9 @@ def _account_balance(account: Account, as_of: date | None) -> Decimal:
 
 
 def customer_balances_total(as_of: date | None = None) -> Decimal:
-    owed = sum((invoice_balance(i, as_of) for i in invoices_with_balances()), ZERO)
-    paid = sum((payment_unapplied(p, as_of) for p in payments_with_balances()), ZERO)
-    credits = sum((credit_unapplied(c, as_of) for c in credit_notes_with_balances()), ZERO)
+    owed = sum((invoice_balance(i, as_of) for i in invoices_with_open_balance(as_of)), ZERO)
+    paid = sum((payment_unapplied(p, as_of) for p in payments_with_unapplied(as_of)), ZERO)
+    credits = sum((credit_unapplied(c, as_of) for c in credit_notes_with_unapplied(as_of)), ZERO)
     return money(owed - paid - credits)
 
 

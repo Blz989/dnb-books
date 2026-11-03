@@ -16,7 +16,7 @@ from items.models import Item
 from items.stock import on_hand
 from ledger.errors import PostingError
 
-from ..balances import invoice_applied, invoice_balance, invoice_total
+from ..balances import invoice_applied, invoice_balance, invoice_total, invoices_with_balances
 from ..errors import SalesError
 from ..forms import InvoiceHeaderForm, ShipmentHeaderForm, VoidDocForm
 from ..models import (
@@ -52,7 +52,7 @@ def _today():
 
 @login_required
 def invoice_list(request):
-    invoices = Invoice.objects.select_related("customer")
+    invoices = invoices_with_balances()
     status = request.GET.get("status", "")
     if status in DocStatus.values:
         invoices = invoices.filter(status=status)
