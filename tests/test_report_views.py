@@ -76,3 +76,23 @@ def test_general_ledger_page_and_csv(logged_in, sample_ledger, cash):
 def test_general_ledger_without_account_shows_form_only(logged_in):
     r = logged_in.get("/reports/general-ledger/")
     assert r.status_code == 200
+
+
+def test_reports_index_requires_login(client):
+    r = client.get("/reports/")
+    assert r.status_code == 302 and "/accounts/login/" in r["Location"]
+
+
+def test_reports_index_lists_every_report(logged_in):
+    r = logged_in.get("/reports/")
+    assert r.status_code == 200
+    html = r.content.decode()
+    for name in ["trial-balance", "profit-and-loss", "balance-sheet", "general-ledger", "ar-aging", "ap-aging",
+                 "undeposited-funds", "inventory-valuation", "1099-summary"]:
+        assert f'href="/reports/{name}/"' in html
+
+
+def test_sidebar_reports_link_opens_the_index(logged_in):
+    html = logged_in.get("/").content.decode()
+    assert '<a href="/reports/" class="on">Reports</a>' not in html
+    assert '<a href="/reports/">Reports</a>' in html

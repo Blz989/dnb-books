@@ -1,0 +1,15 @@
+{% extends "core/base.html" %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block page_subtitle %}<div class="sub">Pick a report</div>{% endblock %}
+{% block content %}
+<div class="card"><div class="body">
+{% include "core/_report_links.html" %}
+<h2>Inventory</h2>
+<ul class="links">
+  <li><a href="{% url 'reports:inventory-valuation' %}">Inventory valuation</a></li>
+  <li><a href="{% url 'reports:stock-movements' %}">Stock movements</a></li>
+  <li><a href="{% url 'reports:negative-stock' %}">Negative stock</a></li>
+</ul>
+</div></div>
+{% endblock %}

@@ -24,6 +24,11 @@ def _wants_csv(request):
 
 
 @login_required
+def index(request):
+    return render(request, "ledger/index.html", {"nav_active": "reports"})
+
+
+@login_required
 def trial_balance(request):
     form = AsOfForm(_data(request, {"as_of": _today().isoformat()}))
     report = reports.trial_balance(form.cleaned_data["as_of"]) if form.is_valid() else None

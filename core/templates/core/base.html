@@ -49,7 +49,7 @@
       <div class="sec">Books</div>
       <a href="{% url 'admin:ledger_journalentry_changelist' %}"{% if nav_active == "journal" %} class="on"{% endif %}>Journal entries</a>
       <a href="{% url 'admin:ledger_account_changelist' %}"{% if nav_active == "accounts" %} class="on"{% endif %}>Chart of accounts</a>
-      <a href="{% url 'reports:trial-balance' %}"{% if nav_active == "reports" %} class="on"{% endif %}>Reports</a>
+      <a href="{% url 'reports:index' %}"{% if nav_active == "reports" %} class="on"{% endif %}>Reports</a>
       <div class="sec">Setup</div>
       <a href="/items/settings/"{% if nav_active == "settings" %} class="on"{% endif %}>Inventory settings</a>
       {% if is_admin %}<a href="/sales/settings/"{% if nav_active == "sales-settings" %} class="on"{% endif %}>Sales settings</a>
