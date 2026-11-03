@@ -7,7 +7,7 @@ from ledger.models import JournalEntry
 from ledger.posting import LineSpec, post_entry, void_entry
 from sales.checks import close_check, undeposited_check
 from sales.errors import DepositError
-from sales.models import PaymentMethod
+from sales.models import PaymentMethod, UndepositedClearing
 from sales.posting.clearings import clear_with_entry
 from sales.posting.deposits import make_deposit, undeposited_payments
 from sales.posting.receipts import receive_payment
