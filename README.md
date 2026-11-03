@@ -193,6 +193,19 @@ docker compose run --rm app python manage.py import_zoho /data/zoho/export.zip -
 
 The command refuses a database that already has documents, and lists every problem in the export (one per line) before anything is imported.
 
+### Old payments Zoho never deposited
+
+Zoho cleared years of customer payments out of Undeposited Funds with one manual journal ("Move Undeposited to Bank", bank in, Undeposited Funds out) instead of deposits. The import now recognizes that journal when its amount equals every earlier undeposited payment, and links those payments to it (`deposit_pairs.csv` rows can also name the payments behind any other entry, such as a vendor payment paid from Undeposited Funds). Nothing is posted: the existing entry is the proof, and the payments stop showing on New deposit and the Undeposited funds report.
+
+A database that was already imported is repaired with `repair_undeposited`. It is a dry run unless you add `--apply`, takes a backup first, links only when every total matches to the cent, changes nothing otherwise, and is safe to run twice:
+
+```bash
+docker compose exec -u dnb app python manage.py repair_undeposited
+docker compose exec -u dnb app python manage.py repair_undeposited --apply
+```
+
+Payments it cannot explain are listed with the unlinked entries that took money out of Undeposited Funds. Put each pair in a file (`entry,payment_numbers`, for example `JE-112345,PMT-04321`) and add `--pairs <file>`.
+
 ### Catch-up after the import
 
 The Zoho export ends before the cutover, so bring the books up to today in this order. Everything here is done in the app.
