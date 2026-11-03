@@ -16,6 +16,7 @@ from django.db import transaction
 
 from items.models import MovementKind
 from items.stock import StockLine, record_movements, record_value_adjustment
+from ledger.models import AccountSubtype
 from ledger.posting import LineSpec, post_entry
 from migration.models import ZohoRecord
 from migration.zoho import mapping
@@ -32,6 +33,7 @@ from purchasing.posting.payments import apply_vendor_payment, pay_vendor
 from sales.balances import invoice_balance
 from sales.models import CreditNote, DocStatus, DocType, Invoice, Payment
 from sales.numbering import use_number
+from sales.posting.clearings import clear_with_entry, taken_out_of_undeposited
 from sales.posting.deposits import make_deposit, undeposited_payments
 from sales.posting.receipts import (
     CreditLineSpec,
@@ -258,6 +260,8 @@ class MoneyReplay:
                     paid_from=paid_from, user=self.user, check_number=ref if is_check else "",
                     reference="" if is_check else ref, applications=applications)
             self.record("vendor_payment", event.zoho_id, payment)
+            if payment.journal_entry_id:
+                self._clear_undeposited(payment.journal_entry, event)
             for number, amount in later:
                 self.pending_bill_applications.setdefault((vendor.pk, number), []).append((payment, amount))
 
@@ -386,6 +390,32 @@ class MoneyReplay:
                 date=event.date, lines=lines, user=self.user, memo=memo, reference=reference,
                 source_type=source_type, source_id=event.zoho_id)
             self.record(event.kind, event.zoho_id, entry)
+            self._clear_undeposited(entry, event)
+
+    def _clear_undeposited(self, entry, event) -> None:
+        """An entry that takes cash out of Undeposited Funds without being a Zoho transfer (a manual journal, an
+        expense) leaves the payments with no deposit. Link them to the entry, posting nothing, when the match is
+        exact: a bank-in/Undeposited-out journal that equals all older undeposited payments, or deposit_pairs.csv."""
+        taken = taken_out_of_undeposited(entry)
+        if taken <= 0:
+            return
+        waiting = undeposited_payments().filter(date__lte=event.date)
+        paired = getattr(self, "deposit_pairs", {}).get((event.date, taken))
+        payments = None
+        if paired:
+            payments = list(waiting.filter(number__in=paired))
+            if len(payments) != len(set(paired)):
+                payments = None  # a transfer used this pair, or a payment is missing
+        elif event.kind == "journal" and self._is_bank_move(entry):
+            everything = list(waiting)
+            if sum((p.amount for p in everything), ZERO) == taken:
+                payments = everything
+        if payments:
+            clear_with_entry(payments=payments, entry=entry, user=self.user, note=entry.memo)
+
+    def _is_bank_move(self, entry) -> bool:
+        lines = list(entry.lines.select_related("account"))
+        return len(lines) == 2 and any(l.debit and l.account.subtype == AccountSubtype.BANK for l in lines)
 
     def post_expense(self, event) -> None:
         rows = self.doc_rows(event.kind, event.zoho_id)
