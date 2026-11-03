@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from ledger.balances import account_totals, money
-from ledger.models import Account
+from ledger.models import Account, EntryStatus
 
 from .balances import (
     _counts, credit_notes_with_unapplied, credit_unapplied, invoice_balance, invoices_with_open_balance,
@@ -36,11 +36,26 @@ def is_deposited(payment: Payment, as_of: date | None = None) -> bool:
     return False
 
 
+def is_cleared(payment: Payment, as_of: date | None = None) -> bool:
+    """Taken out of Undeposited Funds by an existing entry (not a deposit) by the given date, and not voided since."""
+    clearing = payment.clearing
+    if clearing is None:
+        return False
+    entry = clearing.journal_entry
+    if as_of is not None and entry.date > as_of:
+        return False
+    if entry.status == EntryStatus.VOID:
+        reversed_on = min((r.date for r in entry.reversals.all()), default=None)
+        return as_of is not None and reversed_on is not None and reversed_on > as_of
+    return True
+
+
 def undeposited_payments_total(as_of: date | None = None) -> Decimal:
     total = ZERO
     payments = Payment.objects.filter(method__in=(PaymentMethod.CHECK, PaymentMethod.CASH))
-    for payment in payments.prefetch_related("all_deposits"):
-        if _counts(payment, as_of) and not is_deposited(payment, as_of):
+    for payment in payments.select_related("clearing__journal_entry").prefetch_related(
+            "all_deposits", "clearing__journal_entry__reversals"):
+        if _counts(payment, as_of) and not is_deposited(payment, as_of) and not is_cleared(payment, as_of):
             total += payment.amount
     return money(total)
 

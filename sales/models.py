@@ -215,6 +215,19 @@ class Deposit(models.Model):
         return self.number
 
 
+class UndepositedClearing(models.Model):
+    """Cash that left Undeposited Funds through a ledger entry that already exists and is not one of our deposits
+    (Zoho's manual "Move Undeposited to Bank" journal, a vendor payment paid from Undeposited Funds). Nothing is
+    posted here: the entry is the proof, and the payments it covers stop showing as waiting to be banked."""
+    journal_entry = models.OneToOneField(JournalEntry, on_delete=models.PROTECT, related_name="+")
+    note = models.CharField(max_length=200, blank=True)
+    created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Cleared by {self.journal_entry.display_number}"
+
+
 class Payment(models.Model):
     number = models.CharField(max_length=30, unique=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="payments")
@@ -224,6 +237,8 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     deposited_to = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
     deposit = models.ForeignKey(Deposit, null=True, blank=True, on_delete=models.PROTECT, related_name="payments")
+    clearing = models.ForeignKey(
+        UndepositedClearing, null=True, blank=True, on_delete=models.PROTECT, related_name="payments")
     journal_entry = models.ForeignKey(JournalEntry, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     status = models.CharField(max_length=10, choices=DocStatus.choices, default=DocStatus.OPEN)
     voided_on = models.DateField(null=True, blank=True)
