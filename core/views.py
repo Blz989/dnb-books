@@ -57,3 +57,39 @@ def home(request):
         "low_stock_count": len(low_stock()),
         "inventory_unconfigured": is_admin(request.user) and not InventorySettings.load().is_configured,
     })
+
+
+# ---- icons (public: the browser asks for them before anyone signs in) ----
+
+def _icon_response(request, build, content_type: str, *, versioned: bool):
+    from django.http import HttpResponse, HttpResponseNotModified
+
+    from . import favicon
+
+    version = favicon.icon_version()
+    etag = f'"{version}"'
+    if request.headers.get("If-None-Match") == etag:
+        response = HttpResponseNotModified()
+    else:
+        response = HttpResponse(build(), content_type=content_type)
+    response["ETag"] = etag
+    # A ?v= link changes with the logo, so it can be kept for good; /favicon.ico is rechecked daily.
+    long = versioned and request.GET.get("v") == version
+    response["Cache-Control"] = "public, max-age=31536000, immutable" if long else "public, max-age=86400"
+    return response
+
+
+def favicon_ico(request):
+    from . import favicon
+
+    return _icon_response(request, favicon.render_ico, "image/x-icon", versioned=False)
+
+
+def brand_icon(request, size: int):
+    from django.http import Http404
+
+    from . import favicon
+
+    if size not in favicon.PNG_SIZES:
+        raise Http404("No icon of that size.")
+    return _icon_response(request, lambda: favicon.render_png(size), "image/png", versioned=True)
