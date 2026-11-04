@@ -5,8 +5,8 @@ Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. 
 ## Source of truth
 
 - **System spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md` (whole system, approved).
-- **Current spec:** none. Phase 5b is done; its spec is `docs/superpowers/specs/2026-10-28-phase-5b-zoho-migration-design.md`.
-- **Current plan:** none. Phase 5b is done; its plan is `docs/superpowers/plans/2026-10-28-phase-5b-zoho-migration.md`.
+- **Current spec:** `docs/superpowers/specs/2026-11-04-shared-drop-ship-po-design.md` (shared drop-ship POs, in review).
+- **Current plan:** `docs/superpowers/plans/2026-11-04-shared-drop-ship-po.md`.
 - **Visual references:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`; all screens match it) `docs/design/invoice-mockup.html` (invoice PDF), and `docs/design/check-mockup.html` (printed check).
 - **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment, Order profitability and handling, Phase 5b (Zoho migration and catch-up).
 

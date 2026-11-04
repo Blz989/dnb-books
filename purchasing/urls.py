@@ -8,6 +8,7 @@ urlpatterns = [
     path("settings/", settings.purchasing_settings, name="settings"),
     path("orders/", orders.po_list, name="po-list"),
     path("orders/new/", orders.po_new, name="po-new"),
+    path("orders/drop-ship/", orders.drop_ship_po_multi, name="drop-ship-po-multi"),
     path("orders/drop-ship/<str:number>/", orders.drop_ship_po, name="drop-ship-po"),
     path("orders/<str:number>/pdf/", orders.po_pdf_view, name="po-pdf"),
     path("orders/<str:number>/", orders.po_detail, name="po-detail"),

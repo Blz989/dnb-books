@@ -12,7 +12,7 @@ from typing import Literal
 from django.db.models import Prefetch, Q, Sum
 
 from ledger.balances import money
-from purchasing.models import BillItemLine, BillLineKind
+from purchasing import dropship
 from sales.models import CreditApplication, DocStatus, Fulfillment, Invoice, InvoiceLine, SalesOrder
 
 from .models import HandlingRate, HandlingRunLine, HandlingSettings, RunStatus
@@ -141,7 +141,8 @@ def _drop_ship_matching(invoices: list[Invoice], as_of: date) -> dict[int, tuple
 
     The stored DropShipAllocation rows reflect today's documents: a void invoice loses its allocations for good.
     So this replays purchasing.dropship._rebuild_line as of `as_of` instead: bills that are open and dated on or
-    before as_of are matched, oldest first, to the invoices that are not void as of as_of. The caller passes every
+    before as_of are shared out by dropship.bill_pools (the same function the rebuild uses) and matched, oldest
+    first, to the invoices that are not void as of as_of. The caller passes every
     invoice of each sales order dated on or before as_of (orders() and order_profit() filter by order, never by
     line), so the walk sees the same invoice lines the rebuild would, minus the later ones, which come last anyway.
     """
@@ -154,17 +155,9 @@ def _drop_ship_matching(invoices: list[Invoice], as_of: date) -> dict[int, tuple
     result: dict[int, tuple[Decimal, int]] = {}
     if not walk:
         return result
-    pools: dict[int, list[list]] = defaultdict(list)
-    bill_lines = (
-        BillItemLine.objects.filter(
-            kind=BillLineKind.DROP_SHIP, po_line__so_line_id__in=list(walk), bill__status=DocStatus.OPEN,
-            bill__date__lte=as_of)
-        .select_related("bill", "po_line").order_by("bill__date", "bill_id", "id")
-    )
-    for bl in bill_lines:
-        pools[bl.po_line.so_line_id].append([bl, bl.quantity])
+    pools = dropship.bill_pools(walk, as_of=as_of)
     for so_line_id, lines in walk.items():
-        pool = pools.get(so_line_id, [])
+        pool = pools[so_line_id]
         for line in lines:
             cost, allocated = ZERO, 0
             if not _void_as_of(line.invoice, as_of):

@@ -1,5 +1,6 @@
-"""Demo purchasing data for seed_demo: vendors, purchase orders received in parts, a drop-ship PO and its bill,
-expense bills, payments by check, ACH, and card, a return credit, an allowance, and one edited bill."""
+"""Demo purchasing data for seed_demo: vendors, purchase orders received in parts, a drop-ship PO and its bill, a
+drop-ship PO shared by two customers' orders and billed in part, expense bills, payments by check, ACH, and card, a
+return credit, an allowance, and one edited bill."""
 from datetime import timedelta
 from decimal import Decimal
 
@@ -10,6 +11,7 @@ from items.models import Item
 from ledger.models import Account
 from contacts.models import Customer
 from sales.models import Fulfillment, SalesOrder
+from sales.posting.invoices import invoice_from_order
 from sales.posting.orders import OrderLineSpec, create_order
 
 from .models import PurchasingSettings, VendorPaymentMethod as M
@@ -66,6 +68,22 @@ def seed_purchasing(user, items) -> None:
         (po_drop,) = create_drop_ship_pos(order, user=user, date=day(11))
         bill_from_po(po_drop, date=day(9), vendor_invoice_number="DF-77120",
                      quantities={l.pk: l.quantity for l in po_drop.lines.all()}, user=user)
+
+    # Two customers' faucet orders bought from Delta on one shared PO. The vendor billed it in two parts; costs go
+    # to the older order first, so Riverside's faucets are still waiting on the second bill's units.
+    oak = create_order(customer=Customer.objects.get(name="Oak & Pine Remodeling"), date=day(9), user=user, lines=[
+        OrderLineSpec(item("FAUCET-KIT"), 3, D("69.00"), fulfillment=Fulfillment.DROP_SHIP,
+                      drop_ship_vendor="Delta Faucet Supply")])
+    riverside = create_order(customer=Customer.objects.get(name="Riverside School District"), date=day(8),
+                             user=user, lines=[
+        OrderLineSpec(item("FAUCET-KIT"), 5, D("66.00"), fulfillment=Fulfillment.DROP_SHIP,
+                      drop_ship_vendor="Delta Faucet Supply")])
+    (po_shared,) = create_drop_ship_pos([oak, riverside], user=user, date=day(7))
+    shared_line = po_shared.lines.get()
+    for so, qty in ((oak, 3), (riverside, 5)):
+        invoice_from_order(so, date=day(5), quantities={so.lines.get().pk: qty}, user=user)
+    bill_from_po(po_shared, date=day(4), vendor_invoice_number="DF-77188", quantities={shared_line.pk: 6},
+                 user=user)
 
     # A newer order with two drop-ship lines, not on a PO yet. One vendor is on file; "Moen Fixtures" is not.
     create_order(customer=Customer.objects.get(name="Harbor Plumbing"), date=day(2), user=user, lines=[

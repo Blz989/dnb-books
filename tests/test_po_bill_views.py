@@ -358,3 +358,89 @@ def test_bill_detail_links_drop_ship_allocations_to_invoices(adm, customer, admi
     assert DropShipAllocation.objects.count() == 1
     po_page = text(adm.get(f"/purchasing/orders/{drop_po.number}/"))
     assert order.number in po_page
+
+
+# ---- drop ship from several sales orders ----
+
+@pytest.fixture
+def two_orders(sales_order, admin_user, widget):
+    from contacts.models import Customer
+
+    harbor = Customer.objects.create(name="Harbor Plumbing", ship_to_address="9 Pier Rd\nToledo, OH 43604")
+    other = create_order(customer=harbor, date=date(2026, 10, 2), user=admin_user, lines=[
+        OrderLineSpec(widget, 4, D("9.50"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="Delta Faucet")])
+    return sales_order, other
+
+
+def test_order_list_has_checkboxes_and_the_button(adm, two_orders):
+    first, other = two_orders
+    page = text(adm.get("/sales/orders/"))
+    assert 'action="/purchasing/orders/drop-ship/"' in page and "Create drop-ship PO" in page
+    assert f'name="order" value="{first.number}"' in page and f'name="order" value="{other.number}"' in page
+
+
+def test_multi_order_screen_lists_lines_with_their_orders(adm, two_orders, vendor):
+    first, other = two_orders
+    page = text(adm.get(f"/purchasing/orders/drop-ship/?order={first.number}&order={other.number}"))
+    assert "2 sales orders" in page and "Harbor Plumbing" in page and other.number in page
+    assert f'<input type="hidden" name="order" value="{other.number}">' in page
+    assert "No vendor named Delta Faucet" in page
+
+
+def test_multi_order_screen_messages(adm, two_orders, vendor):
+    r = adm.get("/purchasing/orders/drop-ship/")
+    assert r.status_code == 302 and r.url == "/sales/orders/"
+    assert "Select at least one sales order." in text(adm.get(r.url))
+    first, other = two_orders
+    Vendor.objects.create(name="Delta Faucet")
+    vendor.name = "Acme Supply"
+    vendor.save()
+    adm.post("/purchasing/orders/drop-ship/", {"order": [first.number, other.number]})
+    r = adm.get(f"/purchasing/orders/drop-ship/?order={first.number}&order={other.number}")
+    assert r.status_code == 302 and r.url == "/sales/orders/"
+    assert "Every drop-ship line on these orders is already on a purchase order." in text(adm.get(r.url))
+
+
+def test_multi_order_post_makes_one_shared_po(adm, two_orders, vendor, widget):
+    first, other = two_orders
+    vendor.name = "Acme Supply"
+    vendor.save()
+    delta = Vendor.objects.create(name="Delta Faucet Supply Inc")
+    r = adm.post("/purchasing/orders/drop-ship/", {"order": [first.number, other.number]})
+    assert r.status_code == 200 and "No vendor named Delta Faucet. Choose a vendor for these lines." in text(r)
+    assert PurchaseOrder.objects.count() == 0
+    r = adm.post("/purchasing/orders/drop-ship/", {"order": [first.number, other.number],
+                                                   "vendor-Delta Faucet": delta.pk})
+    assert r.status_code == 302 and r.url == "/sales/orders/"
+    shared = PurchaseOrder.objects.get(vendor=delta)
+    (line,) = shared.lines.all()
+    assert line.quantity == 7 and [(a.so_line.order, a.quantity) for a in line.allocations.all()] == [
+        (first, 3), (other, 4)]
+
+    page = text(adm.get(f"/purchasing/orders/{shared.number}/"))
+    assert f"drop ship for <a href=\"/sales/orders/{first.number}/\">{first.number}</a>, " in page
+    assert "<th>For</th>" in page and "Harbor Plumbing" in page
+    for order in (first, other):
+        assert shared.number in text(adm.get(f"/sales/orders/{order.number}/"))
+    assert "Drop ship" in text(adm.get("/purchasing/orders/"))
+
+
+def test_po_pdf_html_for_one_and_several_orders(two_orders, admin_user, vendor):
+    from purchasing.pdf import render_po_html
+
+    first, other = two_orders
+    Vendor.objects.create(name="Delta Faucet")
+    vendor.name = "Acme Supply"
+    vendor.save()
+    (one,) = create_drop_ship_pos(other, user=admin_user, date=date(2026, 10, 3))
+    single = render_po_html(one)
+    assert f"Sales Order#</td><td>: {other.number}" in single and "9 Pier Rd" in single
+    assert "Several customers" not in single
+
+    one.lines.get().delete()
+    acme_po, shared = create_drop_ship_pos([first, other], user=admin_user, date=date(2026, 10, 3))
+    html_ = render_po_html(shared)
+    assert f"Sales Order#</td><td>: {first.number}, {other.number}" in html_
+    assert "Several customers" in html_ and "See the ship-to list below." in html_
+    assert "9 Pier Rd" in html_ and "Dock 4, 200 Industrial Way" in html_
+    assert f"Sales Order# {other.number}" in html_
