@@ -1,5 +1,7 @@
 from django.urls import path
 
+from mcpserver import views as mcp_views
+
 from . import audit_views
 from . import settings_views as views
 
@@ -12,5 +14,6 @@ urlpatterns = [
     path("users/new/", views.user_new, name="user-new"),
     path("users/<int:pk>/", views.user_edit, name="user-edit"),
     path("audit-log/", audit_views.audit_log, name="audit"),
+    path("claude/", mcp_views.connections, name="claude"),
     path("advanced/", views.advanced, name="advanced"),
 ]

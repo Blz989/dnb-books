@@ -16,7 +16,7 @@ from .models import McpAccess, McpSettings
 HEADER = "cf-access-jwt-assertion"
 
 NOT_LINKED = ("This Cloudflare login ({email}) isn't linked to a DNB Books user. "
-              "Ask an admin to add it in Settings → Users and roles.")
+              "Ask an admin to turn it on in Settings → Claude connections.")
 TURNED_OFF = "Claude access to DNB Books is turned off. An admin can turn it on in Settings."
 
 

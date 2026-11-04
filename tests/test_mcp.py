@@ -114,7 +114,7 @@ def test_team_domain_accepts_bare_or_https(settings):
 
 def test_unknown_email_inactive_user_or_access_off_get_the_plain_message(cf, owner, standard_user):
     expected = ("This Cloudflare login (stranger@example.com) isn't linked to a DNB Books user. "
-                "Ask an admin to add it in Settings → Users and roles.")
+                "Ask an admin to turn it on in Settings → Claude connections.")
     assert access.identify(token(cf, email="stranger@example.com")).error == expected
     standard_user.email = "std@example.com"
     standard_user.save()  # no McpAccess row: off by default
@@ -481,3 +481,37 @@ def test_end_to_end_refusals(live_mcp, cf, owner):
 
     (result,) = _call(live_mcp, token(cf), [call])
     assert result.is_error and "isn't linked to a DNB Books user" in result.content[0].text
+
+
+# ---- Settings → Claude connections ----
+
+def test_connections_page_is_admin_only(client, standard_user):
+    client.force_login(standard_user)
+    assert client.get("/settings/claude/").status_code == 403
+
+
+def test_admin_turns_service_and_people_on_and_off(client, owner, standard_user):
+    client.force_login(owner)
+    page = client.get("/settings/claude/")
+    assert page.status_code == 200 and b"https://mcp.lopezhome.casa/mcp" in page.content
+    client.post("/settings/claude/", {"action": "service", "enabled": "0"})
+    assert McpSettings.load().enabled is False
+    client.post("/settings/claude/", {"action": "service", "enabled": "1"})
+    assert McpSettings.load().enabled is True
+
+    r = client.post("/settings/claude/", {"action": "user", "user": standard_user.pk, "enabled": "1"}, follow=True)
+    assert b"Add an email for standard in Users and roles first." in r.content
+    assert not McpAccess.objects.filter(user=standard_user, enabled=True).exists()
+    standard_user.email = "std@example.com"
+    standard_user.save()
+    client.post("/settings/claude/", {"action": "user", "user": standard_user.pk, "enabled": "1"})
+    assert McpAccess.objects.get(user=standard_user).enabled is True
+    client.post("/settings/claude/", {"action": "user", "user": standard_user.pk, "enabled": "0"})
+    assert McpAccess.objects.get(user=standard_user).enabled is False
+
+
+def test_call_log_shows_on_the_page(client, owner):
+    McpCall.objects.create(user=owner, email=owner.email, tool="create_invoice", ok=False, error="September 2026 is closed.")
+    client.force_login(owner)
+    page = client.get("/settings/claude/").content.decode()
+    assert "create_invoice" in page and "September 2026 is closed." in page
