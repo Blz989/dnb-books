@@ -1,6 +1,6 @@
 # DNB Books MCP server: design
 
-Status: draft for owner review. Date: 2026-11-04.
+Status: draft for owner review, revision 2 (sign-in moved to Cloudflare Access). Date: 2026-11-04.
 
 ## 1. Goal
 
@@ -11,11 +11,11 @@ Let the people who use DNB Books work with it from Claude (Claude Desktop, claud
 | Topic | Decision |
 |---|---|
 | Where it's used | Claude Desktop, claude.ai, and phone. All three use one remote connector. |
-| Network | Cloudflare Tunnel on a domain the owner manages in Cloudflare. Both stages are built now, not staged. |
-| Sign-in | Each person signs in with their own DNB Books login (OAuth). Their app role applies. |
+| Network | Cloudflare Tunnel on a domain the owner manages in Cloudflare, protected by a Cloudflare Access application. Both stages are built now, not staged. Optionally listed in the owner's Cloudflare MCP server portal. |
+| Sign-in | Cloudflare Access does the sign-in (Managed OAuth) through the owner's identity provider, so two-step sign-in comes from there. DNB Books maps the signed-in email to a DNB Books user, and that user's role applies. |
 | What Claude can do | Read, plus guarded writes: invoices and payments, bills and vendor payments, purchase orders, customers, vendors, items. |
 | Who can write | The same as each person's app role. |
-| Library | The official MCP Python SDK (`mcp`, 2.x). No other new dependency. |
+| Library | The official MCP Python SDK (`mcp`, 2.x). It already includes PyJWT, which checks Cloudflare's token. No other new dependency. |
 
 The owner chose internet access before cutover, against the recommendation to wait. Section 7 lists the controls that make this acceptable, and section 10 lists what the owner sets up.
 
@@ -25,7 +25,9 @@ The owner chose internet access before cutover, against the recommendation to wa
  Claude (Desktop / web / phone)
         │  HTTPS, from Anthropic's cloud
         ▼
- Cloudflare ──► cloudflared (container) ──► mcp service :8001  (new container)
+ Cloudflare Access (sign-in, policies) ── optional: MCP server portal
+        │
+ Cloudflare Tunnel ──► cloudflared (container) ──► mcp service :8001  (new container)
                                               │  same code and database as the app
                                               ▼
                                            SQLite (data/dnb.sqlite3)
@@ -33,20 +35,24 @@ The owner chose internet access before cutover, against the recommendation to wa
 ```
 
 - **A new `mcp` service** in docker-compose runs `manage.py serve_mcp`: an ASGI app (the SDK's `MCPServer` with Streamable HTTP, served by uvicorn, which the SDK already brings). It imports Django and calls the same services the screens use. It doesn't call the web app over HTTP.
-- **Only the `mcp` service is published through the tunnel.** It serves the MCP endpoint (`/mcp`), the OAuth endpoints, and its own sign-in and approval pages. The main app on port 8000 is not reachable from the internet.
-- **A new Django app, `mcpserver`,** holds the models, the OAuth provider, the tools, and the screens in Settings.
+- **Only the `mcp` service is published through the tunnel,** and only behind its Access application. It serves the MCP endpoint (`/mcp`) and nothing else. The main app on port 8000 is not reachable from the internet.
+- **A new Django app, `mcpserver`,** holds the models, the Access token check, the tools, and the screens in Settings.
 
-## 4. Sign-in (OAuth)
+## 4. Sign-in (Cloudflare Access)
 
-The SDK's `OAuthAuthorizationServerProvider` is implemented against Django models, so tokens live in the DNB Books database.
+DNB Books does not run its own sign-in for the MCP. Cloudflare Access does, using Managed OAuth on a self-hosted Access application for the MCP hostname. Cloudflare's docs describe this pairing ("Managed OAuth ... allows MCP clients to authenticate users through Access using a standard OAuth 2.0 flow ... The MCP server must validate the Access JWT sent in the `Cf-Access-Jwt-Assertion` header").
 
-1. In Claude, the person adds a custom connector with the URL `https://<mcp domain>/mcp`.
-2. Claude registers itself automatically (dynamic client registration). Registration accepts only Claude's callback URLs (`https://claude.ai/api/mcp/auth_callback` and `https://claude.com/api/mcp/auth_callback`). Any other redirect is refused.
-3. Claude opens the DNB Books sign-in page. The person enters their DNB Books username and password, then approves: "Allow Claude to read your books and, after you confirm each change, create invoices, payments, bills, purchase orders, and records, as {username} ({role})."
-4. Claude receives tokens. PKCE is required. Authorization codes last 5 minutes and are single use. Access tokens last 1 hour; refresh tokens last 30 days and rotate on use. Tokens are stored only as SHA-256 hashes.
-5. Every MCP request carries the access token. The service loads that user, and the user must still be active.
+1. In Claude, the person adds a custom connector with the URL `https://<mcp domain>/mcp`, or the URL of the owner's MCP server portal if DNB Books is listed there.
+2. Claude gets a `401` pointing to Access's OAuth discovery. The person signs in through the owner's identity provider (for example Google Workspace, Microsoft, or a one-time email code). Two-step sign-in is whatever that provider enforces.
+3. An Access policy decides who may connect (for example, only the company's email addresses).
+4. Every request then reaches the `mcp` service with `Cf-Access-Jwt-Assertion`. The service:
+   - checks the signature against the team's public keys (`https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`, cached), and the issuer, the audience tag (`DNB_CF_ACCESS_AUD`), and the expiry. A request without a valid token gets `401`, even if it reached the service some other way;
+   - finds the DNB Books user whose email matches the token's `email` claim, case-insensitively. No match, an inactive user, or MCP access turned off for that user gets: "This Cloudflare login (name@example.com) isn't linked to a DNB Books user. Ask an admin to add it in Settings → Users and roles."
+5. The person's app role applies to every tool.
 
-**Settings → Claude connections** (admin) lists every connection: user, connected on, last used, last tool. Any connection can be revoked, and an on/off switch turns the whole MCP service off. Each person also sees and can revoke their own connections on their user page. Turning a user's "Can sign in" off also stops their MCP access.
+**Settings → Claude connections** (admin): an on/off switch for the whole MCP service, an "MCP access" switch per user (off by default), and the call log (section 7). Signing everyone out is done in Cloudflare (Access, revoke sessions). Turning off a user's "Can sign in" or "MCP access" stops their requests at once.
+
+**If DNB Books is added to an MCP server portal:** the portal has its own Access login. Cloudflare's docs warn that "independent MFA ... will not be enforced for MCP servers that are authorized through an MCP portal" and that blocked users "can still connect to the server ... by using its direct URL". So the DNB Books server keeps its own Access application and policy, and two-step sign-in is enforced at the identity provider, not as an Access-only MFA rule.
 
 ## 5. Tools
 
@@ -103,10 +109,11 @@ Errors from the posting services pass through unchanged (for example "October 20
 
 | Risk | Control |
 |---|---|
-| The books are on the internet | Only the `mcp` service is published; the app stays on the office network. Cloudflare sits in front. A Cloudflare rule limits `/mcp` to Anthropic's published IP ranges. The sign-in page must stay reachable from phones, so it is not IP-limited. |
-| Password guessing on the sign-in page | 5 failed tries per username, or 20 per IP, in 15 minutes locks sign-in for 15 minutes. Locks and failures are logged. |
-| Another app impersonating Claude | Registration only accepts Claude's callback URLs; PKCE is required; codes are single use. |
-| A stolen token | Short access tokens, rotating refresh tokens, hashes at rest, revoke in Settings, and the on/off switch. |
+| The books are on the internet | Only the `mcp` service is published, behind a Cloudflare Access application; the app stays on the office network. DNB Books passwords are never entered on the internet. |
+| Someone reaching the service without Access | The service rejects any request without a valid, unexpired Access token for its audience tag, so a misconfigured route still fails closed. |
+| Sign-in strength | Owned by the identity provider: turn on two-step sign-in there. An Access policy limits who can connect. |
+| A stolen session | Revoke sessions in Cloudflare Access, the per-user "MCP access" switch, and the service on/off switch. Access session length is set in Cloudflare (recommend 24 hours). |
+| Who is who | Identity comes only from the verified token's email, matched to a DNB Books user that an admin has enabled for MCP. |
 | A wrong posting from chat | Preview and confirm on every write; no voids through the MCP; closed months enforced; every write recorded in the audit log under the person's name. |
 | Unclear activity | A `McpCall` log: user, tool, time, success or error, and the document created. Shown in Settings → Claude connections. Tool arguments are logged with tax IDs removed. |
 
@@ -116,29 +123,31 @@ The MCP adds no new posting paths. Every write calls the existing services, whic
 
 ## 9. Testing
 
-- OAuth provider: registration accepts only Claude callbacks; a code exchanges once; PKCE is enforced; expiry, refresh rotation, and revocation work; inactive users are refused; sign-in lockout.
+- Access token check: a valid token maps to the right user; a wrong signature, audience, issuer, or an expired token is refused; an unknown email, inactive user, or user with MCP access off gets the plain message; the on/off switch. Tests sign tokens with a test key in place of Cloudflare's.
 - Every tool: works for Admin; Standard gets the role message where the app would refuse; unknown-record messages.
 - Preview and confirm: nothing posts on preview; confirm posts exactly the preview; expired, reused, and other-user confirmations are refused; a month closed between preview and confirm blocks it.
 - Audit: writes record the person as the actor.
-- End to end: the SDK's client against the ASGI app in-process (no network). It signs in, lists tools, runs a report, previews and confirms an invoice.
-- Screenshots: sign-in page, approval page, Settings → Claude connections.
+- End to end: the SDK's client against the ASGI app in-process (no network), with a test Access token. It lists tools, runs a report, and previews and confirms an invoice.
+- Screenshots: Settings → Claude connections, and the per-user MCP access switch.
 
 ## 10. What the owner sets up
 
 1. A domain in Cloudflare (for example `mcp.yourcompany.com`).
-2. In Cloudflare Zero Trust, create a tunnel and copy its token into `.env` as `CLOUDFLARE_TUNNEL_TOKEN`. Set `DNB_MCP_PUBLIC_URL=https://mcp.yourcompany.com`.
-3. Add the WAF rule limiting `/mcp` to Anthropic's IP ranges (the README links Anthropic's page).
-4. `docker compose up -d --build` starts the `mcp` and `cloudflared` services.
-5. In Claude: Settings → Connectors → Add custom connector → paste the URL → sign in.
+2. Zero Trust → Networks → Tunnels: create a tunnel, add a public hostname `mcp.yourcompany.com` pointing to `http://mcp:8001`, and copy its token into `.env` as `CLOUDFLARE_TUNNEL_TOKEN`.
+3. Zero Trust → Access → Applications: add a self-hosted application for `mcp.yourcompany.com`, with a policy allowing the company's people and the identity provider they sign in with. Under Advanced settings, turn on **Managed OAuth**. Copy the **Application Audience (AUD) tag** into `.env` as `DNB_CF_ACCESS_AUD`, and set `DNB_CF_ACCESS_TEAM_DOMAIN=<team>.cloudflareaccess.com`.
+4. Turn on two-step sign-in in the identity provider.
+5. `docker compose up -d --build` starts the `mcp` and `cloudflared` services.
+6. In DNB Books, Settings → Users and roles: make sure each person's email matches their Cloudflare login, and turn on **MCP access** for them.
+7. In Claude: Settings → Connectors → Add custom connector → `https://mcp.yourcompany.com/mcp` → sign in. Or add DNB Books to the MCP server portal and connect Claude to the portal.
 
 ## 11. Out of scope
 
-A local stdio server for Claude Desktop (the remote connector covers Desktop too); two-step sign-in (recommended as a follow-up before wide use); MCP access to the items listed in section 5 as not available; email or notifications.
+A local stdio server for Claude Desktop (the remote connector covers Desktop too); a sign-in system inside DNB Books (Cloudflare Access does it); MCP access to the items listed in section 5 as not available; email or notifications.
 
 ## 12. Build order
 
-1. `mcpserver` app: models (OAuth clients, codes, tokens, pending confirmations, call log, lockouts), the provider, sign-in and approval pages, `serve_mcp`.
+1. `mcpserver` app: models (pending confirmations, call log, per-user MCP access), the Access token check, `serve_mcp`.
 2. Read tools.
 3. Write tools with preview and confirm.
-4. Settings → Claude connections, revoke, on/off.
+4. Settings → Claude connections: on/off, per-user MCP access, call log.
 5. docker-compose services, `.env.example`, README setup section.
