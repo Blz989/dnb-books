@@ -1,8 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "core/report_base.html" %}
 {% block title %}Stock movements{% endblock %}
 {% block page_title %}Stock movements{% endblock %}
 {% block page_subtitle %}{% if rows is not None %}<div class="sub">{{ rows|length }} movement{{ rows|length|pluralize }}</div>{% endif %}{% endblock %}
-{% block content %}
+{% block report %}
 <div class="card">
 {% include "ledger/_filter_form.html" with report=rows %}
 {% if rows is not None %}

@@ -4,8 +4,8 @@
 body { margin: 0; font-family: Inter, sans-serif; font-size: 8.5pt; line-height: 1.25; color: #222; background: #fff; }
 .top { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 10pt; border: 1px solid #bbb; border-bottom: none; padding: 10pt 10pt 8pt; }
 .brand { display: flex; gap: 10pt; align-items: flex-start; }
-.logo { width: 52pt; height: 52pt; }
-.logo img { width: 52pt; height: 52pt; object-fit: contain; }
+.logo { height: 52pt; max-width: 150pt; }
+.logo img { height: 52pt; max-width: 150pt; width: auto; object-fit: contain; }
 .co { line-height: 1.4; color: #444; }
 .co b { color: #111; font-size: 11pt; }
 h1 { font-weight: 400; font-size: 20pt; margin: 0; color: #111; text-align: right; letter-spacing: .01em; }

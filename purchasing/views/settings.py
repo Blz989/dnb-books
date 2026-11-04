@@ -113,5 +113,5 @@ def purchasing_settings(request):
     return render(request, "purchasing/settings.html", {
         "form": form, "numbering": _numbering_rows(numbering_post, numbering_errors),
         "thresholds": _threshold_rows(threshold_post, threshold_errors), "new_row": new_row,
-        "nav_active": "purchasing-settings",
+        "nav_active": "settings", "settings_section": "purchasing",
     })

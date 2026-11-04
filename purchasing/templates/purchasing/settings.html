@@ -1,9 +1,9 @@
-{% extends "core/base.html" %}
+{% extends "core/settings_base.html" %}
 {% load handling_tags %}
-{% block title %}Purchasing settings{% endblock %}
-{% block page_title %}Purchasing settings{% endblock %}
-{% block page_subtitle %}<div class="sub">Accounts payable account, document numbering, 1099 thresholds, and handling</div>{% endblock %}
-{% block content %}
+{% block title %}Purchases settings{% endblock %}
+{% block page_title %}Purchases{% endblock %}
+{% block page_subtitle %}<div class="sub">Accounts payable account, document numbering, and 1099 thresholds.</div>{% endblock %}
+{% block settings_content %}
 {% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
 <div class="card"><div class="body">
 <form method="post">{% csrf_token %}

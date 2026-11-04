@@ -202,10 +202,11 @@ def test_threshold_must_be_above_zero(adm, db):
 
 def test_sidebar_has_purchasing_group(adm):
     page = adm.get("/").content.decode()
-    for text in ("Vendors", "Purchase orders", "Bills", "Pay bills", "Vendor credits", "Purchasing settings"):
+    for text in ("Vendors", "Purchase orders", "Bills", "Pay bills", "Vendor credits"):
         assert text in page, text
+    assert 'href="/settings/"' in page
 
 
 def test_sidebar_hides_purchasing_settings_from_standard_users(std):
     page = std.get("/").content.decode()
-    assert "Vendors" in page and "Purchasing settings" not in page
+    assert "Vendors" in page and 'href="/settings/"' not in page

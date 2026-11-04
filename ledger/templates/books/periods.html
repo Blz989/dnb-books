@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+{% block title %}Month close{% endblock %}
+{% block page_title %}Month close{% endblock %}
+{% block page_subtitle %}<div class="sub">A closed month takes no new entries. Close a month once its bank accounts are reconciled and stock is counted.</div>{% endblock %}
+{% block content %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>Month</th><th>Status</th><th>Closed by</th><th>Notes</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="nowrap">{{ r.label }}</td>
+      <td>{% if r.closed %}<span class="tag">Closed</span>{% else %}<span class="tag ns">Open</span>{% endif %}</td>
+      <td class="nowrap">{% if r.closed %}{{ r.period.closed_by.get_username }} <span class="dash">{{ r.period.closed_at|date:"M j, Y" }}</span>{% endif %}</td>
+      <td>{% if r.period.close_override_reason %}Closed anyway: {{ r.period.close_override_reason }}{% elif r.period.reopen_reason %}<span class="dash">Reopened: {{ r.period.reopen_reason }}</span>{% endif %}</td>
+      <td class="num nowrap">{% if can_manage %}{% if r.closed %}<a class="btn small" href="{% url 'books:period-reopen' r.key %}">Reopen</a>{% else %}<form method="post" action="{% url 'books:period-close' r.key %}" style="display:inline">{% csrf_token %}<button class="btn small">Close month</button></form>{% endif %}{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if not can_manage %}<p class="help">Only an admin can close or reopen a month.</p>{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block title %}Chart of accounts{% endblock %}
+{% block page_title %}Chart of accounts{% endblock %}
+{% block page_subtitle %}<div class="sub">Balances include every posted entry to date.</div>{% endblock %}
+{% block page_actions %}
+{% if show_inactive %}<a class="btn" href="{% url 'books:accounts' %}">Hide inactive</a>{% else %}<a class="btn" href="?inactive=1">Show inactive</a>{% endif %}
+{% if can_edit %}<a class="btn primary" href="{% url 'books:account-new' %}">New account</a>{% endif %}
+{% endblock %}
+{% block content %}
+<div class="card">
+<table class="data">
+  <thead><tr><th style="width:110px">Number</th><th>Name</th><th>Detail type</th><th class="num">Balance</th><th></th></tr></thead>
+  {% for g in groups %}
+  <tbody>
+    <tr class="section"><th colspan="5">{{ g.label }}</th></tr>
+    {% for r in g.rows %}
+    <tr>
+      <td>{{ r.account.number }}</td>
+      <td>{% if can_edit %}<a href="{% url 'books:account-edit' r.account.pk %}">{{ r.account.name }}</a>{% else %}{{ r.account.name }}{% endif %}</td>
+      <td class="dash">{{ r.account.get_subtype_display }}</td>
+      <td class="num">{{ r.balance|floatformat:"2g" }}</td>
+      <td class="nowrap">{% if not r.account.is_active %}<span class="tag ns">Inactive</span>{% endif %}
+        <a class="row-link" href="{% url 'reports:general-ledger' %}?account={{ r.account.pk }}">Ledger</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  {% empty %}
+  <tbody><tr><td colspan="5" class="empty">No accounts yet.</td></tr></tbody>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

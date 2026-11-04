@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% block title %}Void {{ entry.display_number }}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'books:journal' %}">Journal entries</a> / <a href="{% url 'books:journal-detail' entry.pk %}">{{ entry.display_number }}</a></div>{% endblock %}
+{% block page_title %}Void {{ entry.display_number }}{% endblock %}
+{% block content %}
+{% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<div class="card"><div class="body">
+<p>Voiding posts a reversing entry and keeps {{ entry.display_number }} ({{ entry.date|date:"M j, Y" }}) on record. The reversal date must be in an open month.</p>
+<form method="post">{% csrf_token %}
+  {% include "core/_form_rows.html" %}
+  <div class="form-actions">
+    <button type="submit" class="btn danger">Void entry</button>
+    <a class="btn" href="{% url 'books:journal-detail' entry.pk %}">Cancel</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

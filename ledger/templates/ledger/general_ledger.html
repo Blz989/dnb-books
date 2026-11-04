@@ -1,8 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "core/report_base.html" %}
 {% block title %}General ledger{% endblock %}
 {% block page_title %}General ledger{% endblock %}
 {% block page_subtitle %}{% if report %}<div class="sub">{{ report.account }}, {{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}</div>{% endif %}{% endblock %}
-{% block content %}
+{% block report %}
 <div class="card">
 {% include "ledger/_filter_form.html" %}
 {% if report %}

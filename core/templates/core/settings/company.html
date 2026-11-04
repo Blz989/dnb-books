@@ -1,0 +1,29 @@
+{% extends "core/settings_base.html" %}
+{% block title %}Company profile{% endblock %}
+{% block page_title %}Company profile{% endblock %}
+{% block page_subtitle %}<div class="sub">Shown in the app, on the sign-in page, and on every PDF.</div>{% endblock %}
+{% block settings_content %}
+{% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+<div class="card"><div class="card-h">Logo</div><div class="body">
+  <div class="logo-row">
+    <div class="logo-preview">{% if has_logo %}<img src="{% url 'brand-logo' %}" alt="Current logo">{% else %}<span class="dash">No logo</span>{% endif %}</div>
+    <div>
+      <div class="form-row"><label for="{{ form.logo.id_for_label }}">{% if has_logo %}Replace logo{% else %}Upload logo{% endif %}</label>{{ form.logo }}
+        <span class="help">{{ form.logo.help_text }} A wide logo on a white or clear background prints best.</span>
+        {% for e in form.logo.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+      {% if has_logo %}<div class="form-row check"><label>{{ form.remove_logo }} {{ form.remove_logo.label }}</label></div>{% endif %}
+    </div>
+  </div>
+</div></div>
+<div class="card"><div class="card-h">Details</div><div class="body">
+  {% for field in form %}{% if field.name != "logo" and field.name != "remove_logo" %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endif %}{% endfor %}
+</div></div>
+<button type="submit" class="btn primary">Save company profile</button>
+</form>
+{% endblock %}

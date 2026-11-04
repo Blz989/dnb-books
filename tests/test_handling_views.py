@@ -163,8 +163,9 @@ def test_standard_user_can_view_report(client, standard_user, customer, stocked)
     client.force_login(standard_user)
     r = client.get(REPORT, {"from": "2026-10-01", "to": "2026-10-27"})
     assert r.status_code == 200 and len(r.context["rows"]) == 1
-    home = client.get("/").content.decode()
-    assert f'href="{REPORT}">Order profitability</a>' in home
+    # The home page's link block is gone; the report is in the reports list.
+    reports = client.get("/reports/").content.decode()
+    assert f'href="{REPORT}">Order profitability</a>' in reports
 
 
 def test_report_requires_login(client):

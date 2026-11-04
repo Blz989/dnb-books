@@ -72,3 +72,29 @@ class CloseAnywayForm(forms.Form):
         label="Reason", widget=forms.Textarea(attrs={"rows": 3}),
         error_messages={"required": "Enter a reason to close anyway."},
     )
+
+
+class EntryHeaderForm(forms.Form):
+    date = date_field("Date")
+    reference = forms.CharField(label="Reference", max_length=50, required=False)
+    memo = forms.CharField(label="Memo", required=False, widget=forms.Textarea(attrs={"rows": 2}))
+
+
+class AccountForm(forms.ModelForm):
+    class Meta:
+        model = Account
+        fields = ["number", "name", "type", "subtype", "description", "is_active"]
+        labels = {"number": "Account number", "name": "Name", "type": "Type", "subtype": "Detail type",
+                  "description": "Description", "is_active": "Active"}
+        widgets = {"description": forms.Textarea(attrs={"rows": 2})}
+        help_texts = {"is_active": "Inactive accounts can't take new entries and are hidden from pickers."}
+
+    def __init__(self, *args, has_lines=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["number"].error_messages["required"] = "Enter an account number."
+        self.fields["number"].error_messages["unique"] = "Another account already uses that number."
+        self.fields["name"].error_messages["required"] = "Enter a name."
+        if has_lines:
+            # Changing the type would move posted amounts between statements.
+            self.fields["type"].disabled = True
+            self.fields["type"].help_text = "The type can't change once the account has entries."

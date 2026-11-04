@@ -37,7 +37,7 @@
   <dl class="facts">
     <dt>Vendor invoice #</dt><dd>{{ bill.vendor_invoice_number|default:"—" }}</dd>
     <dt>Notes</dt><dd>{{ bill.notes|linebreaksbr|default:"—" }}</dd>
-    <dt>Journal entries</dt><dd>{% for label, e in entries %}<a href="{% url 'admin:ledger_journalentry_change' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="dash">None. The total is zero.</span>{% endfor %}</dd>
+    <dt>Journal entries</dt><dd>{% for label, e in entries %}<a href="{% url 'books:journal-detail' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="dash">None. The total is zero.</span>{% endfor %}</dd>
   </dl>
 </div></div>
 

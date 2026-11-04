@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'reports:index' %}">Reports</a></div>{% endblock %}
+{% block content %}
+<div class="split reports">
+  <nav class="subnav report-nav" aria-label="Reports">
+    <input type="search" class="report-search" placeholder="Find a report" aria-label="Find a report" data-report-search>
+    {% for g in report_groups %}
+    <div class="report-group">
+      <div class="subnav-h">{{ g.label }}</div>
+      {% for r in g.reports %}<a href="{{ r.url }}"{% if r.on %} class="on" aria-current="page"{% endif %}>{{ r.name }}</a>{% endfor %}
+    </div>
+    {% endfor %}
+    <p class="empty small" data-report-none hidden>No report matches.</p>
+  </nav>
+  <section class="split-main">
+    {% block report %}{% endblock %}
+  </section>
+</div>
+<script>
+  (function () {
+    var box = document.querySelector("[data-report-search]");
+    if (!box) return;
+    box.addEventListener("input", function () {
+      var q = box.value.trim().toLowerCase(), any = false;
+      document.querySelectorAll(".report-group").forEach(function (g) {
+        var shown = 0;
+        g.querySelectorAll("a").forEach(function (a) {
+          var hit = !q || a.textContent.toLowerCase().indexOf(q) !== -1;
+          a.hidden = !hit; if (hit) shown++;
+        });
+        g.hidden = shown === 0; if (shown) any = true;
+      });
+      document.querySelector("[data-report-none]").hidden = any;
+    });
+  })();
+</script>
+{% endblock %}

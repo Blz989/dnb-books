@@ -3,8 +3,8 @@
 * { box-sizing: border-box; }
 body { margin: 0; font-family: Inter, sans-serif; font-size: 8.5pt; line-height: 1.3; color: #222; background: #fff; }
 .top { display: flex; justify-content: space-between; align-items: flex-start; }
-.logo { width: 56pt; height: 56pt; }
-.logo img { width: 56pt; height: 56pt; object-fit: contain; }
+.logo { height: 56pt; max-width: 150pt; }
+.logo img { height: 56pt; max-width: 150pt; width: auto; object-fit: contain; }
 .co { text-align: right; line-height: 1.45; color: #333; }
 .co b { color: #111; font-size: 9.5pt; }
 .mid { display: flex; justify-content: space-between; align-items: flex-end; margin: 6pt 0 18pt; }

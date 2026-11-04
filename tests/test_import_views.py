@@ -170,8 +170,12 @@ def test_home_shows_stock_value_and_inventory_links(adm, inv_settings, admin_use
     record_movements(kind=MovementKind.OPENING, date=date(2026, 10, 1), lines=[StockLine(item, 4, unit_cost=D("2.50"))], user=admin_user)
     html = adm.get("/").content.decode()
     assert "Stock value" in html and "10.00" in html
-    for link in ("/items/", "/items/adjust/", "/items/counts/", "/reports/inventory-valuation/", "/reports/stock-movements/"):
+    # Inventory screens are in the sidebar; inventory reports are in the reports list.
+    for link in ("/items/", "/items/adjustments/", "/items/counts/", "/reports/inventory-valuation/"):
         assert f'href="{link}"' in html
+    reports = adm.get("/reports/").content.decode()
+    for link in ("/reports/inventory-valuation/", "/reports/stock-movements/"):
+        assert f'href="{link}"' in reports
 
 
 def test_home_info_banner_for_admin_when_not_configured(adm, db, standard_user):

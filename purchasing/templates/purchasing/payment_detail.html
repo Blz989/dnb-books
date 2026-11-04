@@ -29,5 +29,5 @@
   </tbody>
 </table>
 </div>
-{% if payment.journal_entry %}<p class="help">Journal entry <a href="{% url 'admin:ledger_journalentry_change' payment.journal_entry.pk %}">{{ payment.journal_entry.display_number }}</a></p>{% endif %}
+{% if payment.journal_entry %}<p class="help">Journal entry <a href="{% url 'books:journal-detail' payment.journal_entry.pk %}">{{ payment.journal_entry.display_number }}</a></p>{% endif %}
 {% endblock %}

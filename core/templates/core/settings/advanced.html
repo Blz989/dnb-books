@@ -1,0 +1,10 @@
+{% extends "core/settings_base.html" %}
+{% block title %}Advanced{% endblock %}
+{% block page_title %}Advanced{% endblock %}
+{% block page_subtitle %}<div class="sub">Rarely needed. Use only when asked to fix something.</div>{% endblock %}
+{% block settings_content %}
+<div class="card"><div class="card-h">Database screens</div><div class="body">
+  <p>The raw database screens list every table in the system. Everything you need day to day is in the app. Posted entries can't be changed here either.</p>
+  <a class="btn" href="{% url 'admin:index' %}">Open database screens</a>
+</div></div>
+{% endblock %}

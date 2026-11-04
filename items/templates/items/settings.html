@@ -1,8 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "core/settings_base.html" %}
 {% block title %}Inventory settings{% endblock %}
-{% block page_title %}Inventory settings{% endblock %}
-{% block page_subtitle %}<div class="sub">Accounts used by stock movements and new items</div>{% endblock %}
-{% block content %}
+{% block page_title %}Inventory{% endblock %}
+{% block page_subtitle %}<div class="sub">Accounts used by stock movements and new items.</div>{% endblock %}
+{% block settings_content %}
 <div class="card"><div class="body">
 <form method="post">{% csrf_token %}
   {% for field in form %}
