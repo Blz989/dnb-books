@@ -80,14 +80,14 @@ Invoice list: `?unpaid=1` → `invoices = invoices_with_open_balance(None).filte
 Report view `unpaid_invoices` (AsOfForm, default today); route `reports:unpaid-invoices` at `unpaid-invoices/`; catalog entry in Receivables after "open-invoices": `("unpaid-invoices", "Unpaid invoices by customer", "Each customer's unpaid invoices, aged, for collections.")`. Page subtitle "As of YYYY-MM-DD, days past due". Columns: Invoice, Date, Due, Days past due, Current, 1-30, 31-60, 61-90, Over 90, Credits, Balance. Customer heading row uses `tr.section`; subtotal row `tr.total` labeled "Total {name}"; grand total row "Total". Empty state "Nothing is owed on this date." KPI tiles "Total unpaid", "A/R account", "Difference" and the banner "Customer balances and the A/R account don't match. Difference: X." when nonzero. CSV per spec.
 
 Tests (`tests/test_unpaid_invoices.py`), building data with the existing sales services (see `tests/test_sales_reports.py` for fixtures/helpers):
-- [ ] unpaid filter lists a partly paid invoice and an unpaid not-yet-due one, excludes a fully paid one and a void one; overdue filter still works alone and combined.
-- [ ] unpaid filter query count does not grow with invoice count (`django_assert_max_num_queries`, compare 3 vs 30 invoices).
-- [ ] report groups by customer, puts each invoice in the right bucket for as_of, shows the unapplied credit line, subtotals per customer.
-- [ ] grand total balance == `ar_aging(as_of).totals.total` == A/R account balance from `sales.checks._account_balance(SalesSettings.load().ar_account, as_of)` on the same date, with a payment left partly unapplied and a credit note left unapplied, for two different as_of dates.
-- [ ] ar_aging results are unchanged by the refactor (existing `tests/test_sales_reports.py` passes untouched).
-- [ ] CSV header and a subtotal row; PDF returns `application/pdf`; report listed in `core.report_catalog.catalog()`.
-- [ ] Screenshots: invoices list with Unpaid only ticked; the report (light, dark); the report PDF first page rendered to PNG; report empty state.
-- [ ] Commit: `Unpaid invoices filter and unpaid invoices by customer report`
+- [x] unpaid filter lists a partly paid invoice and an unpaid not-yet-due one, excludes a fully paid one and a void one; overdue filter still works alone and combined.
+- [x] unpaid filter query count does not grow with invoice count (`django_assert_max_num_queries`, compare 3 vs 30 invoices).
+- [x] report groups by customer, puts each invoice in the right bucket for as_of, shows the unapplied credit line, subtotals per customer.
+- [x] grand total balance == `ar_aging(as_of).totals.total` == A/R account balance from `sales.checks._account_balance(SalesSettings.load().ar_account, as_of)` on the same date, with a payment left partly unapplied and a credit note left unapplied, for two different as_of dates.
+- [x] ar_aging results are unchanged by the refactor (existing `tests/test_sales_reports.py` passes untouched).
+- [x] CSV header and a subtotal row; PDF returns `application/pdf`; report listed in `core.report_catalog.catalog()`.
+- [x] Screenshots: invoices list with Unpaid only ticked; the report (light, dark); the report PDF first page rendered to PNG; report empty state.
+- [x] Commit: `Unpaid invoices filter and unpaid invoices by customer report`
 
 ## Task 3: FIFO cost lot tracking report
 
@@ -245,3 +245,23 @@ Files: `README.md`, `core/management/commands/seed_demo.py` or the per-app `demo
 - [ ] README: add the new reports and the bank page to the Banking/Sales/Items task tables; update the Status line to mention this work as ready for review. Keep overview, roadmap, cutover criteria.
 - [ ] Full `uv run pytest -q` green.
 - [ ] Commit: `README for lot tracking, unpaid invoices, and the bank page`
+
+## Task 8: Print margins (added by the owner mid-session)
+
+Files: `sales/static/sales/invoice_pdf.css`, `sales/static/sales/statement_pdf.css`, `core/static/core/report_pdf.css`, `docs/design/invoice-mockup.html`, tests as needed.
+- [ ] Invoice PDF `@page` margin 0.25in top, left, right; 0.4in bottom (room for the page number). Content still fills the page width; nothing clips or wraps badly (long descriptions, many lines, multi-page with the repeated table header).
+- [ ] Statement PDF: same margins.
+- [ ] Report PDFs: 8mm top and sides, 12mm bottom.
+- [ ] Leave check PDFs and calibration alone (exact inches). Reconcile report and handling statement unchanged unless they look cramped or wasteful.
+- [ ] Update `docs/design/invoice-mockup.html` to the new margin.
+- [ ] Before and after screenshots (rendered PDFs, demo data): invoice, multi-page invoice, statement, one report.
+- [ ] Existing PDF tests pass; no invoice content changes.
+- [ ] Commit: `Tighter print margins on invoices, statements, and reports`
+
+## Task 9: Mobile menu behind a hamburger (added by the owner mid-session)
+
+Files: `core/templates/core/base.html`, `core/static/core/app.css`, tests.
+- [ ] Under 900px the sidebar no longer stacks its full nav above the page. A compact top bar shows the brand and a "Menu" button (hamburger icon, `aria-expanded`, `aria-controls`); pressing it opens the nav, settings, theme toggle, and user block; pressing again or choosing a link closes it. Works without JavaScript (falls back to a `<details>`-style toggle or the nav stays reachable). Desktop unchanged.
+- [ ] Test: base template renders the menu button with aria attributes; CSS hides the nav under 900px until opened.
+- [ ] Screenshots at 390px: closed and open, light and dark; desktop unchanged.
+- [ ] Commit: `Mobile menu behind a menu button`

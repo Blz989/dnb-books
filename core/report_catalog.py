@@ -11,6 +11,7 @@ GROUPS = [
     ("Receivables", [
         ("ar-aging", "A/R aging", "What customers owe, by how late it is."),
         ("open-invoices", "Open invoices", "Every invoice with a balance."),
+        ("unpaid-invoices", "Unpaid invoices by customer", "Each customer's unpaid invoices, aged, for collections."),
         ("customer-balances", "Customer balances", "One line per customer."),
         ("open-sales-orders", "Open sales orders", "Orders not fully invoiced."),
         ("undeposited-funds", "Undeposited funds", "Payments waiting to go to the bank."),

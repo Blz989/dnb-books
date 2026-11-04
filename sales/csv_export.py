@@ -42,3 +42,26 @@ def drop_ship_csv(lines):
     body = [[l.invoice.number, l.invoice.date.isoformat(), l.invoice.customer.name, l.item.sku, l.quantity,
              l.drop_ship_vendor] for l in lines]
     return csv_response("drop-ship-awaiting-bill.csv", ["Invoice", "Date", "Customer", "SKU", "Quantity", "Vendor"], body)
+
+
+def unpaid_invoices_csv(report):
+    def amounts(r):
+        return [amt(r.current), amt(r.d1_30), amt(r.d31_60), amt(r.d61_90), amt(r.over_90), amt(r.unapplied_credits),
+                amt(r.total)]
+
+    body = []
+    for g in report.groups:
+        for a in g.invoices:
+            cells = {name: "" for name in ("current", "d1_30", "d31_60", "d61_90", "over_90")}
+            cells[a.bucket] = amt(a.balance)
+            body.append([g.customer.name, a.invoice.number, a.invoice.date.isoformat(), a.invoice.due_date.isoformat(),
+                         max(a.days_past_due, 0), *cells.values(), "", amt(a.balance)])
+        if g.credits:
+            body.append([g.customer.name, "Unapplied payments and credits", "", "", "", "", "", "", "", "",
+                         amt(g.credits), amt(g.credits)])
+        body.append([f"Total {g.customer.name}", "", "", "", "", *amounts(g.totals)])
+    body.append(["Total", "", "", "", "", *amounts(report.totals)])
+    return csv_response(
+        f"unpaid-invoices-{report.as_of.isoformat()}.csv",
+        ["Customer", "Invoice", "Date", "Due", "Days past due", "Current", "1-30", "31-60", "61-90", "Over 90",
+         "Credits", "Balance"], body)

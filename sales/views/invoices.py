@@ -16,7 +16,10 @@ from items.models import Item
 from items.stock import on_hand
 from ledger.errors import PostingError
 
-from ..balances import invoice_applied, invoice_balance, invoice_total, invoices_with_balances
+from ..balances import (
+    _TOLERANCE as UNPAID_TOLERANCE, invoice_applied, invoice_balance, invoice_total, invoices_with_balances,
+    invoices_with_open_balance,
+)
 from ..errors import SalesError
 from ..forms import InvoiceHeaderForm, ShipmentHeaderForm, VoidDocForm
 from ..models import (
@@ -52,7 +55,9 @@ def _today():
 
 @login_required
 def invoice_list(request):
-    invoices = invoices_with_balances()
+    unpaid = request.GET.get("unpaid") == "1"
+    # Unpaid: the SQL balance prefilter from sales.balances, so no invoice is loaded just to find it settled.
+    invoices = invoices_with_open_balance(None).filter(_gap__gt=UNPAID_TOLERANCE) if unpaid else invoices_with_balances()
     status = request.GET.get("status", "")
     if status in DocStatus.values:
         invoices = invoices.filter(status=status)
@@ -73,9 +78,10 @@ def invoice_list(request):
             "invoice": invoice, "total": invoice_total(invoice), "balance": balance,
             "overdue": invoice.status == DocStatus.OPEN and balance > 0 and invoice.due_date < _today(),
         })
-    qs = "&".join(f"{k}={v}" for k, v in (("status", status), ("customer", customer), ("q", q), ("overdue", "1" if overdue else "")) if v)
+    qs = "&".join(f"{k}={v}" for k, v in (("status", status), ("customer", customer), ("q", q), ("overdue", "1" if overdue else ""),
+                                              ("unpaid", "1" if unpaid else "")) if v)
     return render(request, "sales/invoice_list.html", {
-        "rows": rows, "page": page, "status": status, "customer": customer, "q": q, "overdue": overdue,
+        "rows": rows, "page": page, "status": status, "customer": customer, "q": q, "overdue": overdue, "unpaid": unpaid,
         "querystring": qs, "customers": Customer.objects.all(), "nav_active": "invoices",
     })
 

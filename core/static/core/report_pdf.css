@@ -50,3 +50,8 @@ table.data tr.total td { font-weight: 650; border-top: 1pt solid #2b2620; border
 .two-col .card { margin-bottom: 10pt; }
 .small { font-size: 7pt; }
 .notes p { margin: 0 0 4pt; color: #6f655a; }
+/* Unpaid invoices by customer: keep a customer's heading with its first rows and its subtotal. */
+tbody.group { page-break-inside: auto; }
+tbody.group tr.section { page-break-after: avoid; }
+tbody.group tr.total { page-break-before: avoid; }
+.nowrap { white-space: nowrap; }

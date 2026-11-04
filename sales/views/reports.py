@@ -30,6 +30,15 @@ def ar_aging(request):
 
 
 @login_required
+def unpaid_invoices(request):
+    form = AsOfForm(_data(request, {"as_of": _today().isoformat()}))
+    report = reports.unpaid_by_customer(form.cleaned_data["as_of"]) if form.is_valid() else None
+    if report and _wants_csv(request):
+        return csv_export.unpaid_invoices_csv(report)
+    return render(request, "sales/report_unpaid_invoices.html", {"form": form, "report": report, "nav_active": "reports"})
+
+
+@login_required
 def open_invoices(request):
     form = OpenInvoicesForm(_data(request, {"as_of": _today().isoformat()}))
     rows = None
