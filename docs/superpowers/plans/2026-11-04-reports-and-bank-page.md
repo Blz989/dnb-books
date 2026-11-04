@@ -32,10 +32,10 @@ Django 5.2, SQLite, WeasyPrint (existing). No new dependencies.
 
 Files: `core/static/core/app.css`, `tests/test_sidebar.py` (new).
 
-- [ ] Test: GET home as a logged-in user with company name "D&B Goods Trading Corporation" (Settings company profile model in `core/company.py`); assert the response contains the full name, and assert `app.css` contains `grid-template-columns: 264px 1fr` and that the `.brand-name` rule has no `white-space: nowrap` and has `-webkit-line-clamp: 2`.
-- [ ] CSS: `.app` grid column 236px → 264px. `.brand-name`: replace `overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` with `white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere;`. Leave the 900px media query stacking as is; confirm no horizontal scroll at 390px.
-- [ ] Screenshots: home page light and dark at 1440px with the long company name and no logo; same at 390px wide.
-- [ ] Commit: `Widen the sidebar so long company names fit`
+- [x] Test: GET home as a logged-in user with company name "D&B Goods Trading Corporation" (Settings company profile model in `core/company.py`); assert the response contains the full name, and assert `app.css` contains `grid-template-columns: 264px 1fr` and that the `.brand-name` rule has no `white-space: nowrap` and has `-webkit-line-clamp: 2`.
+- [x] CSS: `.app` grid column 236px → 264px. `.brand-name`: replace `overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` with `white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere;`. Leave the 900px media query stacking as is; confirm no horizontal scroll at 390px.
+- [x] Screenshots: home page light and dark at 1440px with the long company name and no logo; same at 390px wide.
+- [x] Commit: `Widen the sidebar so long company names fit`
 
 ## Task 2: Unpaid invoices filter and "Unpaid invoices by customer" report
 

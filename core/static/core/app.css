@@ -49,7 +49,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.45; }
 a { color: var(--accent-text); }
-.app { display: grid; grid-template-columns: 236px 1fr; min-height: 100vh; }
+.app { display: grid; grid-template-columns: 264px 1fr; min-height: 100vh; }
 .app.bare { display: block; }
 aside { background: var(--side-bg); color: var(--side-text); padding: 16px 12px 12px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 aside nav { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; scrollbar-width: thin; }
@@ -60,7 +60,7 @@ aside nav { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0
 .brand-logo { width: 100%; height: 56px; border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: center; padding: 6px 10px; }
 .brand-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .brand-text { display: flex; flex-direction: column; min-width: 0; }
-.brand-name { font-family: "Source Serif 4", Georgia, serif; font-weight: 600; font-size: 16px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-name { font-family: "Source Serif 4", Georgia, serif; font-weight: 600; font-size: 16px; line-height: 1.2; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .brand-app { font-size: 11px; opacity: .65; letter-spacing: .02em; }
 nav a { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px 6px 34px; border-radius: 6px; color: inherit; text-decoration: none; margin-bottom: 1px; opacity: .82; font-size: 13.5px; }
 nav a:hover { opacity: 1; background: color-mix(in srgb, var(--side-active) 55%, transparent); }
