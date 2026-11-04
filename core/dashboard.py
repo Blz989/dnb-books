@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
-from ledger.balances import account_totals, money
+from ledger.balances import ledger_lines, money
 from ledger.models import AccountSubtype, AccountType, JournalLine
 
 from . import charts
@@ -75,12 +75,17 @@ def income_expense(today: date) -> dict:
     from ledger.models import Account
 
     types = dict(Account.objects.values_list("pk", "type"))
-    for mo in months:
-        for account_id, (d, c) in account_totals(start=mo.start, end=mo.end).items():
-            if types.get(account_id) == AccountType.INCOME:
-                mo.a += c - d
-            elif types.get(account_id) == AccountType.EXPENSE:
-                mo.b += d - c
+    # One read for all 12 months: totals per account per day, each rounded to cents, then added up by month.
+    rows = (ledger_lines(start=months[0].start, end=today)
+            .filter(account__type__in=[AccountType.INCOME, AccountType.EXPENSE])
+            .values("account_id", "entry__date").annotate(d=Sum("debit"), c=Sum("credit")))
+    for row in rows:
+        d, c = money(row["d"]), money(row["c"])
+        mo = next(m for m in months if m.start <= row["entry__date"] <= m.end)
+        if types.get(row["account_id"]) == AccountType.INCOME:
+            mo.a += c - d
+        else:
+            mo.b += d - c
     tips = [charts.money_tip(f"{mo.start:%b %Y}", [("Income", mo.a), ("Expense", mo.b), ("Net", mo.net)])
             for mo in months]
     svg = charts.grouped_bars([mo.label for mo in months], [

@@ -1,5 +1,6 @@
 """Speed over the Cloudflare tunnel: long-lived static files, hover prefetch, and query counts that don't grow per row."""
 import json
+from datetime import timedelta
 import re
 from collections import deque
 from html.parser import HTMLParser
@@ -176,3 +177,52 @@ def test_batch_unit_costs_match_one_at_a_time():
     stock = [i for i in items if i.is_stock]
     assert stock
     assert current_unit_costs(items) == {i.pk: current_unit_cost(i) for i in stock}
+
+
+# ---- 4. Home ----
+
+@pytest.mark.django_db
+def test_home_receivables_match_the_reports():
+    from django.utils import timezone
+
+    from sales import reports
+
+    call_command("seed_demo", verbosity=0)
+    for days in (0, 20, 60):
+        today = timezone.localdate() + timedelta(days=days)
+        overdue = reports.open_invoices(today, overdue_only=True)
+        got = reports.home_receivables(today)
+        assert got.open_ar == reports.ar_aging(today).totals.total
+        assert got.overdue_total == sum((r.balance for r in overdue), 0)
+        assert got.overdue_count == len(overdue)
+    assert got.overdue_count > 0  # 60 days out, some demo invoices are past due
+
+
+@pytest.mark.django_db
+def test_income_expense_chart_matches_month_by_month_totals():
+    from django.utils import timezone
+
+    from core import dashboard
+    from ledger.balances import account_totals
+    from ledger.models import Account, AccountType
+
+    call_command("seed_demo", verbosity=0)
+    today = timezone.localdate()
+    types = dict(Account.objects.values_list("pk", "type"))
+    for mo in dashboard.income_expense(today)["months"]:
+        totals = account_totals(start=mo.start, end=mo.end)
+        income = sum((c - d for pk, (d, c) in totals.items() if types[pk] == AccountType.INCOME), 0)
+        expense = sum((d - c for pk, (d, c) in totals.items() if types[pk] == AccountType.EXPENSE), 0)
+        assert (mo.a, mo.b) == (income, expense)
+
+
+@pytest.mark.django_db
+def test_income_expense_chart_reads_the_ledger_once():
+    from django.utils import timezone
+
+    from core import dashboard
+
+    call_command("seed_demo", verbosity=0)
+    with CaptureQueriesContext(connection) as q:
+        dashboard.income_expense(timezone.localdate())
+    assert len(q) <= 2
