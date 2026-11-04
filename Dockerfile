@@ -28,7 +28,7 @@ RUN DNB_SECRET_KEY=build-only-not-secret python manage.py collectstatic --noinpu
 # The entrypoint starts as root only to fix ownership of the mounted ./data folder, then drops to this user.
 RUN useradd --uid 1000 --create-home dnb && mkdir -p /data && chown dnb:dnb /data
 VOLUME /data
-EXPOSE 8000
+EXPOSE 8000 8001
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["python", "manage.py", "serve", "--host", "0.0.0.0", "--port", "8000"]

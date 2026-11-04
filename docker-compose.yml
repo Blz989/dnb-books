@@ -22,3 +22,19 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+
+  # Claude (MCP) service. Reached only through the Cloudflare tunnel; every request needs a valid
+  # Cloudflare Access token. See README, "Use DNB Books from Claude".
+  mcp:
+    image: dnb-books
+    env_file: .env
+    environment:
+      DNB_SKIP_MIGRATE: "1"
+    command: ["python", "manage.py", "serve_mcp", "--host", "0.0.0.0", "--port", "8001"]
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/data
+    depends_on:
+      - app
+    restart: unless-stopped

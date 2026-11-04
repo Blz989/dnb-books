@@ -1,0 +1,82 @@
+{% extends "core/settings_base.html" %}
+{% block title %}Claude connections{% endblock %}
+{% block page_title %}Claude connections{% endblock %}
+{% block page_subtitle %}<div class="sub">Use DNB Books from Claude on the web, desktop, or phone. Sign-in goes through Cloudflare Access.</div>{% endblock %}
+{% block settings_content %}
+<div class="card"><div class="card-h">Service</div><div class="body">
+  <dl class="facts two">
+    <dt>Status</dt>
+    <dd>{% if service.enabled %}<span class="tag">On</span>{% else %}<span class="tag void">Off</span>{% endif %}</dd>
+    <dt>Connector URL</dt><dd><code>{{ connector_url|default:"Not set" }}</code></dd>
+    <dt>Cloudflare team</dt><dd>{% if team_domain %}{{ team_domain }}{% else %}<span class="tag overdue">Missing: DNB_CF_ACCESS_TEAM_DOMAIN</span>{% endif %}</dd>
+    <dt>Access audience tag</dt><dd>{% if aud_set %}Set{% else %}<span class="tag overdue">Missing: DNB_CF_ACCESS_AUD</span>{% endif %}</dd>
+  </dl>
+  <form method="post" class="form-actions">{% csrf_token %}
+    <input type="hidden" name="action" value="service">
+    {% if service.enabled %}
+      <input type="hidden" name="enabled" value="0"><button class="btn danger" type="submit">Turn off Claude access</button>
+      <span class="small dash">Stops every Claude request at once. Turn it back on any time.</span>
+    {% else %}
+      <input type="hidden" name="enabled" value="1"><button class="btn primary" type="submit">Turn on Claude access</button>
+    {% endif %}
+  </form>
+</div></div>
+
+<div class="card"><div class="card-h">People</div>
+<table class="data">
+  <thead><tr><th>Name</th><th>Email (must match their Cloudflare login)</th><th>Role</th><th>Claude access</th><th></th></tr></thead>
+  <tbody>
+  {% for p in people %}
+    <tr>
+      <td>{% firstof p.user.get_full_name p.user.username %}</td>
+      <td>{% if p.user.email %}{{ p.user.email }}{% else %}<a href="{% url 'settings:user-edit' p.user.pk %}">Add an email</a>{% endif %}</td>
+      <td><span class="tag{% if p.role == 'Standard' %} ns{% endif %}">{{ p.role }}</span></td>
+      <td>{% if p.on %}On{% else %}<span class="dash">Off</span>{% endif %}</td>
+      <td class="nowrap">
+        <form method="post">{% csrf_token %}
+          <input type="hidden" name="action" value="user"><input type="hidden" name="user" value="{{ p.user.pk }}">
+          {% if p.on %}<input type="hidden" name="enabled" value="0"><button class="btn small" type="submit">Turn off</button>
+          {% else %}<input type="hidden" name="enabled" value="1"><button class="btn small" type="submit"{% if not p.user.email %} disabled{% endif %}>Turn on</button>{% endif %}
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="body small dash">Each person works with their own role. Claude can look things up and run reports, and can create invoices, payments, bills, vendor payments, purchase orders, customers, vendors, and items. Every change is shown as a preview and saved only when the person confirms it. Voids, refunds, credit notes, deposits, journal entries, and month close stay in the app.</div>
+</div>
+
+<div class="card"><div class="card-h">Recent calls</div>
+{% if calls %}
+<table class="data">
+  <thead><tr><th>When</th><th>Person</th><th>Tool</th><th>Result</th><th>Document</th></tr></thead>
+  <tbody>
+  {% for c in calls %}
+    <tr>
+      <td class="nowrap">{{ c.at|date:"M j, Y g:i A" }}</td>
+      <td>{% if c.user %}{% firstof c.user.get_full_name c.user.username %}{% else %}{{ c.email }}{% endif %}</td>
+      <td><code>{{ c.tool }}</code></td>
+      <td>{% if c.ok %}OK{% else %}<span class="neg">{{ c.error }}</span>{% endif %}</td>
+      <td class="nowrap">{{ c.document }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if calls.has_other_pages %}<div class="pager">
+  {% if calls.has_previous %}<a href="?page={{ calls.previous_page_number }}">Newer</a>{% endif %}
+  <span>Page {{ calls.number }} of {{ calls.paginator.num_pages }}</span>
+  {% if calls.has_next %}<a href="?page={{ calls.next_page_number }}">Older</a>{% endif %}
+</div>{% endif %}
+{% else %}
+<div class="empty small">No calls yet.</div>
+{% endif %}
+</div>
+
+<div class="card"><div class="card-h">Connect</div><div class="body">
+<ol>
+  <li>Turn on Claude access for the person in the table above. Their email must match their Cloudflare login.</li>
+  <li>In Claude, open Settings → Connectors → Add custom connector, and enter <code>{{ connector_url }}</code>.</li>
+  <li>Sign in through Cloudflare when asked.</li>
+</ol>
+</div></div>
+{% endblock %}
