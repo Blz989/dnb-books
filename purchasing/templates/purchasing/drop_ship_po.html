@@ -1,10 +1,11 @@
 {% extends "core/base.html" %}
 {% block title %}Create drop-ship PO{% endblock %}
 {% block page_title %}Create drop-ship PO{% endblock %}
-{% block page_subtitle %}<div class="sub">{{ order.number }} · {{ order.customer.name }}. One purchase order per vendor, for the drop-ship lines not yet on one.</div>{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if order %}{{ order.number }} · {{ order.customer.name }}{% else %}{{ orders|length }} sales orders{% endif %}. One purchase order per vendor, for the drop-ship lines not yet on one. The same item at the same cost goes on one line.</div>{% endblock %}
 {% block content %}
 {% include "purchasing/_errors.html" %}
 <form method="post">{% csrf_token %}
+  {% if not order %}{% for o in orders %}<input type="hidden" name="order" value="{{ o.number }}">{% endfor %}{% endif %}
   {% for r in rows %}
   <div class="card"><div class="body">
     <h2 style="margin-top:0">{{ r.name }}</h2>
@@ -20,12 +21,12 @@
       </div>
     {% endif %}
     <table class="data">
-      <thead><tr><th>Item</th><th class="num">Quantity</th><th class="num">Cost</th></tr></thead>
-      <tbody>{% for l in r.lines %}<tr><td><span class="sku">{{ l.item.sku }}</span> {{ l.description|default:l.item.name }}</td><td class="num">{{ l.quantity }}</td><td class="num">{{ l.item.purchase_cost|floatformat:"2g" }}</td></tr>{% endfor %}</tbody>
+      <thead><tr>{% if not order %}<th>Order</th><th>Customer</th>{% endif %}<th>Item</th><th class="num">Quantity</th><th class="num">Cost</th></tr></thead>
+      <tbody>{% for l in r.lines %}<tr>{% if not order %}<td><a class="sku" href="{% url 'sales:order-detail' l.order.number %}">{{ l.order.number }}</a></td><td>{{ l.order.customer.name }}</td>{% endif %}<td><span class="sku">{{ l.item.sku }}</span> {{ l.description|default:l.item.name }}</td><td class="num">{{ l.quantity }}</td><td class="num">{{ l.item.purchase_cost|floatformat:"2g" }}</td></tr>{% endfor %}</tbody>
     </table>
   </div></div>
   {% endfor %}
   <button type="submit" class="btn primary">Create POs</button>
-  <a class="btn" href="{% url 'sales:order-detail' order.number %}">Cancel</a>
+  <a class="btn" href="{{ back }}">Cancel</a>
 </form>
 {% endblock %}

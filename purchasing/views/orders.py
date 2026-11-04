@@ -165,11 +165,11 @@ def po_close(request, number):
     return redirect(reverse("purchasing:po-detail", args=[po.number]))
 
 
-# ---- drop-ship POs from a sales order ----
+# ---- drop-ship POs from one or several sales orders ----
 
-def _drop_ship_rows(order, post=None):
+def _drop_ship_rows(orders, post=None):
     rows = []
-    for name, lines in drop_ship_candidates(order).items():
+    for name, lines in drop_ship_candidates(orders).items():
         matched = Vendor.find_by_name(name)
         chosen = None
         if post is not None and common.safe_id(post.get(f"vendor-{name}", "")):
@@ -178,36 +178,55 @@ def _drop_ship_rows(order, post=None):
     return rows
 
 
-@login_required
-def drop_ship_po(request, number):
-    order = SalesOrder.objects.filter(number=number).select_related("customer").first()
-    if order is None:
-        raise Http404("No sales order has that number.")
-    context = {"order": order, "nav_active": "orders"}
-    if not drop_ship_candidates(order):
-        messages.info(request, "Every drop-ship line on this order is already on a purchase order.")
-        return redirect(reverse("sales:order-detail", args=[order.number]))
+def _drop_ship_screen(request, orders, *, back, nothing_left):
+    """The one-order button and the order list's multi-select both land here."""
+    if not drop_ship_candidates(orders):
+        messages.info(request, nothing_left)
+        return redirect(back)
+    context = {"orders": orders, "order": orders[0] if len(orders) == 1 else None, "back": back,
+               "nav_active": "orders", "vendors": Vendor.objects.filter(is_active=True)}
     if request.method != "POST":
-        return render(request, "purchasing/drop_ship_po.html", {
-            **context, "rows": _drop_ship_rows(order), "vendors": Vendor.objects.filter(is_active=True)})
+        return render(request, "purchasing/drop_ship_po.html", {**context, "rows": _drop_ship_rows(orders)})
     choices = {}
-    for name in drop_ship_candidates(order):
+    for name in drop_ship_candidates(orders):
         value = common.safe_id(request.POST.get(f"vendor-{name}", ""))
         vendor = Vendor.objects.filter(pk=value).first() if value else None
         if vendor is not None:
             choices[name] = vendor
     try:
-        pos = create_drop_ship_pos(order, user=request.user, date=timezone.localdate(), vendor_choices=choices)
+        pos = create_drop_ship_pos(orders, user=request.user, date=timezone.localdate(), vendor_choices=choices)
     except UnresolvedVendors as exc:
         return render(request, "purchasing/drop_ship_po.html", {
-            **context, "rows": _drop_ship_rows(order, request.POST), "vendors": Vendor.objects.filter(is_active=True),
-            "errors": [str(exc)], "unresolved": exc.unresolved})
+            **context, "rows": _drop_ship_rows(orders, request.POST), "errors": [str(exc)],
+            "unresolved": exc.unresolved})
     except (PurchasingError, PostingError) as exc:
         return render(request, "purchasing/drop_ship_po.html", {
-            **context, "rows": _drop_ship_rows(order, request.POST), "vendors": Vendor.objects.filter(is_active=True),
-            **common.error_context(exc)})
+            **context, "rows": _drop_ship_rows(orders, request.POST), **common.error_context(exc)})
     messages.success(request, "Created " + ", ".join(p.number for p in pos) + ".")
-    return redirect(reverse("sales:order-detail", args=[order.number]))
+    return redirect(back)
+
+
+@login_required
+def drop_ship_po(request, number):
+    order = SalesOrder.objects.filter(number=number).select_related("customer").first()
+    if order is None:
+        raise Http404("No sales order has that number.")
+    return _drop_ship_screen(
+        request, [order], back=reverse("sales:order-detail", args=[order.number]),
+        nothing_left="Every drop-ship line on this order is already on a purchase order.")
+
+
+@login_required
+def drop_ship_po_multi(request):
+    numbers = (request.POST if request.method == "POST" else request.GET).getlist("order")
+    orders = list(SalesOrder.objects.filter(number__in=numbers).select_related("customer").order_by("date", "id"))
+    back = reverse("sales:order-list")
+    if not orders:
+        messages.info(request, "Select at least one sales order.")
+        return redirect(back)
+    return _drop_ship_screen(
+        request, orders, back=back,
+        nothing_left="Every drop-ship line on these orders is already on a purchase order.")
 
 
 @login_required

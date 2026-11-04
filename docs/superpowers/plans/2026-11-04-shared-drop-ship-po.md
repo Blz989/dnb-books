@@ -75,21 +75,21 @@ Files: `purchasing/dropship.py`, `purchasing/posting/bills.py`, `handling/profit
 
 Files: `purchasing/posting/orders.py`, `tests/test_purchase_orders.py`.
 
-- [ ] Tests: candidates across orders; one PO per vendor across two orders; same item and price combine with one
+- [x] Tests: candidates across orders; one PO per vendor across two orders; same item and price combine with one
   allocation per order line; different prices stay separate; unresolved vendor across orders creates nothing;
   single-order call unchanged; editing a PO keeps allocations; single-allocation quantity edit follows; shared
   line quantity edit refused with the spec's message. Confirm they fail.
-- [ ] Implement. Commit `Create drop-ship POs from several sales orders`.
+- [x] Implement. Commit `Create drop-ship POs from several sales orders`.
 
 ## Task 5: Screens
 
 Files: `sales/templates/sales/order_list.html`, `purchasing/urls.py`, `purchasing/views/orders.py`,
 `purchasing/templates/purchasing/drop_ship_po.html`, PO detail/PDF templates, `tests/test_po_bill_views.py`.
 
-- [ ] View tests: list has checkboxes and the button; multi-order screen; none checked message; nothing left
+- [x] View tests: list has checkboxes and the button; multi-order screen; none checked message; nothing left
   message; POST creates one shared PO; unresolved picker across orders; single-order URL still works; PO detail
   "For" column and subtitle; PDF HTML for one and several orders. Confirm they fail.
-- [ ] Implement. Screenshots from a demo database sent with `SendUserFile`. Commit `Multi-select drop-ship PO screen`.
+- [x] Implement. Screenshots from a demo database sent with `SendUserFile`. Commit `Multi-select drop-ship PO screen`.
 
 ## Task 6: MCP, demos, README
 
