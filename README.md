@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested, and Phase 5b is ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -24,7 +24,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 
 | Task | Where |
 |---|---|
-| Set up inventory accounts (once, admin) | Settings, then Items |
+| Set up inventory accounts (once, admin) | Settings, Inventory |
 | Load items and opening stock from a CSV (admin) | Items, Import CSV. The preview lists every bad row. Nothing saves until all rows are valid |
 | Add, edit, and look up items | Items |
 | Fix a quantity | Adjustments, New adjustment. Stock can go below zero after you confirm; the cost is estimated until stock is received or counted |
@@ -35,7 +35,8 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 
 | Task | Where |
 |---|---|
-| Set up sales accounts, company details, logo, default invoice notes, and the next document numbers (once, admin) | Sales settings. Set the next numbers to carry on from Zoho's |
+| Set the company name, address, and logo (once, admin) | Settings, Company profile. The logo shows in the sidebar, on the sign-in page, and on every PDF |
+| Set up sales accounts, default invoice notes, and the next document numbers (once, admin) | Settings, Sales. Set the next numbers to carry on from Zoho's |
 | Add a customer | Customers, New customer. Terms default to Net 30 |
 | Take an order, then invoice it a shipment at a time | Sales orders, New sales order, then Invoice a shipment. Lower a quantity or set it to 0 to leave it for later |
 | Sell something the manufacturer ships straight to the customer | Mark the line "Drop ship" and name the vendor. No stock moves. It shows on the Drop shipments awaiting bill report until the vendor bill is entered (Phase 4) |
@@ -52,7 +53,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 
 | Task | Where |
 |---|---|
-| Set up the accounts payable account, the next document numbers, and the 1099 thresholds (once, admin) | Purchasing settings. Set the next numbers to carry on from Zoho's |
+| Set up the accounts payable account, the next document numbers, and the 1099 thresholds (once, admin) | Settings, Purchases. Set the next numbers to carry on from Zoho's |
 | Add a vendor, mark 1099 vendors, and enter tax IDs | Vendors, New vendor. Only an admin sees a full tax ID, and only on the edit form |
 | Track what was ordered | Purchase orders, New purchase order. Nothing is sent to the vendor |
 | Receive and bill stock | Open the purchase order, then Bill this order. Stock comes in at the price on the bill. Bill in parts by lowering a quantity, and add freight as an expense line |
@@ -83,7 +84,7 @@ Nothing is booked from the bank feed until you confirm it. Confirming a row that
 
 A reconciled month is locked: the documents behind it can't be voided or edited until an admin undoes that reconciliation (the most recent one only).
 
-A month won't close while customer balances, undeposited payments, or vendor balances disagree with the ledger. An admin can close it anyway from Admin, Accounting periods, with a reason that is saved on the period.
+A month won't close while customer balances, undeposited payments, or vendor balances disagree with the ledger. An admin can close it anyway from Accountant, Month close, with a reason that is saved on the period.
 
 ### Order profitability and handling
 
@@ -91,7 +92,7 @@ Each order's profit is its sales, less credits applied to its invoices, less the
 
 | Task | Where |
 |---|---|
-| Set up handling (once, admin) | Purchasing settings, Edit handling settings. Pick the handling vendor and the Handling expense account, set the start date, and confirm the 55% rate. Orders dated before the start date never get handling |
+| Set up handling (once, admin) | Settings, Handling. Pick the handling vendor and the Handling expense account, set the start date, and confirm the 55% rate. Orders dated before the start date never get handling |
 | Change the rate (admin) | Handling settings, Add rate. It applies to orders dated on or after its date |
 | See the profit of every order | Reports, Order profitability. Filter by date, customer, or "Has unbilled handling". Flags show a drop-ship line whose bill isn't entered, an order below zero, and orders before the start date |
 | See one order's profit | Open the sales order or direct invoice. The profit panel shows sales by invoice, credits, cost by line, and each handling bill that billed it |
@@ -100,6 +101,19 @@ Each order's profit is its sales, less credits applied to its invoices, less the
 | Undo the latest handling bill (admin) | Handling, open the run, Void. Only the latest run can be voided, and only before it is paid. Handling bills can't be voided or edited from Bills |
 
 A month won't close until both of its handling bills are created. An admin can close it anyway with a reason.
+
+### Everyday screens
+
+| Task | Where |
+|---|---|
+| Add a user, change a role, reset a password, or block sign-in (admin) | Settings, Users and roles |
+| Look up any journal entry, or follow it back to its invoice, bill, or payment | Accountant, Journal entries |
+| Post a manual adjustment | Accountant, Journal entries, New journal entry. Debits must equal credits |
+| Void a journal entry (admin) | Open the entry, Void |
+| Add or rename an account, or mark it inactive | Accountant, Chart of accounts |
+| Close or reopen a month (admin) | Accountant, Month close |
+| Run a report | Reports. The list stays on the left while the report shows on the right |
+| Raw database screens (rarely needed, admin) | Settings, Advanced |
 
 ## How it works
 
