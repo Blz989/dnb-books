@@ -1,6 +1,6 @@
 # DNB Books MCP server: design
 
-Status: draft for owner review, revision 3 (fits the existing LopezHome tunnel and Access setup). Date: 2026-11-04.
+Status: approved and built, revision 4 (fits the existing LopezHome tunnel and Access setup; section 13 lists what changed while building). Date: 2026-11-04.
 
 ## 1. Goal
 
@@ -48,7 +48,7 @@ DNB Books does not run its own sign-in for the MCP. Cloudflare Access does, usin
 3. An Access policy decides who may connect (for example, only the company's email addresses).
 4. Every request then reaches the `mcp` service with `Cf-Access-Jwt-Assertion`. The service:
    - checks the signature against the team's public keys (`https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`, cached), and the issuer, the audience tag (`DNB_CF_ACCESS_AUD`), and the expiry. A request without a valid token gets `401`, even if it reached the service some other way;
-   - finds the DNB Books user whose email matches the token's `email` claim, case-insensitively. No match, an inactive user, or MCP access turned off for that user gets: "This Cloudflare login (name@example.com) isn't linked to a DNB Books user. Ask an admin to add it in Settings → Users and roles."
+   - finds the DNB Books user whose email matches the token's `email` claim, case-insensitively. No match, an inactive user, or MCP access turned off for that user gets: "This Cloudflare login (name@example.com) isn't linked to a DNB Books user. Ask an admin to turn it on in Settings → Claude connections."
 5. The person's app role applies to every tool.
 
 **Settings → Claude connections** (admin): an on/off switch for the whole MCP service, an "MCP access" switch per user (off by default), and the call log (section 7). Signing everyone out is done in Cloudflare (Access, revoke sessions). Turning off a user's "Can sign in" or "MCP access" stops their requests at once.
@@ -138,7 +138,7 @@ The Cloudflare side matches the handoff from the owner's Cloudflare session (tun
 1. **Tunnel:** on LopezHome, add the public hostname `mcp.lopezhome.casa` → `http://192.168.0.33:8001`, with a proxied CNAME `mcp` to the tunnel. No `httpHostHeader` override.
 2. **Access:** add a dedicated self-hosted application for `mcp.lopezhome.casa` with the "Owner only" policy and **Managed OAuth** turned on (Advanced settings). It has to take precedence over the wildcard app, whose browser login MCP clients can't complete. This is untested in this account, so check it before step 5. Copy its **Application Audience (AUD) tag**.
 3. **`.env` on the NAS:** `DNB_CF_ACCESS_AUD=<AUD tag>`, `DNB_CF_ACCESS_TEAM_DOMAIN=<team>.cloudflareaccess.com`, `DNB_MCP_ALLOWED_HOSTS=mcp.lopezhome.casa`. Then `docker compose up -d --build` starts the `mcp` service on port 8001.
-4. **DNB Books:** in Settings → Users and roles, make sure your user's email is the one in the Owner only policy, and turn on **MCP access**.
+4. **DNB Books:** in Settings → Users and roles, make sure your user's email is the one in the Owner only policy. Then in Settings → Claude connections, turn on Claude access for yourself.
 5. **Claude:** add a custom connector `https://mcp.lopezhome.casa/mcp` in the Claude app, and an HTTP server with the same URL in Claude Code. Sign in through Cloudflare when asked.
 6. **Optional portal:** in Zero Trust → Access controls → MCP Portals, add the server by its full URL (`https://mcp.lopezhome.casa/mcp`), give the server and the portal an Access policy, and connect Claude to the portal URL instead. Whether the Claude app connects cleanly through a portal here is untested; connect directly first.
 
@@ -153,3 +153,11 @@ A local stdio server for Claude Desktop (the remote connector covers Desktop too
 3. Write tools with preview and confirm.
 4. Settings → Claude connections: on/off, per-user MCP access, call log.
 5. docker-compose services, `.env.example`, README setup section.
+
+## 13. Changes made while building
+
+- **Where the per-person switch lives.** It is on Settings → Claude connections (a table of people with Turn on and Turn off), not on the user form. The not-linked message points there: "This Cloudflare login (name@example.com) isn't linked to a DNB Books user. Ask an admin to turn it on in Settings → Claude connections."
+- **How a preview is made.** A write tool runs the real posting service inside a database transaction and rolls it back. The preview therefore shows the same number, totals, and journal lines the confirm will post, and fails with the app's own message. The stored confirmation holds the input, not the result; confirm runs the service again.
+- **Warnings.** Negative stock and duplicate vendor invoice numbers show as preview warnings, and confirming accepts them, as the app's confirm screens do. If a new warning appears between preview and confirm, confirm stops with "Something changed since the preview: ... Ask for a new preview."
+- **Payments without a split.** `receive_payment` without `apply_to` pays the customer's oldest invoices first, using the app's existing oldest-first helper.
+- **Errors inside a tool.** Anything unexpected returns "Something went wrong in DNB Books. The error was logged; try again or use the app." and the details go to `docker compose logs mcp`.

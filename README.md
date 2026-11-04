@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -122,6 +122,7 @@ A month won't close until both of its handling bills are created. An admin can c
 | See who changed what | Settings, Audit log (admin only). Filter by record, type, user, action, and dates |
 | See where cash is heading | Banking, Cash forecast (also under Reports). Daily for 30 days, weekly for 13 weeks, or monthly for 12 months. Open invoices are placed when each customer usually pays (their average over the last year); open bills on their due dates. Rent, payroll, and other costs count only once they're entered as bills |
 | Cash flow and income at a glance | Home. Charts for the last 12 months; hover a month for its numbers, or Show as table |
+| Use DNB Books from Claude (admin turns it on per person) | Settings, Claude connections. See [Use DNB Books from Claude](#use-dnb-books-from-claude) |
 | Raw database screens (rarely needed, admin) | Settings, Advanced |
 
 ## How it works
@@ -131,6 +132,7 @@ A month won't close until both of its handling bills are created. An admin can c
   ┌────────────────────── docker compose ──────────────┐   ┌──────────────┐
   │  app        DNB Books (Python / Django) on :8000   │◄──│  web browser │
   │  scheduler  nightly backup, restore drill, bank sync│  └──────────────┘
+  │  mcp        Claude connector on :8001 (via tunnel) │◄── Claude, through Cloudflare Access
   │  ./data     database (one SQLite file), backups    │
   └──────────────────────┬─────────────────────────────┘
                          │ nightly encrypted copy (rclone)
@@ -193,6 +195,22 @@ Do these once after `./update.sh`.
 4. **Add the bank accounts** under Banking, Bank accounts, then link or import. Set each checking account's next check number.
 5. **Calibrate the check printing.** Open the layout page for the account, print the calibration page at 100% on plain paper, hold it against a voucher check in front of a light, and nudge the offsets until the boxes sit on the lines. Then print one real check on plain paper held against the stock before using the stock.
 
+### Use DNB Books from Claude
+
+The `mcp` service lets people use DNB Books from Claude on the web, desktop, or phone. Claude can look things up and run reports, and can create invoices, customer payments, bills, vendor payments, purchase orders, customers, vendors, and items. Every change comes back as a preview first; nothing is saved until the person confirms it, once, within 15 minutes. Voids, refunds, credit notes, deposits, journal entries, and month close stay in the app. Each person works with their own role, and every change shows in the audit log under their name.
+
+Sign-in is done by Cloudflare Access, not by DNB Books. The service refuses any request without a valid Access token for its application, and the token's email must match a DNB Books user with Claude access turned on.
+
+Do these once:
+
+1. **Tunnel.** On the `LopezHome` tunnel, add the public hostname `mcp.lopezhome.casa` pointing to `http://192.168.0.33:8001`. No Host header override.
+2. **Access application.** Add a self-hosted Access application for `mcp.lopezhome.casa` with the "Owner only" policy, and turn on **Managed OAuth** (Advanced settings). It must take precedence over the wildcard application. Copy its **Application Audience (AUD) tag**.
+3. **`.env` on the server.** Set `DNB_CF_ACCESS_TEAM_DOMAIN` (your team, like `yourteam.cloudflareaccess.com`), `DNB_CF_ACCESS_AUD` (the tag from step 2), and `DNB_MCP_ALLOWED_HOSTS=mcp.lopezhome.casa`. Then `docker compose up -d --build`.
+4. **DNB Books.** Make sure your user has the same email as your Cloudflare login (Settings, Users and roles), then turn on Claude access for yourself in Settings, Claude connections.
+5. **Claude.** Add a custom connector with the URL `https://mcp.lopezhome.casa/mcp` and sign in through Cloudflare when asked.
+
+To stop everything at once, use Turn off Claude access in Settings, Claude connections. To sign everyone out, revoke sessions in Cloudflare Access. Check `docker compose logs mcp` if a connection fails.
+
 ### Import from Zoho (Phase 5b, once)
 
 The import replays the whole Zoho history into a new, empty database. It never writes to the live database file directly: it copies the database to `dnb.sqlite3.import-copy`, imports into the copy, and compares the result with Zoho's own reports (the tie-out). A real run replaces the database with the copy only when the tie-out passes, and only after a backup. If anything goes wrong, the copy is deleted and the database is left as it was. Expect it to take tens of minutes.
@@ -253,6 +271,7 @@ The Zoho export ends before the cutover, so bring the books up to today in this 
 | Back up now | `docker compose exec -u dnb app python manage.py backup_now` |
 | Check backups work | `docker compose exec -u dnb app python manage.py restore_drill` |
 | See what the scheduler did | `docker compose logs scheduler` |
+| See what the Claude service did | Settings, Claude connections (call log), or `docker compose logs mcp` |
 | Stop / start | `docker compose down` / `docker compose up -d` |
 
 ### Backups
