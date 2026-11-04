@@ -44,12 +44,13 @@ def inbox_context(request, account_id: str, status: str) -> dict:
     if account_id.isdigit():
         rows = rows.filter(bank_account_id=int(account_id))
     page = Paginator(rows, PAGE_SIZE).get_page(request.GET.get("page"))
+    pool = inbox.CandidatePool([t for t in page if t.status == TxnStatus.NEW])
     items = []
     for txn in page:
         item = {"txn": txn, "token": common.new_token(), "suggestion": None, "matched": "",
                 "can_receive": can_receive(txn)}
         if txn.status == TxnStatus.NEW:
-            item["suggestion"] = inbox.suggest(txn)
+            item["suggestion"] = inbox.suggest(txn, pool)
         elif txn.status in (TxnStatus.MATCHED, TxnStatus.BOOKED) and hasattr(txn, "match"):
             item["matched"] = match_label(txn.match)
         items.append(item)

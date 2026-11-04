@@ -25,3 +25,11 @@ class VersionedStaticFilesStorage(StaticFilesStorage):
         url = super().url(name)
         path = self.path(name) if self.exists(name) else finders.find(name)
         return f"{url}?v={file_version(path)}" if path else url
+
+
+def current_version(name: str) -> str | None:
+    """The ?v= value a page links today for static file `name`, or None if there is no such file."""
+    from django.contrib.staticfiles.storage import staticfiles_storage
+
+    path = staticfiles_storage.path(name) if staticfiles_storage.exists(name) else finders.find(name)
+    return file_version(path) if path else None

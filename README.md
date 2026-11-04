@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are built and tested. A page for each bank account (dashboard, its inbox, and a register with a running balance), FIFO cost lot tracking, unpaid invoices by customer, tighter print margins, and a phone menu are ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are built and tested. A page for each bank account (dashboard, its inbox, and a register with a running balance), FIFO cost lot tracking, unpaid invoices by customer, tighter print margins, and a phone menu are ready for review. Faster pages through the Cloudflare tunnel (CSS, scripts, and fonts kept by the browser, the next page loaded while its link is hovered in Chrome and Edge, and fewer database queries on the bank inbox and item list) is ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -333,6 +333,8 @@ uv run pytest -q   # run tests
 ```
 
 Each phase gets its own spec and plan before any code is written. Work happens on `claude/*` branches and lands through pull requests into `main`.
+
+Chrome and Edge fetch a page while its link is hovered (speculation rules in `core/templates/core/base.html`), so a plain link must never change data. Use a form that posts, or mark the link `data-no-prefetch`. `tests/test_speed.py` opens every reachable link and fails on any database write. Static files are cached for a year because their URLs carry a content hash; a changed font file needs a new name.
 
 ### Taking screenshots
 Screens are checked visually against `docs/design/items-mockup.html`. Use a throwaway database, never `data/`:
