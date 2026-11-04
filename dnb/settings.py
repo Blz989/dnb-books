@@ -19,6 +19,13 @@ if SECRET_KEY in ("", "change-me"):
         )
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DNB_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
+# Claude (MCP) service, reached through Cloudflare Access. See README, "Use DNB Books from Claude".
+DNB_CF_ACCESS_AUD = os.environ.get("DNB_CF_ACCESS_AUD", "")
+DNB_CF_ACCESS_TEAM_DOMAIN = os.environ.get("DNB_CF_ACCESS_TEAM_DOMAIN", "")
+DNB_MCP_ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get("DNB_MCP_ALLOWED_HOSTS", "mcp.lopezhome.casa").split(",") if h.strip()
+]
+
 DNB_DB_PATH = Path(os.environ.get("DNB_DB_PATH") or BASE_DIR / "data" / "dnb.sqlite3")
 DNB_BACKUP_DIR = Path(os.environ["DNB_BACKUP_DIR"]) if os.environ.get("DNB_BACKUP_DIR") else BASE_DIR / "data" / "backups"
 DNB_BACKUP_KEY = os.environ.get("DNB_BACKUP_KEY", "")
@@ -58,6 +65,7 @@ INSTALLED_APPS = [
     "banking",
     "backup",
     "migration",
+    "mcpserver",
 ]
 
 MIDDLEWARE = [
