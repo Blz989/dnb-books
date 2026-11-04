@@ -21,7 +21,9 @@ from ..crypto import FieldKeyError
 from ..forms import (
     BankAccountForm, CsvMappingForm, ImportUploadForm, csv_headers, guess_mapping, ledger_choices,
 )
-from ..importers import CsvImportError, CsvMapping, import_csv, import_transactions, parse_csv, parse_ofx
+from ..importers import (
+    CsvImportError, CsvMapping, import_csv, import_transactions, parse_csv, parse_ofx, parse_ofx_balance,
+)
 from ..models import (
     AccountKind, BankAccount, ItemStatus, PlaidItem, Reconciliation, ReconStatus, TxnSource, TxnStatus,
 )
@@ -291,6 +293,13 @@ def import_file(request, pk):
             return render(request, "banking/import.html", {**context, "errors": [str(exc)]})
         with transaction.atomic():
             result = import_transactions(account, txns, source=TxnSource.FILE, user=request.user)
+            balance = parse_ofx_balance(data)
+            if balance is not None:
+                # OFX shows what a card or loan owes as negative; store it as owed, like the Bank accounts list.
+                amount, as_of = balance
+                account.bank_balance = -amount if account.is_liability else amount
+                account.bank_balance_on = as_of
+                account.save(update_fields=["bank_balance", "bank_balance_on"])
         return _result_redirect(account, result)
 
     text = _decode(data)

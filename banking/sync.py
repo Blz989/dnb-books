@@ -69,6 +69,19 @@ def _apply_page(item: PlaidItem, accounts: dict[str, BankAccount], page, result:
             result.removed += 1
 
 
+def _store_balances(accounts: dict[str, BankAccount], pages) -> None:
+    """Keep the newest balance Plaid reported for each mapped account. Plaid reports cards as the amount owed."""
+    latest: dict[str, object] = {}
+    for page in pages:
+        latest.update(page.balances)
+    today = timezone.localdate()
+    for plaid_id, balance in latest.items():
+        account = accounts.get(plaid_id)
+        if account is not None:
+            account.bank_balance, account.bank_balance_on = balance, today
+            account.save(update_fields=["bank_balance", "bank_balance_on"])
+
+
 def sync_item(item: PlaidItem) -> SyncResult:
     result = SyncResult()
     try:
@@ -88,6 +101,7 @@ def sync_item(item: PlaidItem) -> SyncResult:
         with transaction.atomic():
             for page in pages:
                 _apply_page(item, accounts, page, result)
+            _store_balances(accounts, pages)
     except FieldKeyError as exc:
         _fail(item, ItemStatus.ERROR, str(exc))
         return SyncResult()

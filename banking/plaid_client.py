@@ -49,6 +49,7 @@ class SyncPage:
     removed: list[str] = field(default_factory=list)
     next_cursor: str = ""
     has_more: bool = False
+    balances: dict[str, Decimal] = field(default_factory=dict)  # Plaid account id -> balances.current
 
 
 def _to_date(value) -> date_type:
@@ -74,6 +75,10 @@ def parse_sync_response(payload: dict) -> SyncPage:
         removed=[r["transaction_id"] for r in payload.get("removed", [])],
         next_cursor=payload.get("next_cursor") or "",
         has_more=bool(payload.get("has_more")),
+        balances={
+            a["account_id"]: Decimal(str(a["balances"]["current"]))
+            for a in payload.get("accounts", []) if (a.get("balances") or {}).get("current") is not None
+        },
     )
 
 

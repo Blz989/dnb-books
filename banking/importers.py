@@ -87,6 +87,22 @@ def parse_ofx(data: bytes) -> list[ParsedTxn]:
     return txns
 
 
+def parse_ofx_balance(data: bytes) -> tuple[Decimal, date_type] | None:
+    """The first statement's ledger balance and its date, or None when the file has none."""
+    from ofxtools.Parser import OFXTree
+
+    try:
+        tree = OFXTree()
+        tree.parse(io.BytesIO(data))
+        statements = list(tree.convert().statements)
+        bal = statements[0].ledgerbal
+    except Exception:
+        return None
+    if bal is None or bal.balamt is None:
+        return None
+    return D(bal.balamt), bal.dtasof.date()
+
+
 def _amount(raw: str) -> Decimal:
     """'$1,234.56', '(45.00)', '-$15.00' and '12' all read; anything else raises ValueError."""
     text = raw.strip().replace("$", "").replace(",", "").replace(" ", "")

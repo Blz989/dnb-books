@@ -108,6 +108,10 @@ class BankAccount(models.Model):
     csv_mapping = models.JSONField(default=dict, blank=True)
     next_check_number = models.PositiveIntegerField(default=1001)
     feed_starts = models.DateField(default=date(2026, 1, 1))
+    # Last balance the bank reported (Plaid sync or an OFX/QFX statement), same sign as the Bank accounts list:
+    # money in the account, or for cards and loans the amount owed.
+    bank_balance = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    bank_balance_on = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:

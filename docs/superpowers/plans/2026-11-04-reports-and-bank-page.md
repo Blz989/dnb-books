@@ -163,7 +163,7 @@ Files: `banking/models.py`, new migration, `banking/plaid_client.py`, `banking/s
 - `sync_item`: after applying pages, for each mapped account whose id appears in the last page carrying balances, set `bank_balance` and `bank_balance_on = timezone.localdate()`.
 - `importers.parse_ofx_balance(data: bytes) -> tuple[Decimal, date] | None` reads the first statement's `ledgerbal` (`balamt`, `dtasof.date()`), None if missing. `import_file` OFX branch stores it, negated when `account.is_liability`.
 - Tests: Plaid fixture with accounts sets balance and date; page without accounts leaves an existing balance alone; OFX with LEDGERBAL sets it (checking positive; card negated); CSV import leaves it unchanged; `FakePlaidClient` keeps working with old fixtures.
-- [ ] Commit: `Keep the bank-reported balance from Plaid and OFX feeds`
+- [x] Commit: `Keep the bank-reported balance from Plaid and OFX feeds`
 
 ## Task 5: Bank register query and "Bank register" report
 
