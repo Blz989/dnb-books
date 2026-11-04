@@ -5,10 +5,10 @@ Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. 
 ## Source of truth
 
 - **System spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md` (whole system, approved).
-- **Current spec:** `docs/superpowers/specs/2026-11-04-shared-drop-ship-po-design.md` (shared drop-ship POs, in review).
-- **Current plan:** `docs/superpowers/plans/2026-11-04-shared-drop-ship-po.md`.
+- **Current spec:** `docs/superpowers/specs/2026-11-04-reports-and-bank-page-design.md` (sidebar width, FIFO lot tracking, unpaid invoices, bank account page; in review).
+- **Current plan:** `docs/superpowers/plans/2026-11-04-reports-and-bank-page.md`.
 - **Visual references:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`; all screens match it) `docs/design/invoice-mockup.html` (invoice PDF), and `docs/design/check-mockup.html` (printed check).
-- **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment, Order profitability and handling, Phase 5b (Zoho migration and catch-up).
+- **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment, Order profitability and handling, Phase 5b (Zoho migration and catch-up), shared drop-ship POs.
 
 Read the specs and the current plan before starting. The plan's Global Constraints, Review Focus, and per-task Interfaces blocks are binding. If the plan and spec conflict, or a plan step cannot work as written, stop and ask the owner rather than improvising a different design. Small mechanical fixes to the plan (a wrong import path, a typo in a test) are fine; note them in the PR.
 

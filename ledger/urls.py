@@ -1,6 +1,6 @@
 from django.urls import path
 
-from banking.views import forecast as forecast_views
+from banking.views import forecast as forecast_views, register as register_views
 from core.report_pdf import pdf_export
 from handling import views as handling_views
 from items import views as item_views
@@ -16,12 +16,15 @@ urlpatterns = [
     path("trial-balance/", pdf_export(views.trial_balance), name="trial-balance"),
     path("profit-and-loss/", pdf_export(views.profit_and_loss), name="profit-and-loss"),
     path("balance-sheet/", pdf_export(views.balance_sheet), name="balance-sheet"),
+    path("bank-register/", pdf_export(register_views.bank_register), name="bank-register"),
     path("general-ledger/", pdf_export(views.general_ledger), name="general-ledger"),
     path("inventory-valuation/", pdf_export(item_views.inventory_valuation), name="inventory-valuation"),
     path("stock-movements/", pdf_export(item_views.stock_movements), name="stock-movements"),
+    path("fifo-lots/", pdf_export(item_views.fifo_lots), name="fifo-lots"),
     path("negative-stock/", pdf_export(item_views.negative_stock), name="negative-stock"),
     path("low-stock/", pdf_export(item_views.low_stock), name="low-stock"),
     path("ar-aging/", pdf_export(sales_reports.ar_aging), name="ar-aging"),
+    path("unpaid-invoices/", pdf_export(sales_reports.unpaid_invoices), name="unpaid-invoices"),
     path("open-invoices/", pdf_export(sales_reports.open_invoices), name="open-invoices"),
     path("customer-balances/", pdf_export(sales_reports.customer_balances), name="customer-balances"),
     path("open-sales-orders/", pdf_export(sales_reports.open_sales_orders), name="open-sales-orders"),

@@ -10,7 +10,7 @@
     <tbody>
     {% for r in rows %}
       <tr>
-        <td><strong>{{ r.account.ledger_account.name }}</strong>{% if r.account.mask %} <span class="dash">···· {{ r.account.mask }}</span>{% endif %}{% if not r.account.is_active %} <span class="tag ns">Inactive</span>{% endif %}
+        <td><a href="{% url 'banking:account-detail' r.account.pk %}"><strong>{{ r.account.ledger_account.name }}</strong></a>{% if r.account.mask %} <span class="dash">···· {{ r.account.mask }}</span>{% endif %}{% if not r.account.is_active %} <span class="tag ns">Inactive</span>{% endif %}
           <div class="on-hand">{{ r.account.ledger_account.number }}</div></td>
         <td>{{ r.account.get_kind_display }}</td>
         <td>{% if r.item %}{{ r.item.institution_name }}

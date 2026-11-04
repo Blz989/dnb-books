@@ -60,41 +60,110 @@ def bucket_for(days_past_due: int) -> str:
     return "over_90"
 
 
-def ar_aging(as_of: date, customer: Customer | None = None) -> Aging:
-    """With a customer, only that customer's row; the ledger comparison is still for the whole A/R account."""
-    rows: dict[int, AgingRow] = {}
+@dataclass
+class AgedInvoice:
+    invoice: Invoice
+    balance: Decimal
+    days_past_due: int  # (as_of - due_date).days; zero or less when not due yet
+    bucket: str
 
-    def row_for(customer) -> AgingRow:
-        return rows.setdefault(customer.pk, AgingRow(customer))
+
+def aged_open_items(as_of: date, customer: Customer | None = None) -> tuple[list[AgedInvoice], dict[int, Decimal]]:
+    """Every invoice with a nonzero balance on as_of, and each customer's unapplied payments and credit notes as a
+    negative amount keyed by customer id. A/R aging and Unpaid invoices by customer both read only this, so their
+    numbers always agree."""
 
     def only(queryset):
         return queryset.filter(customer=customer) if customer is not None else queryset
 
+    invoices = []
     for invoice in only(invoices_with_open_balance(as_of)):
         balance = invoice_balance(invoice, as_of)
         if balance != 0:
-            row = row_for(invoice.customer)
-            name = bucket_for((as_of - invoice.due_date).days)
-            setattr(row, name, money(getattr(row, name) + balance))
+            days = (as_of - invoice.due_date).days
+            invoices.append(AgedInvoice(invoice, balance, days, bucket_for(days)))
+    credits: dict[int, Decimal] = {}
     for payment in only(payments_with_unapplied(as_of)):
         unapplied = payment_unapplied(payment, as_of)
         if unapplied != 0:
-            row = row_for(payment.customer)
-            row.unapplied_credits = money(row.unapplied_credits - unapplied)
+            credits[payment.customer_id] = money(credits.get(payment.customer_id, ZERO) - unapplied)
     for note in only(credit_notes_with_unapplied(as_of)):
         unapplied = credit_unapplied(note, as_of)
         if unapplied != 0:
-            row = row_for(note.customer)
-            row.unapplied_credits = money(row.unapplied_credits - unapplied)
+            credits[note.customer_id] = money(credits.get(note.customer_id, ZERO) - unapplied)
+    return invoices, credits
 
-    ordered = sorted(rows.values(), key=lambda r: r.customer.name.lower())
+
+def _aging_rows(invoices: list[AgedInvoice], credits: dict[int, Decimal]) -> dict[int, AgingRow]:
+    rows: dict[int, AgingRow] = {}
+    customers = {a.invoice.customer_id: a.invoice.customer for a in invoices}
+    missing = [pk for pk in credits if pk not in customers]
+    customers.update(Customer.objects.in_bulk(missing))
+    for a in invoices:
+        row = rows.setdefault(a.invoice.customer_id, AgingRow(customers[a.invoice.customer_id]))
+        setattr(row, a.bucket, money(getattr(row, a.bucket) + a.balance))
+    for pk, amount in credits.items():
+        row = rows.setdefault(pk, AgingRow(customers[pk]))
+        row.unapplied_credits = money(row.unapplied_credits + amount)
+    return rows
+
+
+def _sum_rows(rows) -> AgingRow:
     totals = AgingRow(None)
-    for row in ordered:
+    for row in rows:
         for name in (*BUCKETS, "unapplied_credits"):
             setattr(totals, name, money(getattr(totals, name) + getattr(row, name)))
+    return totals
+
+
+def _ar_ledger(as_of: date) -> Decimal:
     settings = SalesSettings.load()
-    ledger = _account_balance(settings.ar_account, as_of) if settings.ar_account_id else ZERO
+    return _account_balance(settings.ar_account, as_of) if settings.ar_account_id else ZERO
+
+
+def ar_aging(as_of: date, customer: Customer | None = None) -> Aging:
+    """With a customer, only that customer's row; the ledger comparison is still for the whole A/R account."""
+    rows = _aging_rows(*aged_open_items(as_of, customer))
+    ordered = sorted(rows.values(), key=lambda r: r.customer.name.lower())
+    totals = _sum_rows(ordered)
+    ledger = _ar_ledger(as_of)
     return Aging(as_of, ordered, totals, ledger, money(totals.total - ledger))
+
+
+@dataclass
+class UnpaidGroup:
+    customer: Customer
+    invoices: list[AgedInvoice]
+    credits: Decimal  # zero or less
+    totals: AgingRow
+
+
+@dataclass
+class UnpaidReport:
+    as_of: date
+    groups: list[UnpaidGroup]
+    totals: AgingRow
+    ledger_balance: Decimal
+    difference: Decimal
+
+
+def unpaid_by_customer(as_of: date) -> UnpaidReport:
+    """Every customer's unpaid invoices, aged, with their unapplied credits; the totals equal A/R aging's."""
+    invoices, credits = aged_open_items(as_of)
+    rows = _aging_rows(invoices, credits)
+    by_customer: dict[int, list[AgedInvoice]] = {}
+    for a in invoices:
+        by_customer.setdefault(a.invoice.customer_id, []).append(a)
+    groups = []
+    for pk, row in rows.items():
+        if row.total == 0 and not by_customer.get(pk):
+            continue
+        listed = sorted(by_customer.get(pk, []), key=lambda a: (a.invoice.due_date, a.invoice.date, a.invoice.number))
+        groups.append(UnpaidGroup(row.customer, listed, row.unapplied_credits, row))
+    groups.sort(key=lambda g: g.customer.name.lower())
+    totals = _sum_rows(rows.values())
+    ledger = _ar_ledger(as_of)
+    return UnpaidReport(as_of, groups, totals, ledger, money(totals.total - ledger))
 
 
 @dataclass

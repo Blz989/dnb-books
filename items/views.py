@@ -190,6 +190,23 @@ def stock_movements(request):
 
 
 @login_required
+def fifo_lots(request):
+    from .forms import FifoLotsForm
+    from .lots import fifo_lots as trace_lots
+
+    today = _today()
+    form = FifoLotsForm(_data(request, {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}))
+    report = None
+    if form.is_valid() and form.cleaned_data["item"] is not None:
+        d = form.cleaned_data
+        report = trace_lots(d["item"], d["start"], d["end"])
+        if _wants_csv(request):
+            return csv_export.fifo_lots_csv(report)
+    return render(request, "items/fifo_lots.html", {
+        "form": form, "report": report, "wide": True, "nav_active": "reports"})
+
+
+@login_required
 def negative_stock(request):
     rows = reports.negative_stock()
     if _wants_csv(request):

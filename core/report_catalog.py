@@ -11,6 +11,7 @@ GROUPS = [
     ("Receivables", [
         ("ar-aging", "A/R aging", "What customers owe, by how late it is."),
         ("open-invoices", "Open invoices", "Every invoice with a balance."),
+        ("unpaid-invoices", "Unpaid invoices by customer", "Each customer's unpaid invoices, aged, for collections."),
         ("customer-balances", "Customer balances", "One line per customer."),
         ("open-sales-orders", "Open sales orders", "Orders not fully invoiced."),
         ("undeposited-funds", "Undeposited funds", "Payments waiting to go to the bank."),
@@ -26,12 +27,14 @@ GROUPS = [
     ("Inventory", [
         ("inventory-valuation", "Inventory valuation", "Stock on hand and its value against the books."),
         ("stock-movements", "Stock movements", "Every receipt, sale, and adjustment."),
+        ("fifo-lots", "FIFO cost lot tracking", "Each receipt of one item and the sales that used it."),
         ("low-stock", "Low stock", "Items at or below their reorder point."),
         ("negative-stock", "Negative stock", "Items below zero."),
     ]),
     ("Accountant", [
         ("trial-balance", "Trial balance", "Every account's debit or credit balance."),
         ("general-ledger", "General ledger", "Every line posted to one account."),
+        ("bank-register", "Bank register", "Every posted line on one bank or card account, with a running balance."),
     ]),
 ]
 

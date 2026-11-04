@@ -1,5 +1,5 @@
 /* Printed invoice styles: black, white, and grey, laid out like the owner's Zoho invoice (docs/design/invoice-mockup.html). */
-@page { size: letter; margin: 0.45in 0.45in 0.6in; @bottom-right { content: counter(page); font-family: Inter, sans-serif; font-size: 7pt; color: #555; } }
+@page { size: letter; margin: 0.25in 0.25in 0.4in; @bottom-right { content: counter(page); font-family: Inter, sans-serif; font-size: 7pt; color: #555; } }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: Inter, sans-serif; font-size: 8.5pt; line-height: 1.25; color: #222; background: #fff; }
 .top { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 10pt; border: 1px solid #bbb; border-bottom: none; padding: 10pt 10pt 8pt; }

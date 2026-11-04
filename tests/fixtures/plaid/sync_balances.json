@@ -1,0 +1,12 @@
+{
+  "added": [],
+  "modified": [],
+  "removed": [],
+  "accounts": [
+    {"account_id": "acct-chk", "balances": {"current": 2450.17, "available": 2400.00}},
+    {"account_id": "acct-card", "balances": {"current": 312.55, "available": null}},
+    {"account_id": "acct-other", "balances": {"current": null}}
+  ],
+  "next_cursor": "cursor-3",
+  "has_more": false
+}

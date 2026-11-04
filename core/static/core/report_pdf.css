@@ -1,6 +1,9 @@
 /* Report PDFs. Plain black on white; the screen layout's forms and buttons are hidden. */
-@page { size: letter; margin: 14mm 12mm 16mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt Inter, sans-serif; color: #6f655a; } }
+@page { size: letter; margin: 8mm 8mm 12mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt Inter, sans-serif; color: #6f655a; } }
 @page :first { }
+/* Reports with many columns (FIFO lots, bank register) print in landscape. */
+@page wide { size: letter landscape; }
+body.wide { page: wide; }
 body { font-family: Inter, sans-serif; font-size: 9pt; color: #2b2620; }
 .head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5pt solid #2f6b4f; padding-bottom: 8pt; margin-bottom: 12pt; }
 .head .co { display: flex; align-items: center; gap: 8pt; font-size: 10pt; }
@@ -50,3 +53,10 @@ table.data tr.total td { font-weight: 650; border-top: 1pt solid #2b2620; border
 .two-col .card { margin-bottom: 10pt; }
 .small { font-size: 7pt; }
 .notes p { margin: 0 0 4pt; color: #6f655a; }
+/* Unpaid invoices by customer: keep a customer's heading with its first rows and its subtotal. */
+tbody.group { page-break-inside: auto; }
+tbody.group tr.section { page-break-after: avoid; }
+tbody.group tr.total { page-break-before: avoid; }
+.nowrap { white-space: nowrap; }
+table.lots .out-start { border-left: 0.5pt solid #e3dccd; }
+table.lots tr.lot-start td { border-top: 0.5pt solid #e3dccd; }

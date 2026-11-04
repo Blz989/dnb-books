@@ -45,20 +45,38 @@ class NegativeRow:
     value: Decimal
 
 
-def inventory_valuation(as_of: date) -> Valuation:
+def _item_sums(as_of: date, item_id: int | None = None) -> tuple[dict[int, int], dict[int, Decimal]]:
+    """Quantity and value per item as of a date: movements dated by then, less voids and plus cost revisions dated
+    by then. Shared by the valuation report and the FIFO lot tracking closing line."""
     quantity: dict[int, int] = defaultdict(int)
     value: dict[int, Decimal] = defaultdict(lambda: ZERO)
+    movements = StockMovement.objects.all()
+    revisions = CostRevision.objects.all()
+    if item_id is not None:
+        movements = movements.filter(item_id=item_id)
+        revisions = revisions.filter(movement__item_id=item_id)
 
     # Movements dated on or before as_of, then the effect of voids and cost revisions dated by their own dates.
-    for r in StockMovement.objects.filter(date__lte=as_of).values("item_id").annotate(q=Sum("quantity"), v=Sum("total_cost")):
+    for r in movements.filter(date__lte=as_of).values("item_id").annotate(q=Sum("quantity"), v=Sum("total_cost")):
         quantity[r["item_id"]] += r["q"]
         value[r["item_id"]] += money(r["v"])
-    for r in StockMovement.objects.filter(voided=True, voided_on__lte=as_of).values("item_id").annotate(
+    for r in movements.filter(voided=True, voided_on__lte=as_of).values("item_id").annotate(
             q=Sum("quantity"), v=Sum("void_amount")):
         quantity[r["item_id"]] -= r["q"]
         value[r["item_id"]] += money(r["v"])
-    for r in CostRevision.objects.filter(date__lte=as_of).values("movement__item_id").annotate(v=Sum("delta")):
+    for r in revisions.filter(date__lte=as_of).values("movement__item_id").annotate(v=Sum("delta")):
         value[r["movement__item_id"]] += money(r["v"])
+    return quantity, value
+
+
+def item_valuation(item: Item, as_of: date) -> tuple[int, Decimal]:
+    """One item's row of the Inventory valuation report on as_of."""
+    quantity, value = _item_sums(as_of, item.pk)
+    return quantity.get(item.pk, 0), money(value.get(item.pk, ZERO))
+
+
+def inventory_valuation(as_of: date) -> Valuation:
+    quantity, value = _item_sums(as_of)
 
     items = Item.objects.in_bulk(list(quantity))
     rows = [

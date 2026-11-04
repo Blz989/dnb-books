@@ -1,0 +1,72 @@
+{% extends "core/report_base.html" %}
+{% block title %}FIFO cost lot tracking{% endblock %}
+{% block page_title %}FIFO cost lot tracking{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">{{ report.item.name }} · SKU {{ report.item.sku }} · {{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}</div>{% endif %}{% endblock %}
+{% block report %}
+{% if report %}
+{% if report.difference != 0 %}<div class="banner error">The lots add up to {{ report.lots_value|floatformat:"2g" }} but Inventory valuation shows {{ report.value|floatformat:"2g" }} for this item on {{ report.end|date:"Y-m-d" }}. Difference: {{ report.difference|floatformat:"2g" }}.</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Received</div><div class="v">{{ report.received }}</div></div>
+  <div class="kpi"><div class="l">Sold</div><div class="v">{{ report.sold }}</div></div>
+  <div class="kpi{% if report.on_hand < 0 %} warn{% endif %}"><div class="l">On hand at {{ report.end|date:"Y-m-d" }}</div><div class="v">{{ report.on_hand }}</div></div>
+  <div class="kpi"><div class="l">Value at {{ report.end|date:"Y-m-d" }}</div><div class="v">{{ report.value|floatformat:"2g" }}</div></div>
+</div>
+{% endif %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data lots">
+  <thead>
+    <tr class="group-h"><th colspan="7">PRODUCT IN</th><th colspan="4" class="out-start">PRODUCT OUT</th></tr>
+    <tr><th>Date</th><th>Transaction</th><th>Received from</th><th class="num">Quantity</th><th class="num">Age</th><th class="num">Cost per unit</th><th class="num">Total</th>
+      <th class="out-start">Date</th><th>Transaction</th><th>Dispersed to</th><th class="num">Quantity</th></tr>
+  </thead>
+  <tbody>
+  {% for row in report.rows %}
+    <tr{% if row.first %} class="lot-start"{% endif %}>
+      {% if row.first %}
+      <td class="nowrap">{{ row.lot.date|date:"Y-m-d" }}</td>
+      <td>{% include "items/_lot_link.html" with label=row.lot.label url=row.lot.url %}
+        {% if row.lot.opening %}<div class="on-hand">Opening, {{ row.lot.on_hand_at_start }} on hand at {{ report.start|date:"Y-m-d" }}{% if row.lot.used_before_start %}, {{ row.lot.used_before_start }} used before{% endif %}</div>{% endif %}</td>
+      <td>{{ row.lot.party }}</td>
+      <td class="num nowrap">{{ row.lot.quantity }} {{ report.item.unit }}</td>
+      <td class="num nowrap">{{ row.lot.age_days }} day{{ row.lot.age_days|pluralize }}</td>
+      <td class="num">{{ row.lot.unit_cost|floatformat:4 }}</td>
+      <td class="num">{{ row.lot.total|floatformat:"2g" }}</td>
+      {% else %}<td colspan="7"></td>{% endif %}
+      {% if row.out_quantity is not None %}
+      <td class="nowrap out-start">{{ row.out_date|date:"Y-m-d" }}</td>
+      <td>{% include "items/_lot_link.html" with label=row.out_label url=row.out_url %}{% if row.tag %}<div><span class="tag flag">{{ row.tag }}</span></div>{% endif %}</td>
+      <td>{{ row.out_party }}</td>
+      <td class="num">{{ row.out_quantity }}</td>
+      {% else %}
+      <td colspan="4" class="out-start">{% if row.tag %}<span class="tag flag">{{ row.tag }}</span>{% endif %}</td>
+      {% endif %}
+    </tr>
+  {% empty %}<tr><td colspan="11" class="empty">No lots received or on hand in this range.</td></tr>
+  {% endfor %}
+    <tr class="total"><td colspan="5">On hand at {{ report.end|date:"Y-m-d" }}: {{ report.on_hand }} {{ report.item.unit }}, value {{ report.value|floatformat:"2g" }}</td>
+      <td colspan="6" class="num">Lots remaining: {{ report.lots_quantity }}, {{ report.lots_value|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% else %}
+<p class="empty">Pick an item to trace its cost lots.</p>
+{% endif %}
+</div>
+{% if report and report.shorts %}
+<div class="card">
+  <div class="card-h"><strong>Sold with no matching receipt</strong></div>
+  <table class="data">
+    <thead><tr><th>Date</th><th>Transaction</th><th>Dispersed to</th><th class="num">Quantity short</th><th class="num">Estimated cost</th><th>Resolved</th></tr></thead>
+    <tbody>
+    {% for s in report.shorts %}
+      <tr><td class="nowrap">{{ s.date|date:"Y-m-d" }}</td>
+        <td class="nowrap">{% if s.url %}<a href="{{ s.url }}">{{ s.label }}</a>{% else %}{{ s.label }}{% endif %}</td>
+        <td>{{ s.party }}</td><td class="num">{{ s.quantity }}</td><td class="num">{{ s.estimate|floatformat:"2g" }}</td>
+        <td>{% if s.filled %}{{ s.resolved }}{% else %}<span class="tag overdue">{{ s.resolved }}</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

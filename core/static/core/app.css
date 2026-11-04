@@ -49,9 +49,13 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.45; }
 a { color: var(--accent-text); }
-.app { display: grid; grid-template-columns: 236px 1fr; min-height: 100vh; }
+.app { display: grid; grid-template-columns: 264px 1fr; min-height: 100vh; }
 .app.bare { display: block; }
 aside { background: var(--side-bg); color: var(--side-text); padding: 16px 12px 12px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.side-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.menu-toggle { display: none; align-items: center; gap: 6px; background: none; border: 1px solid var(--side-active); border-radius: 6px; color: var(--side-text); font: inherit; font-size: 13px; padding: 6px 10px; cursor: pointer; }
+.menu-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.menu-toggle:hover, aside.open .menu-toggle { background: var(--side-active); }
 aside nav { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; scrollbar-width: thin; }
 .brand { padding: 4px 8px 16px; display: flex; gap: 10px; align-items: center; color: inherit; text-decoration: none; min-width: 0; }
 .brand i { width: 28px; height: 28px; border-radius: 6px; background: var(--accent); display: inline-block; flex: none; }
@@ -60,7 +64,7 @@ aside nav { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0
 .brand-logo { width: 100%; height: 56px; border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: center; padding: 6px 10px; }
 .brand-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .brand-text { display: flex; flex-direction: column; min-width: 0; }
-.brand-name { font-family: "Source Serif 4", Georgia, serif; font-weight: 600; font-size: 16px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-name { font-family: "Source Serif 4", Georgia, serif; font-weight: 600; font-size: 16px; line-height: 1.2; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .brand-app { font-size: 11px; opacity: .65; letter-spacing: .02em; }
 nav a { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px 6px 34px; border-radius: 6px; color: inherit; text-decoration: none; margin-bottom: 1px; opacity: .82; font-size: 13.5px; }
 nav a:hover { opacity: 1; background: color-mix(in srgb, var(--side-active) 55%, transparent); }
@@ -167,8 +171,16 @@ table.data a:hover { text-decoration: underline; }
 .kpi .note a:hover, .kpi .v a:hover { text-decoration: underline; }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
-  aside { position: static; height: auto; overflow: visible; }
+  aside { position: sticky; top: 0; z-index: 20; height: auto; overflow: visible; padding: 8px 12px; }
   aside nav { overflow: visible; }
+  .side-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .side-head .brand { padding: 4px 4px; }
+  .side-head .brand.with-logo { padding: 0; flex: 1; max-width: 220px; }
+  .side-head .brand-logo { height: 40px; }
+  .menu-toggle { display: inline-flex; }
+  html.js aside:not(.open) .side-body { display: none; }
+  aside.open .side-body { display: block; max-height: calc(100vh - 64px); overflow-y: auto; padding-top: 8px; }
+  aside.open .side-foot { margin-top: 8px; }
   .split { grid-template-columns: 1fr; }
   .subnav { position: static; max-height: none; }
   main { padding: 20px 16px 40px; }
@@ -309,3 +321,26 @@ button.btn:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 1100px) { .kpis.five { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .sku-preview { margin: 4px 0 14px; color: var(--muted); } .sku-preview b { color: var(--text); font-variant-numeric: tabular-nums; }
 .audit .chg { font-size: 12.5px; line-height: 1.5; } .audit .chg s { color: var(--muted); }
+/* FIFO cost lot tracking: a rule between the IN and OUT halves, and between lots. */
+table.lots { font-size: 13px; }
+table.lots th, table.lots td { padding-left: 8px; padding-right: 8px; }
+table.lots .group-h th { font-size: 11px; letter-spacing: .07em; color: var(--muted); border-bottom: 0; padding-bottom: 0; }
+table.lots .out-start { border-left: 1px solid var(--border); }
+table.lots tr.lot-start td { border-top: 1px solid var(--border); }
+.tag.info { background: var(--info-bg); color: var(--info-text); }
+/* Bank account page */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 4px 0 16px; overflow-x: auto; }
+.tabs a { padding: 9px 14px; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; font-weight: 500; }
+.tabs a:hover { color: var(--text); }
+.tabs a.on { color: var(--accent-text); border-bottom-color: var(--accent); font-weight: 600; }
+.kpi .v.small { font-size: 14px; font-weight: 600; }
+.kpi form { margin-top: 8px; }
+.btn.small { padding: 3px 10px; font-size: 12px; }
+.tiles.activity { margin-bottom: 16px; }
+.bank-dash { display: grid; grid-template-columns: minmax(0, 2fr) minmax(200px, 1fr); gap: 12px; margin-bottom: 8px; }
+.bank-counts { display: flex; flex-direction: column; gap: 12px; }
+.bank-counts .kpi { flex: 1; }
+@media (max-width: 900px) { .bank-dash { grid-template-columns: 1fr; } }
+.tiles.activity .tile a { font-size: 13px; margin-top: 4px; }
+/* Phones: a wide table scrolls inside its card instead of being cut off. */
+@media (max-width: 900px) { .card { overflow-x: auto; } }

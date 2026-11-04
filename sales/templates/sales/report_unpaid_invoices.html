@@ -1,0 +1,53 @@
+{% extends "core/report_base.html" %}
+{% block title %}Unpaid invoices by customer{% endblock %}
+{% block page_title %}Unpaid invoices by customer{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">As of {{ report.as_of|date:"Y-m-d" }}, days past due</div>{% endif %}{% endblock %}
+{% block report %}
+{% if report %}
+{% if report.difference != 0 %}<div class="banner error">Customer balances and the A/R account don't match. Difference: {{ report.difference|floatformat:"2g" }}.</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Total unpaid</div><div class="v">{{ report.totals.total|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">A/R account</div><div class="v">{{ report.ledger_balance|floatformat:"2g" }}</div></div>
+  <div class="kpi{% if report.difference != 0 %} warn{% endif %}"><div class="l">Difference</div><div class="v">{{ report.difference|floatformat:"2g" }}</div></div>
+</div>
+{% endif %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>Invoice</th><th>Date</th><th>Due</th><th class="num">Days past due</th><th class="num">Current</th><th class="num">1-30</th><th class="num">31-60</th><th class="num">61-90</th><th class="num">Over 90</th><th class="num">Credits</th><th class="num">Balance</th></tr></thead>
+  {% for g in report.groups %}
+  <tbody class="group">
+    <tr class="section"><th colspan="11"><a href="/customers/{{ g.customer.pk }}/">{{ g.customer.name }}</a></th></tr>
+    {% for a in g.invoices %}
+    <tr><td class="nowrap"><a class="sku" href="{% url 'sales:invoice-detail' a.invoice.number %}">{{ a.invoice.number }}</a></td>
+      <td class="nowrap">{{ a.invoice.date|date:"Y-m-d" }}</td><td class="nowrap">{{ a.invoice.due_date|date:"Y-m-d" }}</td>
+      <td class="num">{% if a.days_past_due > 0 %}{{ a.days_past_due }}{% else %}0{% endif %}</td>
+      <td class="num">{% if a.bucket == "current" %}{{ a.balance|floatformat:"2g" }}{% endif %}</td>
+      <td class="num">{% if a.bucket == "d1_30" %}{{ a.balance|floatformat:"2g" }}{% endif %}</td>
+      <td class="num">{% if a.bucket == "d31_60" %}{{ a.balance|floatformat:"2g" }}{% endif %}</td>
+      <td class="num">{% if a.bucket == "d61_90" %}{{ a.balance|floatformat:"2g" }}{% endif %}</td>
+      <td class="num{% if a.bucket == 'over_90' %} neg{% endif %}">{% if a.bucket == "over_90" %}{{ a.balance|floatformat:"2g" }}{% endif %}</td>
+      <td></td><td class="num">{{ a.balance|floatformat:"2g" }}</td></tr>
+    {% endfor %}
+    {% if g.credits %}<tr><td colspan="9">Unapplied payments and credits</td><td class="num">{{ g.credits|floatformat:"2g" }}</td><td class="num">{{ g.credits|floatformat:"2g" }}</td></tr>{% endif %}
+    <tr class="total"><td colspan="4">Total {{ g.customer.name }}</td>
+      <td class="num">{{ g.totals.current|floatformat:"2g" }}</td><td class="num">{{ g.totals.d1_30|floatformat:"2g" }}</td>
+      <td class="num">{{ g.totals.d31_60|floatformat:"2g" }}</td><td class="num">{{ g.totals.d61_90|floatformat:"2g" }}</td>
+      <td class="num">{{ g.totals.over_90|floatformat:"2g" }}</td><td class="num">{{ g.totals.unapplied_credits|floatformat:"2g" }}</td>
+      <td class="num">{{ g.totals.total|floatformat:"2g" }}</td></tr>
+  </tbody>
+  {% empty %}
+  <tbody><tr><td colspan="11" class="empty">Nothing is owed on this date.</td></tr></tbody>
+  {% endfor %}
+  <tbody>
+    <tr class="total grand"><td colspan="4">Total</td>
+      <td class="num">{{ report.totals.current|floatformat:"2g" }}</td><td class="num">{{ report.totals.d1_30|floatformat:"2g" }}</td>
+      <td class="num">{{ report.totals.d31_60|floatformat:"2g" }}</td><td class="num">{{ report.totals.d61_90|floatformat:"2g" }}</td>
+      <td class="num">{{ report.totals.over_90|floatformat:"2g" }}</td><td class="num">{{ report.totals.unapplied_credits|floatformat:"2g" }}</td>
+      <td class="num">{{ report.totals.total|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

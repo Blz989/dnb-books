@@ -9,6 +9,7 @@
     <label class="grow">Search<input type="search" name="q" value="{{ q }}" placeholder="Invoice number or customer"></label>
     <label>Status<select name="status"><option value="">All</option><option value="OPEN"{% if status == "OPEN" %} selected{% endif %}>Open</option><option value="VOID"{% if status == "VOID" %} selected{% endif %}>Void</option></select></label>
     <label>Customer<select name="customer"><option value="">All customers</option>{% for c in customers %}<option value="{{ c.pk }}"{% if customer == c.pk|stringformat:"s" %} selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+    <label><span><input type="checkbox" name="unpaid" value="1"{% if unpaid %} checked{% endif %}> Unpaid only</span></label>
     <label><span><input type="checkbox" name="overdue" value="1"{% if overdue %} checked{% endif %}> Overdue only</span></label>
     <button type="submit" class="btn primary">Search</button>
   </form>
