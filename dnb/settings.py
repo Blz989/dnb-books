@@ -140,6 +140,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "core.storage.VersionedStaticFilesStorage"},
+}
 
 # Uploaded files (the invoice logo). Not served publicly; an authenticated view hands them out.
 MEDIA_ROOT = DNB_DB_PATH.parent / "media"
