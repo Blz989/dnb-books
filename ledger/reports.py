@@ -152,7 +152,11 @@ def _section(accounts, totals, subtype) -> list[ReportRow]:
 
 
 def profit_and_loss(start: date, end: date) -> ProfitAndLoss:
-    totals = account_totals(start=start, end=end)
+    return profit_and_loss_from_totals(start, end, account_totals(start=start, end=end))
+
+
+def profit_and_loss_from_totals(start: date, end: date, totals) -> ProfitAndLoss:
+    """Lay out a P&L from {account id: (debits, credits)}; accrual and cash basis share this."""
     accounts = _accounts(totals)
     income = _section(accounts, totals, AccountSubtype.INCOME)
     cogs = _section(accounts, totals, AccountSubtype.COST_OF_GOODS_SOLD)

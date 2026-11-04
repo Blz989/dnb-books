@@ -25,3 +25,8 @@ def negative_stock_csv(rows):
     return csv_response(
         "negative-stock.csv", ["SKU", "Name", "Quantity", "Estimated value"],
         [[r.item.sku, r.item.name, r.quantity, amt(r.value)] for r in rows])
+
+
+def low_stock_csv(rows):
+    return csv_response("low-stock.csv", ["SKU", "Name", "On hand", "On order", "Reorder point", "Short by"], [
+        [r.item.sku, r.item.name, r.on_hand, r.on_order, r.reorder_point, r.short_by] for r in rows])

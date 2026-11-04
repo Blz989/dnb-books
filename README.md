@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -115,6 +115,11 @@ A month won't close until both of its handling bills are created. An admin can c
 | Run a report | Reports. The list stays on the left while the report shows on the right |
 | Compare with earlier years | Profit and loss, Balance sheet, Trial balance, or Order profitability, then Compare with. Up to 3 prior years, with change and % change |
 | Save or print a report | Open the report, Download PDF. Every report has it |
+| Cash-basis profit and loss | Reports, Profit and loss, Basis: Cash. Income counts when customers pay and bill expenses when bills are paid, split across each document's lines; cost of goods sold, stock adjustments, and journal entries count when posted |
+| Number new items automatically | Settings, Inventory, SKU series. Set the base SKU, the next number, and the digits. New items get the next SKU filled in; saving one in the series moves the counter past it |
+| Know what to reorder | Set a Reorder point on each stock item, then Reports, Low stock (also a tile on Home). On order counts open purchase orders, not drop ships |
+| Send a purchase order | Open the purchase order, Download PDF, attach it to your email |
+| See who changed what | Settings, Audit log (admin only). Filter by record, type, user, action, and dates |
 | See where cash is heading | Banking, Cash forecast (also under Reports). Daily for 30 days, weekly for 13 weeks, or monthly for 12 months. Open invoices are placed when each customer usually pays (their average over the last year); open bills on their due dates. Rent, payroll, and other costs count only once they're entered as bills |
 | Cash flow and income at a glance | Home. Charts for the last 12 months; hover a month for its numbers, or Show as table |
 | Raw database screens (rarely needed, admin) | Settings, Advanced |

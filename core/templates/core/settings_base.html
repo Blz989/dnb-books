@@ -12,6 +12,7 @@
     <a href="{% url 'items:settings' %}"{% if settings_section == "inventory" %} class="on"{% endif %}>Inventory</a>
     <a href="{% url 'handling:settings' %}"{% if settings_section == "handling" %} class="on"{% endif %}>Handling</a>
     <div class="subnav-h">System</div>
+    <a href="{% url 'settings:audit' %}"{% if settings_section == "audit" %} class="on"{% endif %}>Audit log</a>
     <a href="{% url 'settings:advanced' %}"{% if settings_section == "advanced" %} class="on"{% endif %}>Advanced</a>
   </nav>
   <section class="split-main">

@@ -4,6 +4,7 @@
 {% block page_subtitle %}<div class="sub"><a href="/vendors/{{ order.vendor.pk }}/">{{ order.vendor.name }}</a> · {{ order.date|date:"Y-m-d" }}{% if order.expected_date %} · expected {{ order.expected_date|date:"Y-m-d" }}{% endif %} · <span class="tag{% if order.status == 'CLOSED' %} ns{% endif %}">{{ order.get_status_display }}</span>
   {% if order.sales_order %}· drop ship for <a href="/sales/orders/{{ order.sales_order.number }}/">{{ order.sales_order.number }}</a>{% endif %}</div>{% endblock %}
 {% block page_actions %}
+  <a class="btn" href="{% url 'purchasing:po-pdf' order.number %}" target="_blank" rel="noopener">Download PDF</a>
   {% if order.status == "OPEN" %}<a class="btn" href="{% url 'purchasing:po-edit' order.number %}">Edit</a>{% endif %}
   {% if can_bill %}<a class="btn primary" href="{% url 'purchasing:po-bill' order.number %}">Bill this order</a>{% endif %}
   <form method="post" action="{% url 'purchasing:po-close' order.number %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">{% if order.status == "OPEN" %}Close order{% else %}Reopen order{% endif %}</button></form>

@@ -1,10 +1,11 @@
 {% extends "core/report_base.html" %}
 {% block title %}Profit and loss{% endblock %}
 {% block page_title %}Profit and loss{% endblock %}
-{% block page_subtitle %}{% if report %}<div class="sub">{{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}, accrual basis</div>{% endif %}{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">{{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}, {% if basis == "cash" %}cash basis{% else %}accrual basis{% endif %}</div>{% endif %}{% endblock %}
 {% block report %}
 <div class="card">
 {% include "ledger/_filter_form.html" %}
+{% if basis == "cash" and report %}<p class="help pad cash-note">Cash basis: income counts when customers pay and bill expenses when bills are paid, each split across the document's lines. Cost of goods sold, stock adjustments, and journal entries count when posted. Payments not yet applied to an invoice aren't income yet.</p>{% endif %}
 {% if comparison %}
 {% include "ledger/_comparison.html" %}
 {% elif report %}

@@ -20,6 +20,7 @@ urlpatterns = [
     path("inventory-valuation/", pdf_export(item_views.inventory_valuation), name="inventory-valuation"),
     path("stock-movements/", pdf_export(item_views.stock_movements), name="stock-movements"),
     path("negative-stock/", pdf_export(item_views.negative_stock), name="negative-stock"),
+    path("low-stock/", pdf_export(item_views.low_stock), name="low-stock"),
     path("ar-aging/", pdf_export(sales_reports.ar_aging), name="ar-aging"),
     path("open-invoices/", pdf_export(sales_reports.open_invoices), name="open-invoices"),
     path("customer-balances/", pdf_export(sales_reports.customer_balances), name="customer-balances"),

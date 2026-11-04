@@ -6,7 +6,8 @@ from django.utils import timezone
 
 from . import csv_export, reports
 from . import comparison
-from .forms import AsOfCompareForm, GeneralLedgerForm, RangeCompareForm
+from .cash_basis import profit_and_loss_cash
+from .forms import AsOfCompareForm, GeneralLedgerForm, ProfitAndLossForm
 
 
 def _data(request, defaults):
@@ -51,20 +52,26 @@ def trial_balance(request):
 @login_required
 def profit_and_loss(request):
     today = _today()
-    form = RangeCompareForm(_data(request, {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}))
+    form = ProfitAndLossForm(_data(request, {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}))
     report = compared = None
+    basis = "accrual"
     if form.is_valid():
         start, end, years = form.cleaned_data["start"], form.cleaned_data["end"], form.cleaned_data["compare"]
-        report = reports.profit_and_loss(start, end)
+        basis = form.cleaned_data["basis"]
+        report = profit_and_loss_cash(start, end) if basis == "cash" else reports.profit_and_loss(start, end)
         if years:
-            compared = comparison.profit_and_loss_comparison(start, end, years)
+            compared = comparison.profit_and_loss_comparison(start, end, years, basis)
+    suffix = "-cash" if basis == "cash" else ""
     if compared and _wants_csv(request):
         return comparison.comparison_csv(
-            compared, f"profit-and-loss-comparison-{report.start.isoformat()}_{report.end.isoformat()}.csv")
+            compared, f"profit-and-loss{suffix}-comparison-{report.start.isoformat()}_{report.end.isoformat()}.csv")
     if report and _wants_csv(request):
-        return csv_export.profit_and_loss_csv(report)
+        response = csv_export.profit_and_loss_csv(report)
+        if suffix:
+            response["Content-Disposition"] = response["Content-Disposition"].replace("profit-and-loss-", "profit-and-loss-cash-")
+        return response
     return render(request, "ledger/profit_and_loss.html", {
-        "form": form, "report": report, "comparison": compared, "nav_active": "reports"})
+        "form": form, "report": report, "comparison": compared, "basis": basis, "nav_active": "reports"})
 
 
 @login_required

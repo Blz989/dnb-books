@@ -13,6 +13,7 @@ from core.roles import require_admin
 from ledger.periods import is_closed
 
 from .errors import SettingsMissingError
+from .sku import advance_past
 from .models import SKU_MESSAGE, SKU_PATTERN, Category, CostingMethod, InventorySettings, Item, ItemType, MovementKind
 
 HEADERS = [
@@ -180,6 +181,7 @@ def apply_import(preview: ImportPreview, *, user) -> list[Item]:
                 cogs_account=s.default_cogs_account if stock else None,
                 inventory_account=s.default_inventory_account if stock else None)
             items.append(item)
+            advance_past(item.sku)
             if r.opening_quantity:
                 openings.setdefault(r.opening_date, []).append(StockLine(item, r.opening_quantity, unit_cost=r.opening_unit_cost))
         for day, lines in sorted(openings.items()):

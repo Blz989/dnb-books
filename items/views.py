@@ -23,9 +23,11 @@ from ledger.models import Account, AccountType
 
 from . import counts as count_service
 from . import imports as import_service
+from .sku import advance_past
 from .errors import CountError, CountNeedsConfirmation, NegativeStockWarning, SettingsMissingError, StockError
 from .forms import (
-    REASONS, AdjustDateForm, CountPostForm, CountStartForm, ItemForm, MovementsForm, SettingsForm, ValueAdjustForm,
+    REASONS, AdjustDateForm, CountPostForm, CountStartForm, ItemForm, MovementsForm, SettingsForm, SkuSeriesForm,
+    ValueAdjustForm,
     VoidMovementForm,
 )
 from .models import (
@@ -117,7 +119,9 @@ def item_detail(request, sku):
 
 def _save_item_form(request, form, item=None):
     if form.is_valid():
-        saved = form.save()
+        with transaction.atomic():
+            saved = form.save()
+            advance_past(saved.sku)
         messages.success(request, f"Saved {saved.sku}.")
         return redirect(reverse("items:detail", args=[saved.sku]))
     return None
@@ -191,6 +195,14 @@ def negative_stock(request):
     if _wants_csv(request):
         return csv_export.negative_stock_csv(rows)
     return render(request, "items/negative_stock.html", {"rows": rows, "nav_active": "reports"})
+
+
+@login_required
+def low_stock(request):
+    rows = reports.low_stock()
+    if _wants_csv(request):
+        return csv_export.low_stock_csv(rows)
+    return render(request, "items/low_stock.html", {"rows": rows, "nav_active": "reports"})
 
 
 # ---- adjustments ----
@@ -560,9 +572,22 @@ def import_confirm(request):
 @login_required
 def inventory_settings(request):
     require_admin(request.user)
-    form = SettingsForm(_posted(request), instance=InventorySettings.load())
-    if request.method == "POST" and form.is_valid():
+    config = InventorySettings.load()
+    # Two forms on one page: the SKU series posts action=sku; anything else is the accounts form.
+    is_post = request.method == "POST"
+    sku_post = is_post and request.POST.get("action") == "sku"
+    form = SettingsForm(request.POST if is_post and not sku_post else None, instance=config)
+    sku_form = SkuSeriesForm(request.POST if sku_post else None, instance=config)
+    if sku_post and sku_form.is_valid():
+        sku_form.save()
+        messages.success(request, "SKU series saved.")
+        return redirect(reverse("items:settings"))
+    if is_post and not sku_post and form.is_valid():
         form.save()
         messages.success(request, "Settings saved.")
         return redirect(reverse("items:settings"))
-    return render(request, "items/settings.html", {"form": form, "nav_active": "settings", "settings_section": "inventory"})
+    from .sku import next_sku
+
+    return render(request, "items/settings.html", {
+        "form": form, "sku_form": sku_form, "next_sku": next_sku(config),
+        "nav_active": "settings", "settings_section": "inventory"})

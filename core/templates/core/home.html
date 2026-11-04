@@ -52,6 +52,7 @@
 <div class="kpis">
   <div class="kpi{% if backup.level != "ok" %} warn{% endif %}"><div class="l">Backups</div><div class="v">{% if backup.level == "ok" %}OK{% else %}Needs attention{% endif %}</div><div class="note">{{ backup.message }}</div></div>
   <div class="kpi"><div class="l">Stock value</div><div class="v">{{ stock_value|floatformat:"2g" }}</div><div class="note"><a href="/reports/inventory-valuation/">Inventory valuation</a></div></div>
+  <div class="kpi{% if low_stock_count %} warn{% endif %}"><div class="l">Items to reorder</div><div class="v">{{ low_stock_count }}</div><div class="note"><a href="{% url 'reports:low-stock' %}">Low stock report</a></div></div>
   <div class="kpi{% if negative_stock_count %} warn{% endif %}"><div class="l">Items below zero</div><div class="v">{{ negative_stock_count }}</div><div class="note"><a href="/reports/negative-stock/">Negative stock report</a></div></div>
 </div>
 {% endblock %}

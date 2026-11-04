@@ -1,0 +1,23 @@
+{% extends "core/report_base.html" %}
+{% block title %}Low stock{% endblock %}
+{% block page_title %}Low stock{% endblock %}
+{% block page_subtitle %}<div class="sub">Stock items whose on hand plus on order is at or below their reorder point. Set a reorder point on each item to track it.</div>{% endblock %}
+{% block report_actions %}<a class="btn" href="?format=csv">Download CSV</a>{% endblock %}
+{% block report %}
+{% if rows %}<div class="banner warning">{{ rows|length }} item{{ rows|length|pluralize }} to reorder.</div>{% endif %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>SKU</th><th>Name</th><th class="num">On hand</th><th class="num">On order</th><th class="num">Reorder point</th><th class="num">Short by</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td><a class="sku" href="{% url 'items:detail' r.item.sku %}">{{ r.item.sku }}</a></td><td>{{ r.item.name }}</td>
+      <td class="num{% if r.on_hand < 0 %} neg{% endif %}">{{ r.on_hand }}</td>
+      <td class="num">{% if r.on_order %}{{ r.on_order }}{% else %}<span class="dash">—</span>{% endif %}</td>
+      <td class="num">{{ r.reorder_point }}</td>
+      <td class="num">{% if r.short_by %}<b>{{ r.short_by }}</b>{% else %}<span class="dash">At point</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nothing to reorder. Items without a reorder point aren't tracked here.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

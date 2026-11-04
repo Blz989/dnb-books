@@ -44,6 +44,14 @@ class RangeCompareForm(RangeForm):
     compare = compare_field()
 
 
+class ProfitAndLossForm(RangeCompareForm):
+    basis = forms.ChoiceField(label="Basis", choices=[("accrual", "Accrual"), ("cash", "Cash")], required=False)
+    field_order = ["start", "end", "basis", "compare"]
+
+    def clean_basis(self):
+        return self.cleaned_data.get("basis") or "accrual"
+
+
 class GeneralLedgerForm(RangeForm):
     account = forms.ModelChoiceField(
         Account.objects.all(), error_messages={"invalid_choice": "Choose an account.", "required": "Choose an account."}
