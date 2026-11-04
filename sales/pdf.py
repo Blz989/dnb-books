@@ -7,6 +7,8 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from weasyprint import CSS, HTML
 
+from core.company import logo_uri
+
 from .balances import invoice_applied, invoice_total
 from .models import DocStatus, Fulfillment, Invoice, SalesSettings
 
@@ -16,13 +18,6 @@ INVOICE_CSS = Path(settings.BASE_DIR) / "sales" / "static" / "sales" / "invoice_
 
 def _address(text: str) -> list[str]:
     return [line.strip() for line in (text or "").splitlines() if line.strip()]
-
-
-def _logo_uri(config: SalesSettings) -> str | None:
-    if not config.logo:
-        return None
-    path = Path(settings.MEDIA_ROOT) / config.logo.name
-    return path.as_uri() if path.is_file() else None
 
 
 def _grouped_lines(invoice: Invoice) -> list[dict]:
@@ -54,7 +49,7 @@ def render_invoice_html(invoice: Invoice) -> str:
         "invoice": invoice,
         "company": config,
         "company_address": _address(config.company_address),
-        "logo_uri": _logo_uri(config),
+        "logo_uri": logo_uri(),
         "font_uri": FONT_DIR.as_uri(),
         "bill_name": customer.name,
         "bill_lines": _address(customer.billing_address),
@@ -90,7 +85,7 @@ def render_statement_html(statement) -> str:
         "statement": statement,
         "company": config,
         "company_address": _address(config.company_address),
-        "logo_uri": _logo_uri(config),
+        "logo_uri": logo_uri(),
         "font_uri": FONT_DIR.as_uri(),
         "bill_lines": _address(customer.billing_address),
     }

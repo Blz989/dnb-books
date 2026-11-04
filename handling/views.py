@@ -81,7 +81,7 @@ def handling_settings(request):
     return render(request, "handling/settings.html", {
         "form": form, "rate_form": rate_form, "locked": form.locked,
         "rates": HandlingRate.objects.select_related("created_by").order_by("-effective_from"),
-        "nav_active": "purchasing-settings"})
+        "nav_active": "settings", "settings_section": "handling"})
 
 
 # ---- runs ----

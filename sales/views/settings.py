@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.files.base import ContentFile
+from django.views.decorators.cache import never_cache
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -27,12 +27,6 @@ def _numbering_rows(post=None, errors=None):
     return rows
 
 
-def _replace_logo(config: SalesSettings, data: bytes, extension: str) -> None:
-    if config.logo:
-        config.logo.delete(save=False)
-    config.logo.save(f"company-logo.{extension}", ContentFile(data), save=False)
-
-
 @login_required
 def sales_settings(request):
     require_admin(request.user)
@@ -41,15 +35,9 @@ def sales_settings(request):
     errors: dict[str, str] = {}
     post = None
     if request.method == "POST" and request.POST.get("action") == "settings":
-        form = SalesSettingsForm(request.POST, request.FILES, instance=config)
+        form = SalesSettingsForm(request.POST, instance=config)
         if form.is_valid():
-            saved = form.save(commit=False)
-            if form.cleaned_data.get("remove_logo") and saved.logo and not form.logo_data:
-                saved.logo.delete(save=False)
-                saved.logo = ""
-            if form.logo_data:
-                _replace_logo(saved, form.logo_data, form.logo_extension)
-            saved.save()
+            form.save()
             messages.success(request, "Settings saved.")
             return redirect(reverse("sales:settings"))
     elif request.method == "POST" and request.POST.get("action") == "numbering":
@@ -71,13 +59,14 @@ def sales_settings(request):
             messages.success(request, "Numbering saved.")
             return redirect(reverse("sales:settings"))
     return render(request, "sales/settings.html", {
-        "form": form, "numbering": _numbering_rows(post, errors), "has_logo": bool(config.logo),
-        "nav_active": "sales-settings",
+        "form": form, "numbering": _numbering_rows(post, errors),
+        "nav_active": "settings", "settings_section": "sales",
     })
 
 
-@login_required
+@never_cache
 def logo(request):
+    """Public on purpose: the login page shows the logo before anyone signs in."""
     config = SalesSettings.load()
     if not config.logo:
         raise Http404("No logo has been uploaded.")

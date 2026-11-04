@@ -1,8 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "core/report_base.html" %}
 {% block title %}Order profitability{% endblock %}
 {% block page_title %}Order profitability{% endblock %}
 {% block page_subtitle %}<div class="sub">Sales, cost, and handling for orders dated in the range. Sales are net of credits.</div>{% endblock %}
-{% block content %}
+{% block report %}
 <div class="card">
 {% include "ledger/_filter_form.html" %}
 {% if rows is not None %}

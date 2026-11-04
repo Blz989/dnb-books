@@ -1,8 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "core/report_base.html" %}
 {% block title %}A/R aging{% endblock %}
 {% block page_title %}A/R aging{% endblock %}
 {% block page_subtitle %}{% if report %}<div class="sub">As of {{ report.as_of|date:"Y-m-d" }}, days past due</div>{% endif %}{% endblock %}
-{% block content %}
+{% block report %}
 {% if report %}
 {% if report.difference != 0 %}<div class="banner error">Customer balances and the A/R account don't match. Difference: {{ report.difference|floatformat:"2g" }}.</div>{% endif %}
 <div class="kpis">

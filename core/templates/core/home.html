@@ -1,79 +1,49 @@
 {% extends "core/base.html" %}
 {% block title %}Home{% endblock %}
-{% block page_title %}DNB Books{% endblock %}
-{% block page_subtitle %}<div class="sub">Books and inventory</div>{% endblock %}
+{% block page_title %}{{ brand.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% now "l, F j, Y" %}</div>{% endblock %}
+{% block page_actions %}
+<a class="btn" href="{% url 'sales:payment-new' %}">Receive payment</a>
+<a class="btn" href="{% url 'purchasing:bill-new' %}">New bill</a>
+<a class="btn primary" href="{% url 'sales:invoice-new' %}">New invoice</a>
+{% endblock %}
 {% block content %}
 {% if negative_stock_count %}
 <div class="banner warning">{{ negative_stock_count }} item{{ negative_stock_count|pluralize }} {{ negative_stock_count|pluralize:"is,are" }} below zero. Their cost is estimated until stock is received or counted. <a href="/reports/negative-stock/">Review →</a></div>
 {% endif %}
 {% if inventory_unconfigured %}
-<div class="banner info">Inventory isn't set up yet. Choose the inventory accounts in Settings. <a href="/items/settings/">Open settings</a></div>
+<div class="banner info">Inventory isn't set up yet. Choose the inventory accounts in Settings. <a href="{% url 'items:settings' %}">Open settings</a></div>
 {% endif %}
 {% if sales_unconfigured %}
-<div class="banner info">Sales isn't set up yet. Choose the sales accounts in Sales settings. <a href="/sales/settings/">Open settings</a></div>
+<div class="banner info">Sales isn't set up yet. Choose the sales accounts in Sales settings. <a href="{% url 'sales:settings' %}">Open settings</a></div>
 {% endif %}
 {% if purchasing_unconfigured %}
-<div class="banner info">Purchasing isn't set up yet. Choose the accounts payable account in Purchasing settings. <a href="/purchasing/settings/">Open settings</a></div>
+<div class="banner info">Purchasing isn't set up yet. Choose the accounts payable account in Purchasing settings. <a href="{% url 'purchasing:settings' %}">Open settings</a></div>
 {% endif %}
 {% if backup.level != "ok" %}<div class="banner {{ backup.level }}">{{ backup.message }}</div>{% endif %}
+<div class="section-h">Receivables</div>
 <div class="kpis">
   <div class="kpi"><div class="l">Open A/R</div><div class="v">{{ open_ar|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:ar-aging' %}">A/R aging</a></div></div>
   <div class="kpi{% if overdue_count %} warn{% endif %}"><div class="l">Overdue</div><div class="v">{{ overdue_total|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:open-invoices' %}?overdue=1">{{ overdue_count }} overdue invoice{{ overdue_count|pluralize }}</a></div></div>
   <div class="kpi"><div class="l">Undeposited</div><div class="v">{{ undeposited|floatformat:"2g" }}</div><div class="note"><a href="{% url 'sales:deposit-new' %}">Make a deposit</a></div></div>
   <div class="kpi{% if awaiting_bill %} warn{% endif %}"><div class="l">Drop shipments awaiting bill</div><div class="v">{{ awaiting_bill }}</div><div class="note"><a href="{% url 'reports:drop-ship-awaiting-bill' %}">Awaiting bill report</a></div></div>
 </div>
+<div class="section-h">Payables</div>
 <div class="kpis">
   <div class="kpi"><div class="l">Bills due in 7 days</div><div class="v">{{ bills_due_total|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:bills-due' %}?through={{ bills_due_through }}">{{ bills_due_count }} bill{{ bills_due_count|pluralize }} due</a></div></div>
   <div class="kpi{% if bills_overdue_count %} warn{% endif %}"><div class="l">Overdue bills</div><div class="v">{{ bills_overdue_total|floatformat:"2g" }}</div><div class="note"><a href="/purchasing/bills/?overdue=1">{{ bills_overdue_count }} overdue bill{{ bills_overdue_count|pluralize }}</a></div></div>
   {% if handling_due %}<div class="kpi warn"><div class="l">Handling</div><div class="v" style="font-size:16px"><a href="{% url 'handling:preview' handling_due.end %}">Handling bill due for {{ handling_due.label }}</a></div><div class="note">{% if handling_due_count > 1 %}{{ handling_due_count }} periods are waiting. {% endif %}<a href="{% url 'handling:runs' %}">Handling bills</a></div></div>{% endif %}
 </div>
+<div class="section-h">Banking</div>
 <div class="kpis">
   <div class="kpi"><div class="l">Inbox items waiting</div><div class="v">{{ bank_inbox_count }}</div><div class="note"><a href="/banking/inbox/">Open the inbox</a></div></div>
   <div class="kpi{% if bank_sync.level == "warning" %} warn{% endif %}"><div class="l">Bank sync</div><div class="v" style="font-size:16px">{{ bank_sync.message }}</div><div class="note">{% if bank_sync.needs_login %}{% for item in bank_sync.needs_login %}{% if is_admin %}<a href="/banking/link/{{ item.pk }}/update/">Re-link {{ item.institution_name }}</a>{% else %}Ask an admin to re-link {{ item.institution_name }}{% endif %}{% if not forloop.last %} · {% endif %}{% endfor %}{% else %}<a href="/banking/">Bank accounts</a>{% endif %}</div></div>
   <div class="kpi{% if unreconciled %} warn{% endif %}"><div class="l">Not reconciled in 40 days</div><div class="v">{{ unreconciled|length }}</div><div class="note">{% if unreconciled %}{% for a in unreconciled %}<a href="/banking/reconcile/{{ a.pk }}/">{{ a.ledger_account.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}All accounts are up to date.{% endif %}</div></div>
 </div>
+<div class="section-h">Inventory and system</div>
 <div class="kpis">
   <div class="kpi{% if backup.level != "ok" %} warn{% endif %}"><div class="l">Backups</div><div class="v">{% if backup.level == "ok" %}OK{% else %}Needs attention{% endif %}</div><div class="note">{{ backup.message }}</div></div>
   <div class="kpi"><div class="l">Stock value</div><div class="v">{{ stock_value|floatformat:"2g" }}</div><div class="note"><a href="/reports/inventory-valuation/">Inventory valuation</a></div></div>
   <div class="kpi{% if negative_stock_count %} warn{% endif %}"><div class="l">Items below zero</div><div class="v">{{ negative_stock_count }}</div><div class="note"><a href="/reports/negative-stock/">Negative stock report</a></div></div>
 </div>
-<div class="card"><div class="body">
-  <h2 style="margin-top:0">Inventory</h2>
-  <ul class="links">
-    <li><a href="/items/">Items</a></li>
-    <li><a href="/items/adjust/">New adjustment</a></li>
-    <li><a href="/items/adjustments/">Adjustments</a></li>
-    <li><a href="/items/counts/">Counts</a></li>
-    <li><a href="/reports/inventory-valuation/">Inventory valuation</a></li>
-    <li><a href="/reports/stock-movements/">Stock movements</a></li>
-  </ul>
-  <h2>Sales</h2>
-  <ul class="links">
-    <li><a href="{% url 'contacts:list' %}">Customers</a></li>
-    <li><a href="{% url 'sales:order-new' %}">New sales order</a></li>
-    <li><a href="{% url 'sales:invoice-new' %}">New invoice</a></li>
-    <li><a href="{% url 'sales:payment-new' %}">Receive payment</a></li>
-    <li><a href="{% url 'sales:deposit-new' %}">New deposit</a></li>
-    <li><a href="{% url 'sales:credit-new' %}">New credit note</a></li>
-  </ul>
-  <h2>Purchasing</h2>
-  <ul class="links">
-    <li><a href="{% url 'vendors:list' %}">Vendors</a></li>
-    <li><a href="{% url 'purchasing:po-new' %}">New purchase order</a></li>
-    <li><a href="{% url 'purchasing:bill-new' %}">New bill</a></li>
-    <li><a href="{% url 'purchasing:pay-bills' %}">Pay bills</a></li>
-    <li><a href="{% url 'purchasing:credit-new' %}?kind=return">Return to vendor</a></li>
-    <li><a href="{% url 'purchasing:credit-new' %}?kind=allowance">Credit without a return</a></li>
-    <li><a href="{% url 'handling:runs' %}">Handling</a></li>
-  </ul>
-  <h2>Reports</h2>
-  {% include "core/_report_links.html" %}
-  <h2>Books</h2>
-  <ul class="links">
-    <li><a href="{% url 'admin:ledger_account_changelist' %}">Chart of accounts</a></li>
-    <li><a href="{% url 'admin:ledger_journalentry_changelist' %}">Journal entries</a></li>
-    <li><a href="{% url 'admin:ledger_accountingperiod_changelist' %}">Accounting periods</a></li>
-    <li><a href="{% url 'admin:index' %}">All admin screens</a></li>
-  </ul>
-</div></div>
 {% endblock %}

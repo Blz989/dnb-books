@@ -16,7 +16,7 @@
       <td class="num{% if m.quantity < 0 %} neg{% endif %}">{{ m.quantity }}</td>
       <td class="num{% if m.total_cost < 0 %} neg{% endif %}">{{ m.total_cost|floatformat:"2g" }}</td>
       <td>{{ m.reason }}</td>
-      <td>{% if m.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' m.journal_entry.pk %}">{{ m.journal_entry.display_number }}</a>{% else %}<span class="dash">—</span>{% endif %}</td>
+      <td>{% if m.journal_entry %}<a href="{% url 'books:journal-detail' m.journal_entry.pk %}">{{ m.journal_entry.display_number }}</a>{% else %}<span class="dash">—</span>{% endif %}</td>
       <td>{{ m.created_by.get_username }}</td>
       {% if is_admin %}<td>{% if not m.voided %}<a href="{% url 'items:void-movement' m.pk %}">Void</a>{% endif %}</td>{% endif %}
     </tr>

@@ -1,8 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "core/report_base.html" %}
 {% block title %}1099 summary{% endblock %}
 {% block page_title %}1099 summary{% endblock %}
 {% block page_subtitle %}<div class="sub">Check and ACH payments to vendors marked 1099, by calendar year. Card payments are left out.</div>{% endblock %}
-{% block content %}
+{% block report %}
 {% if report and report.threshold is None %}<div class="banner warning">Set the 1099 threshold for {{ report.year }} in Purchasing settings.</div>{% endif %}
 <div class="banner info">Check amounts and thresholds with your accountant before filing.</div>
 <div class="card">

@@ -22,3 +22,7 @@ table.lines { width: 100%; border-collapse: collapse; }
 .total td:last-child { font-size: 11pt; }
 .note { margin-top: 14pt; color: #6f655a; font-size: 8.5pt; }
 .void-mark { position: fixed; top: 30%; left: 22%; transform: rotate(-20deg); font-family: "Source Serif 4"; font-weight: 600; font-size: 120pt; letter-spacing: .08em; color: rgba(156, 42, 42, 0.16); border: 8pt solid rgba(156, 42, 42, 0.16); padding: 0 24pt; }
+
+.brandrow { display: flex; gap: 10pt; align-items: flex-start; }
+.logo { height: 56pt; max-width: 150pt; }
+.logo img { height: 56pt; max-width: 150pt; width: auto; object-fit: contain; }

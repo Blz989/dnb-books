@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+{% block title %}Close {{ label }}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'books:periods' %}">Month close</a></div>{% endblock %}
+{% block page_title %}Close {{ label }} anyway?{% endblock %}
+{% block content %}
+<div class="banner warning">{{ label }} can't close normally.</div>
+<div class="card"><div class="body">
+<ul class="problems">{% for p in problems %}<li>{{ p }}</li>{% empty %}<li>No problems now. You can close it from the list.</li>{% endfor %}</ul>
+<p>Closing anyway saves your reason and these problems with the month.</p>
+<form method="post">{% csrf_token %}
+  {% include "core/_form_rows.html" %}
+  <div class="form-actions">
+    <button type="submit" class="btn danger">Close anyway</button>
+    <a class="btn" href="{% url 'books:periods' %}">Cancel</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

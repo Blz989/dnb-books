@@ -126,7 +126,7 @@ def test_detail_case_insensitive_sku_and_history(std, stocked, admin_user):
     assert r.status_code == 200 and "BOLT-14" in html and "Damaged" in html and "HB-014" in html
     assert "Opening stock" in html and "Quantity adjustment" in html
     assert "Cost correction" in html and "0.60" in html  # revision row under the Oct 5 outflow
-    assert "JE-0000" in html and "/admin/ledger/journalentry/" in html
+    assert "JE-0000" in html and "/books/journal/" in html
     assert "on hand" in html.lower()
 
 

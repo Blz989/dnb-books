@@ -1,0 +1,45 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}New journal entry{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'books:journal' %}">Journal entries</a></div>{% endblock %}
+{% block page_title %}New journal entry{% endblock %}
+{% block page_subtitle %}<div class="sub">For adjustments that no invoice, bill, or payment covers. Debits must equal credits.</div>{% endblock %}
+{% block content %}
+{% if error %}<div class="banner error">{{ error }}</div>{% endif %}
+<form method="post">{% csrf_token %}
+<div class="card"><div class="body">
+  <div class="form-grid">
+    {% for field in form %}{% if field.name != "memo" %}
+    <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    {% endif %}{% endfor %}
+  </div>
+  <div class="form-row wide"><label for="{{ form.memo.id_for_label }}">{{ form.memo.label }}</label>{{ form.memo }}</div>
+</div></div>
+<div class="card">
+<table class="data" id="je-lines">
+  <thead><tr><th>Account</th><th>Description</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr{% if r.hidden %} data-extra hidden{% endif %}>
+      <td><select name="account_{{ r.n }}" aria-label="Line {{ r.n }} account"><option value=""></option>{% for a in accounts %}<option value="{{ a.pk }}"{% if r.account == a.pk|stringformat:"d" %} selected{% endif %}>{{ a.number }} {{ a.name }}</option>{% endfor %}</select></td>
+      <td><input type="text" name="description_{{ r.n }}" value="{{ r.description }}" maxlength="200" aria-label="Line {{ r.n }} description"></td>
+      <td class="num"><input type="text" inputmode="decimal" class="amt" data-side="debit" name="debit_{{ r.n }}" value="{{ r.debit }}" aria-label="Line {{ r.n }} debit"></td>
+      <td class="num"><input type="text" inputmode="decimal" class="amt" data-side="credit" name="credit_{{ r.n }}" value="{{ r.credit }}" aria-label="Line {{ r.n }} credit"></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr class="total"><td><button type="button" class="btn small" id="add-line" data-table="je-lines">Add line</button></td><td>Total</td><td class="num" data-total="debit">0.00</td><td class="num" data-total="credit">0.00</td></tr>
+    <tr><td></td><td class="dash">Difference</td><td class="num" colspan="2" data-total="difference">0.00</td></tr>
+  </tfoot>
+</table>
+</div>
+<div class="form-actions">
+  <button type="submit" class="btn primary">Post entry</button>
+  <a class="btn" href="{% url 'books:journal' %}">Cancel</a>
+</div>
+</form>
+<script src="{% static 'core/lines.js' %}" defer></script>
+<script src="{% static 'core/journal.js' %}" defer></script>
+{% endblock %}

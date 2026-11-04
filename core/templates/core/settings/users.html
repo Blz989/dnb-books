@@ -1,0 +1,30 @@
+{% extends "core/settings_base.html" %}
+{% block title %}Users and roles{% endblock %}
+{% block page_title %}Users and roles{% endblock %}
+{% block page_subtitle %}<div class="sub">Who can sign in, and what they can do.</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'settings:user-new' %}">New user</a>{% endblock %}
+{% block settings_content %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Last sign-in</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td><a href="{% url 'settings:user-edit' r.user.pk %}">{% firstof r.user.get_full_name r.user.username %}</a>{% if r.user.pk == user.pk %} <span class="dash">(you)</span>{% endif %}</td>
+      <td>{{ r.user.username }}</td>
+      <td>{{ r.user.email|default:"" }}</td>
+      <td><span class="tag{% if r.role == 'Standard' %} ns{% endif %}">{{ r.role }}</span></td>
+      <td>{% if r.user.is_active %}Active{% else %}<span class="tag void">Can't sign in</span>{% endif %}</td>
+      <td>{% if r.user.last_login %}{{ r.user.last_login|date:"M j, Y" }}{% else %}<span class="dash">Never</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="card"><div class="card-h">Roles</div><div class="body">
+<dl class="facts two">
+  <dt>Admin</dt><dd>Everything, plus settings, users, voids, refunds, and closing or reopening months.</dd>
+  <dt>Standard</dt><dd>Day-to-day work: customers, orders, invoices, payments, bills, items, counts, the bank inbox, and reports.</dd>
+</dl>
+</div></div>
+{% endblock %}

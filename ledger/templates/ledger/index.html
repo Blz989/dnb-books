@@ -1,15 +1,12 @@
-{% extends "core/base.html" %}
+{% extends "core/report_base.html" %}
 {% block title %}Reports{% endblock %}
+{% block breadcrumb %}{% endblock %}
 {% block page_title %}Reports{% endblock %}
-{% block page_subtitle %}<div class="sub">Pick a report</div>{% endblock %}
-{% block content %}
-<div class="card"><div class="body">
-{% include "core/_report_links.html" %}
-<h2>Inventory</h2>
-<ul class="links">
-  <li><a href="{% url 'reports:inventory-valuation' %}">Inventory valuation</a></li>
-  <li><a href="{% url 'reports:stock-movements' %}">Stock movements</a></li>
-  <li><a href="{% url 'reports:negative-stock' %}">Negative stock</a></li>
-</ul>
-</div></div>
+{% block page_subtitle %}<div class="sub">Pick a report from the list. These are used most.</div>{% endblock %}
+{% block report %}
+<div class="tiles">
+  {% for r in featured %}
+  <a class="tile" href="{{ r.url }}"><span class="tile-name">{{ r.name }}</span><span class="tile-desc">{{ r.description }}</span></a>
+  {% endfor %}
+</div>
 {% endblock %}

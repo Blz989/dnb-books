@@ -1,9 +1,9 @@
-{% extends "core/base.html" %}
+{% extends "core/settings_base.html" %}
 {% load handling_tags %}
 {% block title %}Handling settings{% endblock %}
-{% block page_title %}Handling settings{% endblock %}
-{% block page_subtitle %}<div class="sub">Who bills handling, where it is booked, when it starts, and the rate. <a href="{% url 'purchasing:settings' %}">Purchasing settings</a></div>{% endblock %}
-{% block content %}
+{% block page_title %}Handling{% endblock %}
+{% block page_subtitle %}<div class="sub">Who bills handling, where it is booked, when it starts, and the rate.</div>{% endblock %}
+{% block settings_content %}
 {% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
 <div class="card"><div class="body">
 <form method="post">{% csrf_token %}

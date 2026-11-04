@@ -15,6 +15,7 @@ from django.db import IntegrityError, transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from core.company import logo_uri as company_logo_uri
 from core.roles import require_admin
 from ledger.errors import PostingError
 from ledger.periods import assert_open
@@ -182,6 +183,7 @@ def render_statement_html(run: HandlingRun) -> str:
         "label": run.label,
         "company": company,
         "company_address": _address(company.company_address),
+        "logo_uri": company_logo_uri(),
         "font_uri": FONT_DIR.as_uri(),
         "vendor": vendor,
         "lines": lines,

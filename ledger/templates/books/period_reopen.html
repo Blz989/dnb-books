@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+{% block title %}Reopen {{ label }}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'books:periods' %}">Month close</a></div>{% endblock %}
+{% block page_title %}Reopen {{ label }}{% endblock %}
+{% block content %}
+<div class="card"><div class="body">
+<p>Reopening lets entries be posted in {{ label }} again. The reason is saved with the month.</p>
+<form method="post">{% csrf_token %}
+  {% include "core/_form_rows.html" %}
+  <div class="form-actions">
+    <button type="submit" class="btn primary">Reopen month</button>
+    <a class="btn" href="{% url 'books:periods' %}">Cancel</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

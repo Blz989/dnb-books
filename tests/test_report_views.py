@@ -94,5 +94,5 @@ def test_reports_index_lists_every_report(logged_in):
 
 def test_sidebar_reports_link_opens_the_index(logged_in):
     html = logged_in.get("/").content.decode()
-    assert '<a href="/reports/" class="on">Reports</a>' not in html
-    assert '<a href="/reports/">Reports</a>' in html
+    assert '<a href="/reports/" class="on">' not in html
+    assert '<a href="/reports/">' in html

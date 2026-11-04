@@ -138,9 +138,19 @@ def settings_post(sales_settings, **extra):
     return data
 
 
+# The logo and company details moved from Sales settings to Settings, Company profile.
+COMPANY = "/settings/company/"
+
+
+def company_post(**extra):
+    data = {"company_name": "DNB Supply Co.", "company_address": "1 Main", "company_phone": "", "company_email": ""}
+    data.update(extra)
+    return data
+
+
 def test_save_settings_and_logo(adm, sales_settings, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
-    r = adm.post("/sales/settings/", settings_post(sales_settings, logo=SimpleUploadedFile("l.png", PNG)))
+    r = adm.post(COMPANY, company_post(logo=SimpleUploadedFile("l.png", PNG)))
     assert r.status_code == 302
     s = SalesSettings.load()
     assert s.company_name == "DNB Supply Co." and s.logo.name == "logo/company-logo.png"
@@ -151,8 +161,8 @@ def test_save_settings_and_logo(adm, sales_settings, settings, tmp_path):
 
 def test_logo_replaced_removes_old_file(adm, sales_settings, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
-    adm.post("/sales/settings/", settings_post(sales_settings, logo=SimpleUploadedFile("l.png", PNG)))
-    adm.post("/sales/settings/", settings_post(sales_settings, logo=SimpleUploadedFile("l.jpg", JPEG)))
+    adm.post(COMPANY, company_post(logo=SimpleUploadedFile("l.png", PNG)))
+    adm.post(COMPANY, company_post(logo=SimpleUploadedFile("l.jpg", JPEG)))
     assert SalesSettings.load().logo.name == "logo/company-logo.jpg"
     assert sorted(p.name for p in (tmp_path / "logo").iterdir()) == ["company-logo.jpg"]
 
@@ -164,8 +174,8 @@ def test_logo_replaced_removes_old_file(adm, sales_settings, settings, tmp_path)
 ])
 def test_bad_logo_is_refused_and_old_logo_kept(adm, sales_settings, settings, tmp_path, upload):
     settings.MEDIA_ROOT = tmp_path
-    adm.post("/sales/settings/", settings_post(sales_settings, logo=SimpleUploadedFile("l.png", PNG)))
-    r = adm.post("/sales/settings/", settings_post(sales_settings, company_name="Changed", logo=upload))
+    adm.post(COMPANY, company_post(logo=SimpleUploadedFile("l.png", PNG)))
+    r = adm.post(COMPANY, company_post(company_name="Changed", logo=upload))
     assert r.status_code == 200 and "Logo must be a PNG or JPEG under 1 MB." in r.content.decode()
     s = SalesSettings.load()
     assert s.logo.name == "logo/company-logo.png" and s.company_name == "DNB Supply Co."
@@ -174,8 +184,8 @@ def test_bad_logo_is_refused_and_old_logo_kept(adm, sales_settings, settings, tm
 
 def test_remove_logo(adm, sales_settings, settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
-    adm.post("/sales/settings/", settings_post(sales_settings, logo=SimpleUploadedFile("l.png", PNG)))
-    adm.post("/sales/settings/", settings_post(sales_settings, remove_logo="on"))
+    adm.post(COMPANY, company_post(logo=SimpleUploadedFile("l.png", PNG)))
+    adm.post(COMPANY, company_post(remove_logo="on"))
     assert not SalesSettings.load().logo
     assert adm.get("/sales/settings/logo/").status_code == 404
 
@@ -218,5 +228,7 @@ def test_numbering_rejects_non_numbers(adm, db):
 
 def test_sidebar_has_sales_group(adm):
     page = adm.get("/").content.decode()
-    for text in ("Customers", "Sales orders", "Invoices", "Payments", "Deposits", "Credit notes", "Sales settings"):
+    for text in ("Customers", "Sales orders", "Invoices", "Payments", "Deposits", "Credit notes"):
         assert text in page
+    # Module settings live in the one Settings area now.
+    assert 'href="/settings/"' in page

@@ -52,7 +52,7 @@
       <td class="num">{{ m.unit_cost|floatformat:4 }}</td>
       <td class="num{% if h.value < 0 %} neg{% endif %}">{{ h.value|floatformat:"2g" }}</td>
       <td class="num{% if h.running < 0 %} neg{% endif %}">{{ h.running }}</td>
-      <td>{% if m.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' m.journal_entry.pk %}">{{ m.journal_entry.display_number }}</a>{% else %}<span class="dash">—</span>{% endif %}</td>
+      <td>{% if m.journal_entry %}<a href="{% url 'books:journal-detail' m.journal_entry.pk %}">{{ m.journal_entry.display_number }}</a>{% else %}<span class="dash">—</span>{% endif %}</td>
       <td>{{ m.created_by.get_username }}</td>
       <td>{{ m.reason }}</td>
       {% if is_admin %}<td>{% if not m.voided %}<a href="{% url 'items:void-movement' m.pk %}">Void</a>{% endif %}</td>{% endif %}
@@ -62,7 +62,7 @@
       <td>{{ r.date|date:"Y-m-d" }}</td>
       <td colspan="3" style="padding-left: 32px" class="dash">↳ Cost correction</td>
       <td class="num{% if r.delta < 0 %} neg{% endif %}">{{ r.delta|floatformat:"2g" }}</td><td></td>
-      <td>{% if r.journal_entry %}<a href="{% url 'admin:ledger_journalentry_change' r.journal_entry.pk %}">{{ r.journal_entry.display_number }}</a>{% endif %}</td>
+      <td>{% if r.journal_entry %}<a href="{% url 'books:journal-detail' r.journal_entry.pk %}">{{ r.journal_entry.display_number }}</a>{% endif %}</td>
       <td></td><td></td>{% if is_admin %}<td></td>{% endif %}
     </tr>
     {% endfor %}

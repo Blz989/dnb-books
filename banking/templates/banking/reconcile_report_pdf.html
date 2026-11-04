@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Reconciliation report</title>
 </head><body>
+<div class="head">{% if logo_uri %}<img class="logo" src="{{ logo_uri }}" alt="">{% endif %}<div class="co">{{ company.company_name }}</div></div>
 <h1>Reconciliation report</h1>
 <div class="sub">{{ account }} · statement dated {{ rec.statement_date|date:"F j, Y" }} · prepared {{ now|date:"F j, Y" }}</div>
 

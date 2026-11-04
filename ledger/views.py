@@ -25,7 +25,9 @@ def _wants_csv(request):
 
 @login_required
 def index(request):
-    return render(request, "ledger/index.html", {"nav_active": "reports"})
+    from core.report_catalog import featured
+
+    return render(request, "ledger/index.html", {"nav_active": "reports", "featured": featured()})
 
 
 @login_required

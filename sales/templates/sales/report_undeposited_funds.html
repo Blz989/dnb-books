@@ -1,8 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "core/report_base.html" %}
 {% block title %}Undeposited funds{% endblock %}
 {% block page_title %}Undeposited funds{% endblock %}
 {% block page_subtitle %}<div class="sub">Checks and cash not yet taken to the bank</div>{% endblock %}
-{% block content %}
+{% block report %}
 {% if report.difference != 0 %}<div class="banner error">Undeposited payments and the Undeposited Funds account don't match. Difference: {{ report.difference|floatformat:"2g" }}.</div>{% endif %}
 <div class="kpis">
   <div class="kpi"><div class="l">Undeposited payments</div><div class="v">{{ report.total|floatformat:"2g" }}</div></div>

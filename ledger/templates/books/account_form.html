@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+{% block title %}{% if account %}{{ account.number }} {{ account.name }}{% else %}New account{% endif %}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'books:accounts' %}">Chart of accounts</a></div>{% endblock %}
+{% block page_title %}{% if account %}{{ account.number }} {{ account.name }}{% else %}New account{% endif %}{% endblock %}
+{% block content %}
+{% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  {% include "core/_form_rows.html" %}
+  <div class="form-actions">
+    <button type="submit" class="btn primary">Save account</button>
+    <a class="btn" href="{% url 'books:accounts' %}">Cancel</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

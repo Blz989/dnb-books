@@ -37,5 +37,5 @@
   </tbody>
 </table>
 </div>
-<p class="help">Journal entries: {% for label, e in entries %}<a href="{% url 'admin:ledger_journalentry_change' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<p class="help">Journal entries: {% for label, e in entries %}<a href="{% url 'books:journal-detail' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
 {% endblock %}

@@ -1,8 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "core/report_base.html" %}
 {% block title %}Open sales orders{% endblock %}
 {% block page_title %}Open sales orders{% endblock %}
 {% block page_subtitle %}<div class="sub">Lines still to invoice</div>{% endblock %}
-{% block content %}
+{% block report %}
 <div class="card">
 <form method="get" class="filters"><button type="submit" name="format" value="csv" class="btn">Download CSV</button></form>
 <table class="data">

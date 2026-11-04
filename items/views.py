@@ -565,4 +565,4 @@ def inventory_settings(request):
         form.save()
         messages.success(request, "Settings saved.")
         return redirect(reverse("items:settings"))
-    return render(request, "items/settings.html", {"form": form, "nav_active": "settings"})
+    return render(request, "items/settings.html", {"form": form, "nav_active": "settings", "settings_section": "inventory"})

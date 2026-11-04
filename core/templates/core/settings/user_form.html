@@ -1,0 +1,16 @@
+{% extends "core/settings_base.html" %}
+{% block title %}{% if editing %}{{ editing.username }}{% else %}New user{% endif %}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'settings:index' %}">Settings</a> / <a href="{% url 'settings:users' %}">Users and roles</a></div>{% endblock %}
+{% block page_title %}{% if editing %}{% firstof editing.get_full_name editing.username %}{% else %}New user{% endif %}{% endblock %}
+{% block settings_content %}
+{% if is_superuser %}<div class="banner info">This user is the owner account and always has admin access.</div>{% endif %}
+<div class="card"><div class="body">
+<form method="post" autocomplete="off">{% csrf_token %}
+  {% include "core/_form_rows.html" %}
+  <div class="form-actions">
+    <button type="submit" class="btn primary">{% if editing %}Save user{% else %}Add user{% endif %}</button>
+    <a class="btn" href="{% url 'settings:users' %}">Cancel</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

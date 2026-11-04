@@ -21,19 +21,10 @@ def logo_extension(data: bytes) -> str | None:
 
 
 class SalesSettingsForm(forms.ModelForm):
-    logo = forms.FileField(required=False, label="Logo", help_text="PNG or JPEG, up to 1 MB.")
-    remove_logo = forms.BooleanField(required=False, label="Remove the current logo")
-
     class Meta:
         model = SalesSettings
-        fields = [
-            "ar_account", "undeposited_account", "returns_account", "company_name", "company_address",
-            "company_phone", "company_email", "default_invoice_notes",
-        ]
-        widgets = {
-            "company_address": forms.Textarea(attrs={"rows": 3}),
-            "default_invoice_notes": forms.Textarea(attrs={"rows": 3}),
-        }
+        fields = ["ar_account", "undeposited_account", "returns_account", "default_invoice_notes"]
+        widgets = {"default_invoice_notes": forms.Textarea(attrs={"rows": 3})}
         labels = {
             "ar_account": "Accounts receivable account",
             "undeposited_account": "Undeposited Funds account",
@@ -52,11 +43,25 @@ class SalesSettingsForm(forms.ModelForm):
             self.fields[name].queryset = Account.objects.filter(subtype__in=subtypes, is_active=True)
             self.fields[name].required = True
             self.fields[name].error_messages["required"] = "Choose an account."
-        self.fields["company_name"].required = False
-        self.fields["company_address"].required = False
-        self.fields["company_phone"].required = False
-        self.fields["company_email"].required = False
         self.fields["default_invoice_notes"].required = False
+
+
+class CompanyProfileForm(forms.ModelForm):
+    """Company details and the logo. Stored on SalesSettings; used across the app and on every PDF."""
+    logo = forms.FileField(required=False, label="Logo", help_text="PNG or JPEG, up to 1 MB.")
+    remove_logo = forms.BooleanField(required=False, label="Remove the current logo")
+
+    class Meta:
+        model = SalesSettings
+        fields = ["company_name", "company_address", "company_phone", "company_email"]
+        widgets = {"company_address": forms.Textarea(attrs={"rows": 3})}
+        labels = {"company_name": "Company name", "company_address": "Address",
+                  "company_phone": "Phone", "company_email": "Email"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in self.Meta.fields:
+            self.fields[name].required = False
         self.logo_data: bytes | None = None
         self.logo_extension: str | None = None
 

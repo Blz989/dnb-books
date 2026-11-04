@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}DNB Books{% endblock %}</title>
+  <title>{% block title %}DNB Books{% endblock %} · {{ brand.name }}</title>
   <script>
     (function () {
       try {
@@ -19,63 +19,76 @@
 <div class="app{% if not user.is_authenticated %} bare{% endif %}">
   {% if user.is_authenticated %}
   <aside>
-    <a class="brand" href="{% url 'home' %}"><i></i>DNB Books</a>
+    {% if brand.has_logo %}
+    <a class="brand with-logo" href="{% url 'home' %}" title="{{ brand.name }}">
+      <span class="brand-logo"><img src="{% url 'brand-logo' %}" alt="{{ brand.name }}"></span>
+    </a>
+    {% else %}
+    <a class="brand" href="{% url 'home' %}">
+      <i aria-hidden="true"></i>
+      <span class="brand-text"><span class="brand-name">{{ brand.name }}</span>{% if brand.name != "DNB Books" %}<span class="brand-app">DNB Books</span>{% endif %}</span>
+    </a>
+    {% endif %}
     <nav>
-      <a href="{% url 'home' %}"{% if nav_active == "home" %} class="on"{% endif %}>Home</a>
-      <div class="sec">Sales</div>
+      <a href="{% url 'home' %}"{% if nav_active == "home" %} class="on"{% endif %}><span class="ni"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9.5 10 4l7 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-5V17H4a1 1 0 0 1-1-1z"/></svg>Home</span></a>
+      <a href="{% url 'reports:index' %}"{% if nav_active == "reports" %} class="on"{% endif %}><span class="ni"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16V9m4 7V5m4 11v-5m4 5V7"/></svg>Reports</span></a>
+      <div class="sec"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h12v12H4zM4 8h12M8 8v8"/></svg>Sales</div>
       <a href="/customers/"{% if nav_active == "customers" %} class="on"{% endif %}>Customers</a>
       <a href="/sales/orders/"{% if nav_active == "orders" %} class="on"{% endif %}>Sales orders</a>
       <a href="/sales/invoices/"{% if nav_active == "invoices" %} class="on"{% endif %}>Invoices</a>
-      <a href="/sales/payments/"{% if nav_active == "payments" %} class="on"{% endif %}>Payments</a>
+      <a href="/sales/payments/"{% if nav_active == "payments" %} class="on"{% endif %}>Payments received</a>
       <a href="/sales/deposits/"{% if nav_active == "deposits" %} class="on"{% endif %}>Deposits</a>
       <a href="/sales/credits/"{% if nav_active == "credits" %} class="on"{% endif %}>Credit notes</a>
-      <div class="sec">Purchasing</div>
+      <div class="sec"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h2l1.5 8h8L16 7H6.2M8 16.5h.01M14 16.5h.01"/></svg>Purchases</div>
       <a href="/vendors/"{% if nav_active == "vendors" %} class="on"{% endif %}>Vendors</a>
       <a href="/purchasing/orders/"{% if nav_active == "purchase-orders" %} class="on"{% endif %}>Purchase orders</a>
       <a href="/purchasing/bills/"{% if nav_active == "bills" %} class="on"{% endif %}>Bills</a>
       <a href="/purchasing/pay/"{% if nav_active == "pay-bills" %} class="on"{% endif %}>Pay bills</a>
       <a href="/purchasing/credits/"{% if nav_active == "vendor-credits" %} class="on"{% endif %}>Vendor credits</a>
       <a href="/handling/"{% if nav_active == "handling" %} class="on"{% endif %}>Handling</a>
-      <div class="sec">Banking</div>
+      <div class="sec"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8 10 4l7 4M4.5 8.5V15m3.5-6.5V15m4-6.5V15m3.5-6.5V15M3 16h14"/></svg>Banking</div>
       <a href="/banking/"{% if nav_active == "bank-accounts" %} class="on"{% endif %}>Bank accounts</a>
       <a href="/banking/inbox/"{% if nav_active == "inbox" %} class="on"{% endif %}>Inbox</a>
       <a href="/banking/transfers/"{% if nav_active == "transfers" %} class="on"{% endif %}>Transfers</a>
       <a href="/banking/reconcile/"{% if nav_active == "reconcile" %} class="on"{% endif %}>Reconcile</a>
       <a href="/banking/checks/"{% if nav_active == "checks" %} class="on"{% endif %}>Checks to print</a>
-      <div class="sec">Inventory</div>
+      <div class="sec"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3 3.5 6.5v7L10 17l6.5-3.5v-7zM3.5 6.5 10 10l6.5-3.5M10 10v7"/></svg>Inventory</div>
       <a href="/items/"{% if nav_active == "items" %} class="on"{% endif %}>Items{% if negative_stock_count %} <span class="pill">{{ negative_stock_count }} below zero</span>{% endif %}</a>
       <a href="/items/adjustments/"{% if nav_active == "adjustments" %} class="on"{% endif %}>Adjustments</a>
       <a href="/items/counts/"{% if nav_active == "counts" %} class="on"{% endif %}>Counts</a>
-      <div class="sec">Books</div>
-      <a href="{% url 'admin:ledger_journalentry_changelist' %}"{% if nav_active == "journal" %} class="on"{% endif %}>Journal entries</a>
-      <a href="{% url 'admin:ledger_account_changelist' %}"{% if nav_active == "accounts" %} class="on"{% endif %}>Chart of accounts</a>
-      <a href="{% url 'reports:index' %}"{% if nav_active == "reports" %} class="on"{% endif %}>Reports</a>
-      <div class="sec">Setup</div>
-      <a href="/items/settings/"{% if nav_active == "settings" %} class="on"{% endif %}>Inventory settings</a>
-      {% if is_admin %}<a href="/sales/settings/"{% if nav_active == "sales-settings" %} class="on"{% endif %}>Sales settings</a>
-      <a href="/purchasing/settings/"{% if nav_active == "purchasing-settings" %} class="on"{% endif %}>Purchasing settings</a>{% endif %}
-      <a href="{% url 'admin:index' %}">Admin</a>
+      <div class="sec"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5h9a1 1 0 0 1 1 1v12H6a1 1 0 0 1-1-1zM5 14.5a1 1 0 0 1 1-1h9M8 7h4"/></svg>Accountant</div>
+      <a href="{% url 'books:journal' %}"{% if nav_active == "journal" %} class="on"{% endif %}>Journal entries</a>
+      <a href="{% url 'books:accounts' %}"{% if nav_active == "accounts" %} class="on"{% endif %}>Chart of accounts</a>
+      <a href="{% url 'books:periods' %}"{% if nav_active == "periods" %} class="on"{% endif %}>Month close</a>
     </nav>
-    <div class="side-user">{{ user.get_username }} &middot;
-      <form method="post" action="{% url 'logout' %}" style="display:inline">{% csrf_token %}<button type="submit">Log out</button></form>
+    <div class="side-foot">
+      {% if is_admin %}<a class="side-settings{% if nav_active == "settings" %} on{% endif %}" href="{% url 'settings:index' %}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/><path d="M16.2 11.6 17.5 10l-1.3-1.6.3-2-1.9-.8-.8-1.9-2 .3L10 2.5 8.4 3.8l-2-.3-.8 1.9-1.9.8.3 2L2.5 10l1.3 1.6-.3 2 1.9.8.8 1.9 2-.3 1.6 1.3 1.6-1.3 2 .3.8-1.9 1.9-.8z"/></svg>Settings</a>{% endif %}
+      <div class="toggle side-toggle" role="group" aria-label="Theme">
+        <button type="button" data-theme-choice="auto" aria-pressed="true">Auto</button>
+        <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+        <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+      </div>
+      <div class="side-user">
+        <span class="avatar" aria-hidden="true">{{ user.get_username|slice:":1"|upper }}</span>
+        <span class="who"><span class="un">{% firstof user.get_full_name user.get_username %}</span><span class="role">{% if is_admin %}Admin{% else %}Standard{% endif %}</span></span>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
+      </div>
     </div>
   </aside>
   {% endif %}
   <main>
+    {% block top %}
     <div class="top">
       <div>
+        {% block breadcrumb %}{% endblock %}
         <h1>{% block page_title %}DNB Books{% endblock %}</h1>
         {% block page_subtitle %}{% endblock %}
       </div>
       <div class="actions">
-        <div class="toggle" role="group" aria-label="Theme">
-          <button type="button" data-theme-choice="auto" aria-pressed="true">Auto</button>
-          <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
-          <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
-        </div>
         {% block page_actions %}{% endblock %}
       </div>
     </div>
+    {% endblock %}
     {% block messages %}
     {% for m in messages %}<div class="banner {% if m.tags == 'error' %}error{% elif m.tags == 'warning' %}warning{% else %}ok{% endif %}">{{ m }}</div>{% endfor %}
     {% endblock %}

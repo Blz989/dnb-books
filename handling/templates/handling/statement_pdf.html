@@ -11,7 +11,7 @@
 <body>
 {% if is_void %}<div class="void-mark">VOID</div>{% endif %}
 <div class="top">
-  <div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div>
+  <div class="brandrow">{% if logo_uri %}<div class="logo"><img src="{{ logo_uri }}" alt=""></div>{% endif %}<div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div></div>
   <div>
     <h1>Handling statement, {{ label }}</h1>
     <table class="meta">

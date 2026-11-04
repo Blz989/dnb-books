@@ -7,8 +7,10 @@ from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from core.company import logo_uri as company_logo_uri
 from core.roles import require_admin
 from ledger.models import JournalEntry, JournalLine
+from sales.models import SalesSettings
 
 from .models import BankAccount, Match, Reconciliation, ReconciliationItem, ReconStatus
 
@@ -171,6 +173,8 @@ def _context(rec: Reconciliation) -> dict:
         "in_transit": [r for r in open_ if r["is_deposit"]],
         "is_liability": account.is_liability,
         "now": timezone.localtime(),
+        "company": SalesSettings.load(),
+        "logo_uri": company_logo_uri(),
     }
 
 

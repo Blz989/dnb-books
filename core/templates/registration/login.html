@@ -1,14 +1,26 @@
 {% extends "core/base.html" %}
 {% block title %}Log in{% endblock %}
-{% block page_title %}Log in{% endblock %}
+{% block top %}{% endblock %}
 {% block content %}
-{% if form.errors %}<div class="banner error">Wrong username or password.</div>{% endif %}
-<div class="card"><div class="body">
-<form method="post">{% csrf_token %}
-  <div class="form-row"><label for="{{ form.username.id_for_label }}">Username</label>{{ form.username }}</div>
-  <div class="form-row"><label for="{{ form.password.id_for_label }}">Password</label>{{ form.password }}</div>
-  <input type="hidden" name="next" value="{{ next }}">
-  <button type="submit" class="btn primary">Log in</button>
-</form>
-</div></div>
+<div class="login">
+  <div class="login-brand">
+    {% if brand.has_logo %}<img class="login-logo" src="{% url 'brand-logo' %}" alt="{{ brand.name }}">{% else %}<i aria-hidden="true"></i>{% endif %}
+    <h1>{% if brand.has_logo %}Sign in{% else %}{{ brand.name }}{% endif %}</h1>
+    <div class="sub">{% if brand.has_logo %}{{ brand.name }} · {% endif %}DNB Books</div>
+  </div>
+  {% if form.errors %}<div class="banner error">Wrong username or password.</div>{% endif %}
+  <div class="card"><div class="body">
+  <form method="post">{% csrf_token %}
+    <div class="form-row"><label for="{{ form.username.id_for_label }}">Username</label>{{ form.username }}</div>
+    <div class="form-row"><label for="{{ form.password.id_for_label }}">Password</label>{{ form.password }}</div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" class="btn primary wide">Log in</button>
+  </form>
+  </div></div>
+  <div class="toggle login-toggle" role="group" aria-label="Theme">
+    <button type="button" data-theme-choice="auto" aria-pressed="true">Auto</button>
+    <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+    <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+  </div>
+</div>
 {% endblock %}
