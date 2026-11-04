@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are built and tested. A page for each bank account (dashboard, its inbox, and a register with a running balance), FIFO cost lot tracking, unpaid invoices by customer, tighter print margins, and a phone menu are ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -30,6 +30,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Fix a quantity | Adjustments, New adjustment. Stock can go below zero after you confirm; the cost is estimated until stock is received or counted |
 | Count the shelves | Counts. Enter counts without seeing expected quantities, review the differences, then post |
 | Check stock value against the books | Reports, Inventory valuation. The difference must be 0.00 |
+| Trace one item's receipts to the sales that used them | Reports, FIFO cost lot tracking. Pick the item and dates. Bills with no invoice yet, sales made before stock arrived, and the closing quantity and value (which match Inventory valuation) are flagged |
 
 ### Sales (Phase 3)
 
@@ -48,6 +49,8 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Void a sales document | Admin only, with a reason. Voided documents keep their numbers |
 | Send a customer their statement | Customers, Statement. Pick the dates (default last 90 days), check the aging grid and which invoices each payment paid, then Download PDF. The balance equals that customer's row in A/R aging |
 | Check A/R against the books | Reports, A/R aging and Undeposited funds. Both show a Difference that must be 0.00 |
+| See every invoice with money still owed | Invoices, tick Unpaid only (Overdue only still works) |
+| Hand a salesman the collections list | Reports, Unpaid invoices by customer. Every customer's unpaid invoices aged like A/R aging, with unapplied credits and subtotals. Download PDF to print it. The total equals A/R aging and the A/R account |
 
 ### Purchasing (Phase 4)
 
@@ -76,6 +79,7 @@ Nothing is booked from the bank feed until you confirm it. Confirming a row that
 | Add a bank, card, or loan account (once, admin) | Bank accounts, Add account. Pick the ledger account and its kind. Set the next check number for a checking account |
 | Bring in a statement | Bank accounts, Import file. OFX and QFX files read themselves. The first CSV for an account asks which column is which and remembers it. Rows already imported are skipped |
 | Bring in transactions automatically (admin) | Bank accounts, Link with Plaid. The bank's own sign-in opens in a pop-up. It syncs four times a day, or press Sync now |
+| Look at one account | Bank accounts, click its name. Amount in books and the last balance the bank reported, then Dashboard (30-day balance chart, recent activity), Uncategorized (that account's inbox, every inbox action works here), and All transactions (the register: every posted line with a running balance, filters, CSV and PDF). Also Reports, Bank register, and Chart of accounts, Bank page |
 | Work the inbox | Inbox. Confirm a suggestion, Change it to another match or an account, make it a Transfer, or Exclude it with a reason. Tick rows and Confirm ticked rows to do several at once |
 | Book the same fee every month | Inbox, Rules. The first active rule that matches the description suggests its account |
 | Move money between your accounts, pay the card, pay the loan | Transfers, New transfer, or Transfer on an inbox row. Make it once from either side. The other account's row matches the same transfer and books nothing new |

@@ -242,9 +242,9 @@ Files: `banking/views/account_page.py` (new), `banking/urls.py`, `banking/templa
 ## Task 7: README and demo data
 
 Files: `README.md`, `core/management/commands/seed_demo.py` or the per-app `demo.py` modules (only if the screenshots needed data that the demo lacks; use services).
-- [ ] README: add the new reports and the bank page to the Banking/Sales/Items task tables; update the Status line to mention this work as ready for review. Keep overview, roadmap, cutover criteria.
+- [x] README: add the new reports and the bank page to the Banking/Sales/Items task tables; update the Status line to mention this work as ready for review. Keep overview, roadmap, cutover criteria.
 - [ ] Full `uv run pytest -q` green.
-- [ ] Commit: `README for lot tracking, unpaid invoices, and the bank page`
+- [x] Commit: `README for lot tracking, unpaid invoices, and the bank page`
 
 ## Task 8: Print margins (added by the owner mid-session)
 
