@@ -152,3 +152,36 @@ def test_view_returns_inline_pdf(client, admin_user, invoice):
 def test_view_unknown_number_is_404(client, admin_user):
     client.force_login(admin_user)
     assert client.get("/sales/invoices/INV-999999/pdf/").status_code == 404
+
+
+def _page_texts(document):
+    def texts(box):
+        for b in box.descendants():
+            text = getattr(b, "text", None)
+            if text:
+                yield text
+    return [" ".join(texts(page._page_box)) for page in document.pages]
+
+
+def test_long_invoice_repeats_column_headers_on_every_page(service, customer, admin_user, sales_settings):
+    invoice = create_invoice(customer=customer, date=d(10, 27), user=admin_user, lines=[
+        InvoiceLineSpec(service, 1, D("10.00"), description=f"Line {n}") for n in range(1, 70)])
+    pages = _page_texts(invoice_document(invoice))
+    with_lines = [p for p in pages if "Line " in p]
+    assert len(with_lines) >= 2
+    assert all("Item & Description" in p and "Amount" in p for p in with_lines)
+
+
+def test_long_purchase_order_repeats_column_headers(admin_user, vendor, make_item, sales_settings, purchasing_settings):
+    from weasyprint import CSS, HTML
+
+    from purchasing.pdf import render_po_html
+    from purchasing.posting.orders import POLineSpec, create_po
+    from sales.pdf import INVOICE_CSS
+
+    item = make_item("BOLT")
+    po = create_po(vendor=vendor, date=d(10, 1), user=admin_user,
+                   lines=[POLineSpec(item, 1, D("1.00"), description=f"Line {n}") for n in range(1, 70)])
+    document = HTML(string=render_po_html(po)).render(stylesheets=[CSS(filename=str(INVOICE_CSS))])
+    with_lines = [p for p in _page_texts(document) if "Line " in p]
+    assert len(with_lines) >= 2 and all("Item & Description" in p for p in with_lines)
