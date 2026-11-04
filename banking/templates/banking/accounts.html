@@ -5,6 +5,10 @@
 {% block page_actions %}{% if is_admin %}{% if plaid_ready %}<a class="btn" href="{% url 'banking:link' %}">Link with Plaid</a>{% endif %}<a class="btn primary" href="{% url 'banking:account-new' %}">+ Add account</a>{% endif %}{% endblock %}
 {% block content %}
 <div class="card">
+  <form method="get" class="filters">
+    <label><span><input type="checkbox" name="inactive" value="1"{% if show_inactive %} checked{% endif %} onchange="this.form.submit()"> Show inactive</span></label>
+    <noscript><button type="submit" class="btn">Show</button></noscript>
+  </form>
   <table class="data">
     <thead><tr><th>Account</th><th>Kind</th><th>Connection</th><th class="num">Balance</th><th>Last reconciled</th><th class="num">Inbox</th><th></th></tr></thead>
     <tbody>
@@ -31,7 +35,7 @@
         </td>
       </tr>
     {% empty %}
-      <tr><td colspan="7" class="empty">No bank accounts yet. {% if is_admin %}Add one, then import a statement file or link it with Plaid.{% else %}Ask an admin to add one.{% endif %}</td></tr>
+      <tr><td colspan="7" class="empty">{% if hidden %}No active bank accounts. Tick Show inactive to see the others.{% else %}No bank accounts yet. {% if is_admin %}Add one, then import a statement file or link it with Plaid.{% else %}Ask an admin to add one.{% endif %}{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table>

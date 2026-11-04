@@ -385,3 +385,20 @@ def test_account_list_links_check_layout_for_checking_accounts_to_admins(adm, st
     assert link in text(adm.get("/banking/"))
     assert f'href="/banking/layout/{card_account.pk}/"' not in text(adm.get("/banking/"))
     assert link not in text(std.get("/banking/"))
+
+
+def test_account_list_hides_inactive_accounts_until_asked(adm, checking, card_account):
+    card_account.is_active = False
+    card_account.save()
+    page = text(adm.get("/banking/"))
+    assert "Checking" in page and "Company Visa" not in page and "Show inactive" in page
+    shown = text(adm.get("/banking/?inactive=1"))
+    assert "Company Visa" in shown and "Inactive" in shown and "checked" in shown
+
+
+def test_account_list_says_when_every_account_is_inactive(adm, checking):
+    checking.is_active = False
+    checking.save()
+    page = text(adm.get("/banking/"))
+    assert "No active bank accounts. Tick Show inactive to see the others." in page
+    assert "No bank accounts yet" not in page
