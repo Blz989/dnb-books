@@ -249,14 +249,14 @@ Files: `README.md`, `core/management/commands/seed_demo.py` or the per-app `demo
 ## Task 8: Print margins (added by the owner mid-session)
 
 Files: `sales/static/sales/invoice_pdf.css`, `sales/static/sales/statement_pdf.css`, `core/static/core/report_pdf.css`, `docs/design/invoice-mockup.html`, tests as needed.
-- [ ] Invoice PDF `@page` margin 0.25in top, left, right; 0.4in bottom (room for the page number). Content still fills the page width; nothing clips or wraps badly (long descriptions, many lines, multi-page with the repeated table header).
-- [ ] Statement PDF: same margins.
-- [ ] Report PDFs: 8mm top and sides, 12mm bottom.
-- [ ] Leave check PDFs and calibration alone (exact inches). Reconcile report and handling statement unchanged unless they look cramped or wasteful.
-- [ ] Update `docs/design/invoice-mockup.html` to the new margin.
-- [ ] Before and after screenshots (rendered PDFs, demo data): invoice, multi-page invoice, statement, one report.
-- [ ] Existing PDF tests pass; no invoice content changes.
-- [ ] Commit: `Tighter print margins on invoices, statements, and reports`
+- [x] Invoice PDF `@page` margin 0.25in top, left, right; 0.4in bottom (room for the page number). Content still fills the page width; nothing clips or wraps badly (long descriptions, many lines, multi-page with the repeated table header).
+- [x] Statement PDF: same margins.
+- [x] Report PDFs: 8mm top and sides, 12mm bottom.
+- [x] Leave check PDFs and calibration alone (exact inches). Reconcile report and handling statement unchanged unless they look cramped or wasteful.
+- [x] Update `docs/design/invoice-mockup.html` to the new margin.
+- [x] Before and after screenshots (rendered PDFs, demo data): invoice, multi-page invoice, statement, one report.
+- [x] Existing PDF tests pass; no invoice content changes.
+- [x] Commit: `Tighter print margins on invoices, statements, and reports`
 
 ## Task 9: Mobile menu behind a hamburger (added by the owner mid-session)
 
