@@ -109,6 +109,9 @@ def update_po(
             if line is None:
                 raise PurchasingError(f"Line {n} doesn't belong to {current.number}.")
             kept.add(line.pk)
+            allocations = list(line.allocations.all())
+            if len(allocations) > 1 and spec.quantity != line.quantity:
+                raise PurchasingError(f"Line {n} is shared by several sales orders. Its quantity can't change.")
             billed = billed_quantity(line)
             if spec.quantity < billed:
                 raise PurchasingError(f"Line {n}: {billed} already billed.")
@@ -127,6 +130,11 @@ def update_po(
                 for field, value in values.items():
                     setattr(line, field, value)
                 line.save()
+                allocations = list(line.allocations.all())
+                if len(allocations) == 1 and allocations[0].quantity != line.quantity:
+                    # A line bought for one sales order line keeps buying all of it for that line.
+                    allocations[0].quantity = line.quantity
+                    allocations[0].save()
         if date is not None:
             current.date = date
         if expected_date is not None:
@@ -172,23 +180,44 @@ def refresh_po_status(po: PurchaseOrder) -> None:
         po.save()
 
 
-def drop_ship_candidates(order: SalesOrder) -> dict[str, list[SalesOrderLine]]:
-    """Drop-ship lines not yet on a PO, grouped by the vendor text as typed (outer spaces trimmed)."""
+def _orders(orders: SalesOrder | Sequence[SalesOrder]) -> list[SalesOrder]:
+    orders = [orders] if isinstance(orders, SalesOrder) else list(orders)
+    return sorted({o.pk: o for o in orders}.values(), key=lambda o: (o.date, o.pk))
+
+
+def drop_ship_candidates(orders: SalesOrder | Sequence[SalesOrder]) -> dict[str, list[SalesOrderLine]]:
+    """Drop-ship lines not yet on a PO, grouped by the vendor text as typed (outer spaces trimmed). Lines come
+    oldest sales order first, then in line order."""
     groups: dict[str, list[SalesOrderLine]] = defaultdict(list)
-    lines = order.lines.filter(fulfillment=Fulfillment.DROP_SHIP, po_allocations__isnull=True).select_related("item")
-    for line in lines:
-        groups[line.drop_ship_vendor.strip()].append(line)
+    for order in _orders(orders):
+        lines = order.lines.filter(
+            fulfillment=Fulfillment.DROP_SHIP, po_allocations__isnull=True).select_related("item", "order")
+        for line in lines:
+            groups[line.drop_ship_vendor.strip()].append(line)
     return dict(groups)
 
 
+def _combined_specs(lines: list[SalesOrderLine]) -> list[POLineSpec]:
+    """One PO line per item and price, with one allocation per sales order line."""
+    grouped: dict[tuple[int, Decimal], list[SalesOrderLine]] = {}
+    for line in lines:
+        grouped.setdefault((line.item_id, line.item.purchase_cost), []).append(line)
+    return [
+        POLineSpec(same[0].item, sum(l.quantity for l in same), price, description=same[0].description,
+                   allocations=tuple((l, l.quantity) for l in same))
+        for (_, price), same in grouped.items()
+    ]
+
+
 def create_drop_ship_pos(
-    order: SalesOrder, *, user, date: date_type, vendor_choices: dict[str, Vendor] | None = None,
+    orders: SalesOrder | Sequence[SalesOrder], *, user, date: date_type,
+    vendor_choices: dict[str, Vendor] | None = None,
 ) -> list[PurchaseOrder]:
-    """One PO per vendor for the order's drop-ship lines that are not already on a PO."""
+    """One PO per vendor for the drop-ship lines of these sales orders that are not already on a PO."""
     choices = vendor_choices or {}
     resolved: dict[int, tuple[Vendor, list[SalesOrderLine]]] = {}
     unresolved = []
-    for name, lines in drop_ship_candidates(order).items():
+    for name, lines in drop_ship_candidates(orders).items():
         vendor = choices.get(name) or Vendor.find_by_name(name)
         if vendor is None:
             unresolved.append(name)
@@ -197,12 +226,8 @@ def create_drop_ship_pos(
     if unresolved:
         raise UnresolvedVendors(unresolved)
     with transaction.atomic():
-        return [
-            create_po(
-                vendor=vendor, date=date, user=user,
-                lines=[POLineSpec(l.item, l.quantity, l.item.purchase_cost, description=l.description,
-                                  allocations=((l, l.quantity),))
-                       for l in lines],
-            )
-            for vendor, lines in sorted(resolved.values(), key=lambda pair: pair[0].name.casefold())
-        ]
+        pos = []
+        for vendor, lines in sorted(resolved.values(), key=lambda pair: pair[0].name.casefold()):
+            lines.sort(key=lambda l: (l.order.date, l.order_id, l.position, l.pk))
+            pos.append(create_po(vendor=vendor, date=date, user=user, lines=_combined_specs(lines)))
+        return pos

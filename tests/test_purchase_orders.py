@@ -155,7 +155,9 @@ def test_two_vendors_make_two_pos(sales_order, two_vendors, admin_user):
     assert sorted(p.vendor.name for p in pos) == ["Acme Mfg", "Zed Parts"]
     by_vendor = {p.vendor: p for p in pos}
     assert by_vendor[acme].sales_orders() == [sales_order]
-    assert sorted(l.quantity for l in by_vendor[acme].lines.all()) == [1, 2]
+    # The two service lines are the same item at the same cost, so they share one PO line.
+    (acme_line,) = by_vendor[acme].lines.all()
+    assert acme_line.quantity == 3 and [a.quantity for a in acme_line.allocations.all()] == [2, 1]
     zed_line = by_vendor[zed].lines.get()
     assert zed_line.quantity == 3 and zed_line.price == D("0.5000")
     assert [(a.so_line.quantity, a.quantity) for a in zed_line.allocations.all()] == [(3, 3)]
@@ -181,3 +183,89 @@ def test_vendor_choices_resolve_unmatched_names(sales_order, admin_user, db):
     other = Vendor.objects.create(name="Zeta Parts Inc")
     pos = create_drop_ship_pos(sales_order, user=admin_user, date=d(10, 2), vendor_choices={"Zed Parts": other})
     assert sorted(p.vendor.name for p in pos) == ["Acme Mfg", "Zeta Parts Inc"]
+
+
+# ---- drop ship from several sales orders ----
+
+@pytest.fixture
+def gadget(make_item):
+    return make_item("GADGET", purchase_cost="4.0000")
+
+
+@pytest.fixture
+def two_orders(customer, admin_user, gadget, widget, two_vendors):
+    from contacts.models import Customer
+
+    harbor = Customer.objects.create(name="Harbor Plumbing")
+    newer = create_order(customer=harbor, date=d(10, 2), user=admin_user, lines=[
+        OrderLineSpec(gadget, 4, D("9.50"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="acme mfg"),
+        OrderLineSpec(widget, 5, D("9.50"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="Zed Parts"),
+        OrderLineSpec(widget, 1, D("9.50")),
+    ])
+    older = create_order(customer=customer, date=d(10, 1), user=admin_user, lines=[
+        OrderLineSpec(widget, 2, D("9.50"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="Acme Mfg"),
+        OrderLineSpec(gadget, 6, D("9.50"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="Acme Mfg"),
+    ])
+    return older, newer
+
+
+def test_candidates_across_orders(two_orders):
+    older, newer = two_orders
+    candidates = drop_ship_candidates([newer, older])
+    assert sorted(candidates) == ["Acme Mfg", "Zed Parts", "acme mfg"]
+    assert [(l.order, l.quantity) for l in candidates["Acme Mfg"]] == [(older, 2), (older, 6)]
+
+
+def test_one_po_per_vendor_across_orders(two_orders, two_vendors, admin_user, gadget, widget):
+    older, newer = two_orders
+    acme, zed = two_vendors
+    pos = create_drop_ship_pos([newer, older], user=admin_user, date=d(10, 3))
+    assert [p.vendor for p in pos] == [acme, zed]
+    acme_po, zed_po = pos
+    assert acme_po.sales_orders() == [older, newer]
+    rows = [(l.item, l.quantity, l.price, [(a.so_line.order, a.quantity) for a in l.allocations.all()])
+            for l in acme_po.lines.all()]
+    # The gadgets from both orders combine into one line; lines follow the oldest order's line order.
+    assert rows == [
+        (widget, 2, D("0.5000"), [(older, 2)]),
+        (gadget, 10, D("4.0000"), [(older, 6), (newer, 4)]),
+    ]
+    assert [(l.quantity, [a.so_line.order for a in l.allocations.all()]) for l in zed_po.lines.all()] == [
+        (5, [newer])]
+    assert drop_ship_candidates([older, newer]) == {}
+
+
+def test_single_order_is_the_same_path(two_orders, two_vendors, admin_user):
+    older, newer = two_orders
+    (po,) = create_drop_ship_pos(older, user=admin_user, date=d(10, 3))
+    assert po.sales_orders() == [older]
+    pos = create_drop_ship_pos([older, newer], user=admin_user, date=d(10, 4))
+    assert [p.sales_orders() for p in pos] == [[newer], [newer]]
+
+
+def test_unresolved_vendor_across_orders_creates_nothing(two_orders, admin_user):
+    older, newer = two_orders
+    Vendor.objects.filter(name="Zed Parts").delete()
+    with pytest.raises(PurchasingError, match="No vendor named Zed Parts.") as e:
+        create_drop_ship_pos([older, newer], user=admin_user, date=d(10, 3))
+    assert e.value.unresolved == ["Zed Parts"]
+    assert PurchaseOrder.objects.count() == 0
+
+
+def test_editing_a_drop_ship_po_keeps_its_allocations(two_orders, two_vendors, admin_user, gadget, widget):
+    older, newer = two_orders
+    acme_po, _ = create_drop_ship_pos([older, newer], user=admin_user, date=d(10, 3))
+    single, shared_line = acme_po.lines.all()
+    update_po(acme_po, user=admin_user, notes="Rush", lines=[
+        POLineSpec(widget, 3, D("0.50"), line_id=single.pk), POLineSpec(gadget, 10, D("4.10"), line_id=shared_line.pk)])
+    # One sales order line: the allocation follows the new quantity.
+    assert [(a.so_line.order, a.quantity) for a in single.allocations.all()] == [(older, 3)]
+    assert [a.quantity for a in shared_line.allocations.all()] == [6, 4]
+    with pytest.raises(PurchasingError, match="Line 2 is shared by several sales orders. Its quantity can't change."):
+        update_po(acme_po, user=admin_user, lines=[
+            POLineSpec(widget, 3, D("0.50"), line_id=single.pk),
+            POLineSpec(gadget, 9, D("4.10"), line_id=shared_line.pk)])
+    # Removing an unbilled shared line frees both orders' lines for another PO.
+    update_po(acme_po, user=admin_user, lines=[POLineSpec(widget, 3, D("0.50"), line_id=single.pk)])
+    assert sorted((l.order.number, l.quantity) for lines in drop_ship_candidates([older, newer]).values()
+                  for l in lines) == sorted([(older.number, 6), (newer.number, 4)])
