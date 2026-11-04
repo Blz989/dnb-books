@@ -1,6 +1,6 @@
 # DNB Books MCP server: design
 
-Status: draft for owner review, revision 2 (sign-in moved to Cloudflare Access). Date: 2026-11-04.
+Status: draft for owner review, revision 3 (fits the existing LopezHome tunnel and Access setup). Date: 2026-11-04.
 
 ## 1. Goal
 
@@ -11,7 +11,7 @@ Let the people who use DNB Books work with it from Claude (Claude Desktop, claud
 | Topic | Decision |
 |---|---|
 | Where it's used | Claude Desktop, claude.ai, and phone. All three use one remote connector. |
-| Network | Cloudflare Tunnel on a domain the owner manages in Cloudflare, protected by a Cloudflare Access application. Both stages are built now, not staged. Optionally listed in the owner's Cloudflare MCP server portal. |
+| Network | The existing remotely managed `LopezHome` tunnel on `lopezhome.casa`. A new public hostname `mcp.lopezhome.casa` points to `http://192.168.0.33:8001`, behind its own Access application. It can also be listed in the owner's Cloudflare MCP server portal. |
 | Sign-in | Cloudflare Access does the sign-in (Managed OAuth) through the owner's identity provider, so two-step sign-in comes from there. DNB Books maps the signed-in email to a DNB Books user, and that user's role applies. |
 | What Claude can do | Read, plus guarded writes: invoices and payments, bills and vendor payments, purchase orders, customers, vendors, items. |
 | Who can write | The same as each person's app role. |
@@ -27,15 +27,16 @@ The owner chose internet access before cutover, against the recommendation to wa
         ▼
  Cloudflare Access (sign-in, policies) ── optional: MCP server portal
         │
- Cloudflare Tunnel ──► cloudflared (container) ──► mcp service :8001  (new container)
-                                              │  same code and database as the app
-                                              ▼
-                                           SQLite (data/dnb.sqlite3)
- Office browsers ───────────────────────────► app :8000  (unchanged, office network only)
+ LopezHome tunnel (already running) ──► NAS 192.168.0.33:8001 ── mcp service (new container)
+                                                                   │  same code and database as the app
+                                                                   ▼
+                                                                SQLite (data/dnb.sqlite3)
+ books.lopezhome.casa (Access: owner only) ──► NAS :8000 ── app (unchanged)
 ```
 
 - **A new `mcp` service** in docker-compose runs `manage.py serve_mcp`: an ASGI app (the SDK's `MCPServer` with Streamable HTTP, served by uvicorn, which the SDK already brings). It imports Django and calls the same services the screens use. It doesn't call the web app over HTTP.
-- **Only the `mcp` service is published through the tunnel,** and only behind its Access application. It serves the MCP endpoint (`/mcp`) and nothing else. The main app on port 8000 is not reachable from the internet.
+- **The `mcp` service** is published on the NAS at port 8001 (bound to `0.0.0.0` in the container) and reached only through the tunnel and its Access application. It serves the MCP endpoint (`/mcp`) over Streamable HTTP, stateless with JSON responses, which Cloudflare's portal accepts. It accepts only the hosts in `DNB_MCP_ALLOWED_HOSTS` (default `mcp.lopezhome.casa`), using the SDK's host check, so the tunnel rule needs no `httpHostHeader` override.
+- **The main app** is already reachable at `books.lopezhome.casa` behind the owner-only Access policy. That is separate from this work. Signing in there needs `DNB_CSRF_TRUSTED_ORIGINS` (PR #36).
 - **A new Django app, `mcpserver`,** holds the models, the Access token check, the tools, and the screens in Settings.
 
 ## 4. Sign-in (Cloudflare Access)
@@ -109,7 +110,7 @@ Errors from the posting services pass through unchanged (for example "October 20
 
 | Risk | Control |
 |---|---|
-| The books are on the internet | Only the `mcp` service is published, behind a Cloudflare Access application; the app stays on the office network. DNB Books passwords are never entered on the internet. |
+| The books are on the internet | The `mcp` service sits behind its own Access application (owner-only policy to start). DNB Books passwords are never entered for the MCP. |
 | Someone reaching the service without Access | The service rejects any request without a valid, unexpired Access token for its audience tag, so a misconfigured route still fails closed. |
 | Sign-in strength | Owned by the identity provider: turn on two-step sign-in there. An Access policy limits who can connect. |
 | A stolen session | Revoke sessions in Cloudflare Access, the per-user "MCP access" switch, and the service on/off switch. Access session length is set in Cloudflare (recommend 24 hours). |
@@ -132,13 +133,14 @@ The MCP adds no new posting paths. Every write calls the existing services, whic
 
 ## 10. What the owner sets up
 
-1. A domain in Cloudflare (for example `mcp.yourcompany.com`).
-2. Zero Trust → Networks → Tunnels: create a tunnel, add a public hostname `mcp.yourcompany.com` pointing to `http://mcp:8001`, and copy its token into `.env` as `CLOUDFLARE_TUNNEL_TOKEN`.
-3. Zero Trust → Access → Applications: add a self-hosted application for `mcp.yourcompany.com`, with a policy allowing the company's people and the identity provider they sign in with. Under Advanced settings, turn on **Managed OAuth**. Copy the **Application Audience (AUD) tag** into `.env` as `DNB_CF_ACCESS_AUD`, and set `DNB_CF_ACCESS_TEAM_DOMAIN=<team>.cloudflareaccess.com`.
-4. Turn on two-step sign-in in the identity provider.
-5. `docker compose up -d --build` starts the `mcp` and `cloudflared` services.
-6. In DNB Books, Settings → Users and roles: make sure each person's email matches their Cloudflare login, and turn on **MCP access** for them.
-7. In Claude: Settings → Connectors → Add custom connector → `https://mcp.yourcompany.com/mcp` → sign in. Or add DNB Books to the MCP server portal and connect Claude to the portal.
+The Cloudflare side matches the handoff from the owner's Cloudflare session (tunnel `LopezHome`, wildcard Access app "Home services (wildcard)" with the "Owner only" policy).
+
+1. **Tunnel:** on LopezHome, add the public hostname `mcp.lopezhome.casa` → `http://192.168.0.33:8001`, with a proxied CNAME `mcp` to the tunnel. No `httpHostHeader` override.
+2. **Access:** add a dedicated self-hosted application for `mcp.lopezhome.casa` with the "Owner only" policy and **Managed OAuth** turned on (Advanced settings). It has to take precedence over the wildcard app, whose browser login MCP clients can't complete. This is untested in this account, so check it before step 5. Copy its **Application Audience (AUD) tag**.
+3. **`.env` on the NAS:** `DNB_CF_ACCESS_AUD=<AUD tag>`, `DNB_CF_ACCESS_TEAM_DOMAIN=<team>.cloudflareaccess.com`, `DNB_MCP_ALLOWED_HOSTS=mcp.lopezhome.casa`. Then `docker compose up -d --build` starts the `mcp` service on port 8001.
+4. **DNB Books:** in Settings → Users and roles, make sure your user's email is the one in the Owner only policy, and turn on **MCP access**.
+5. **Claude:** add a custom connector `https://mcp.lopezhome.casa/mcp` in the Claude app, and an HTTP server with the same URL in Claude Code. Sign in through Cloudflare when asked.
+6. **Optional portal:** in Zero Trust → Access controls → MCP Portals, add the server by its full URL (`https://mcp.lopezhome.casa/mcp`), give the server and the portal an Access policy, and connect Claude to the portal URL instead. Whether the Claude app connects cleanly through a portal here is untested; connect directly first.
 
 ## 11. Out of scope
 
