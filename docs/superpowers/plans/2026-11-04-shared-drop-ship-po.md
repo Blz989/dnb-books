@@ -95,7 +95,7 @@ Files: `sales/templates/sales/order_list.html`, `purchasing/urls.py`, `purchasin
 
 Files: `mcpserver/read.py`, `purchasing/demo.py`, `README.md`, `tests/test_mcp.py`.
 
-- [ ] `get_purchase_order` returns `drop_ship_for` joined and per-line `allocations`; test it.
-- [ ] Demo: two more customers' faucet orders from Delta on one shared PO, billed in two partial bills.
-- [ ] README: shared drop-ship POs in the purchasing section; Status line.
-- [ ] Full suite green. Commit `Shared drop-ship POs in MCP, demo, and README`.
+- [x] `get_purchase_order` returns `drop_ship_for` joined and per-line `allocations`; test it.
+- [x] Demo: two more customers' faucet orders from Delta on one shared PO, billed in two partial bills.
+- [x] README: shared drop-ship POs in the purchasing section; Status line.
+- [x] Full suite green. Commit `Shared drop-ship POs in MCP, demo, and README`.

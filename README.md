@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -12,7 +12,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Backups | Nightly encrypted off-site backup, monthly restore drill | 1 |
 | Items and inventory | Item catalog, stock movements, FIFO or weighted average cost per item | 2 |
 | Sales | Customers, sales orders, invoices per shipment (PDF, drop-ship lines, editable), payments, deposits, credit notes, refunds, A/R aging, customer statements (page and PDF, from Customers), invoice and statement PDFs laid out like the Zoho originals | 3 |
-| Purchasing | Vendors, purchase orders (including drop-ship POs), bills that receive stock at the bill price, vendor payments by check, ACH, or company card, vendor credits and returns, A/P aging, 1099 summary | 4 |
+| Purchasing | Vendors, purchase orders (including drop-ship POs, one PO shared by several sales orders), bills that receive stock at the bill price, vendor payments by check, ACH, or company card, vendor credits and returns, A/P aging, 1099 summary | 4 |
 | Banking | Plaid bank feeds or OFX, QFX, and CSV files, an inbox that suggests matches for you to confirm, transfers and loan payments, reconciliation that locks what it clears, check printing on existing voucher stock | 5a |
 | Order profitability | Profit per order (sales less stock and drop-ship cost), a report with flags, and a profit panel on each order and direct invoice | After 5a |
 | Handling | Twice-monthly bill to the handling company for 55% of each order's profit not yet billed, with a statement PDF, corrections in the next bill, and a month close check | After 5a |
@@ -59,6 +59,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Receive and bill stock | Open the purchase order, then Bill this order. Stock comes in at the price on the bill. Bill in parts by lowering a quantity, and add freight as an expense line |
 | Enter a bill with no purchase order, or an expense bill (rent, utilities) | Bills, New bill. Item lines and expense lines can share a bill |
 | Buy something that ships straight to the customer | Open the sales order, then Create drop-ship PO. Billing it posts the cost and clears the invoice from Drop shipments awaiting bill |
+| Buy drop-ship lines for several orders on one PO | Sales orders, check the orders, then Create drop-ship PO. One PO per vendor; the same item at the same cost goes on one line, with each order's quantity listed under "For" on the PO and in a ship-to list on its PDF. Bills on that PO are costed to the orders automatically, oldest sales order first, and rebuilt whenever a bill or invoice changes |
 | Fix a saved bill | Bills, open it, Edit. The number stays, the books are reposted, and the old version stays under Revisions. Voids are admin only |
 | Pay bills | Pay bills. Tick amounts (partial is fine), choose check, ACH, or company card. One payment is made for each vendor, and each check needs its own number |
 | Pay a vendor ahead, or without a bill | Pay bills, Single payment. Anything not applied stays as credit with the vendor |

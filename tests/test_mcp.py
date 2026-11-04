@@ -300,6 +300,25 @@ def test_purchase_order_then_bill_against_it(books, owner):
     assert PurchaseOrder.objects.count() == 1
 
 
+def test_shared_drop_ship_po_lists_its_orders(books, owner, admin_user):
+    from purchasing.posting.orders import create_drop_ship_pos
+    from sales.posting.orders import OrderLineSpec, create_order
+
+    ds = dict(fulfillment="DROP_SHIP", drop_ship_vendor="Acme Supply")
+    harbor = Customer.objects.create(name="Harbor Plumbing")
+    first = create_order(customer=books.customer, date=date(2026, 10, 1), user=admin_user,
+                         lines=[OrderLineSpec(books.widget, 6, D("25.00"), **ds)])
+    second = create_order(customer=harbor, date=date(2026, 10, 2), user=admin_user,
+                          lines=[OrderLineSpec(books.widget, 4, D("25.00"), **ds)])
+    (po,) = create_drop_ship_pos([first, second], user=admin_user, date=date(2026, 10, 3))
+    got = read.get_purchase_order(owner, po.number)
+    assert got["drop_ship_for"] == f"{first.number}, {second.number}"
+    (line,) = got["lines"]
+    assert line["quantity"] == 10 and line["allocations"] == [
+        {"sales_order": first.number, "customer": "Acme Builders", "quantity": 6},
+        {"sales_order": second.number, "customer": "Harbor Plumbing", "quantity": 4}]
+
+
 def test_save_customer_vendor_item(books, owner):
     p = write.preview(owner, "save_customer", {"name": "Birch Co", "fields": {"email": "ap@birch.test", "terms": "Net 15"}})
     assert p["preview"]["action"] == "create" and not Customer.objects.filter(name="Birch Co").exists()
