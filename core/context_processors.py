@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from core.roles import is_admin
 
 
@@ -18,4 +20,13 @@ def nav(request):
         from core.report_catalog import catalog
 
         out["report_groups"] = catalog(match.url_name)
+        query = request.GET.copy()
+        query["format"] = "pdf"
+        out["pdf_url"] = f"{request.path}?{query.urlencode()}"
+        out["pdf"] = getattr(request, "report_pdf", False)
+        if out["pdf"]:
+            from core.company import logo_uri
+
+            out["pdf_logo_uri"] = logo_uri()
+            out["pdf_font_uri"] = (settings.BASE_DIR / "core" / "static" / "core" / "fonts").as_uri()
     return out

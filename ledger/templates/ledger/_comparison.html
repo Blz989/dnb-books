@@ -1,0 +1,18 @@
+<div class="scroll">
+<table class="data compare">
+  <thead><tr><th>{{ comparison.first_header }}</th>{% for col in comparison.columns %}<th class="num">{{ col }}</th>{% endfor %}<th class="num">Change</th><th class="num">%</th></tr></thead>
+  <tbody>
+  {% for r in comparison.rows %}
+    {% if r.kind == "section" %}<tr class="section"><th colspan="{{ comparison.columns|length|add:3 }}">{{ r.label }}</th></tr>
+    {% else %}<tr{% if r.kind == "total" %} class="total"{% endif %}>
+      <td>{% if r.number %}<span class="dash">{{ r.number }}</span> {% endif %}{{ r.label }}</td>
+      {% for a in r.amounts %}<td class="num{% if forloop.first %} cur{% endif %}">{{ a|floatformat:"2g" }}</td>{% endfor %}
+      <td class="num">{{ r.change|floatformat:"2g" }}</td>
+      <td class="num dash">{% if r.percent is not None %}{{ r.percent }}%{% else %}—{% endif %}</td>
+    </tr>{% endif %}
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if comparison.note %}<p class="help pad">{{ comparison.note }}</p>{% endif %}
+<p class="help pad">Change compares {{ comparison.columns.0 }} with {{ comparison.columns.1 }}.</p>

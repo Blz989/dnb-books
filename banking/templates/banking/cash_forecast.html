@@ -1,0 +1,50 @@
+{% extends "core/report_base.html" %}
+{% load static %}
+{% block title %}Cash forecast{% endblock %}
+{% block page_title %}Cash forecast{% endblock %}
+{% block page_subtitle %}<div class="sub">From {{ f.today|date:"M j, Y" }}: cash on hand, plus open invoices when each customer usually pays, less open bills when they're due.</div>{% endblock %}
+{% block report %}
+<div class="seg" role="group" aria-label="View">{% for key, label in views %}<a href="?view={{ key }}"{% if key == f.view %} class="on" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</div>
+<div class="kpis five">
+  <div class="kpi"><div class="l">Cash today</div><div class="v">{{ f.starting_cash|floatformat:"2g" }}</div><div class="note">Bank {{ f.bank_balance|floatformat:"2g" }}{% if f.undeposited %} · Undeposited {{ f.undeposited|floatformat:"2g" }}{% endif %}</div></div>
+  <div class="kpi"><div class="l">Coming in</div><div class="v">{{ f.total_in|floatformat:"2g" }}</div><div class="note">{{ ins|length }} invoice{{ ins|length|pluralize }}</div></div>
+  <div class="kpi"><div class="l">Going out</div><div class="v">{{ f.total_out|floatformat:"2g" }}</div><div class="note">{{ outs|length }} bill{{ outs|length|pluralize }}</div></div>
+  {% with low=f.low_point %}<div class="kpi{% if low.closing < 0 %} warn{% endif %}"><div class="l">Lowest point</div><div class="v">{{ low.closing|floatformat:"2g" }}</div><div class="note">{% if low.closing < 0 %}Short of cash · {% endif %}{{ low.label }}</div></div>{% endwith %}
+  <div class="kpi"><div class="l">Cash at end</div><div class="v">{{ f.ending_cash|floatformat:"2g" }}</div>{% with last=f.periods|last %}<div class="note">{{ last.end|date:"M j, Y" }}</div>{% endwith %}</div>
+</div>
+{% if f.late_receivables %}<div class="banner warning">{{ f.late_receivables|floatformat:"2g" }} in invoices is later than those customers usually pay. It's counted as coming in today, which may be optimistic.</div>{% endif %}
+{% include "core/_chart.html" with chart_title="Projected cash" chart_sub="Cash at the end of each period" svg=svg legend=None rows=rows head=head foot=None %}
+<div class="card">
+<div class="scroll">
+<table class="data">
+  <thead><tr>{% for h in head %}<th{% if not forloop.first %} class="num"{% endif %}>{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for p in f.periods %}
+    <tr><td class="nowrap">{{ p.label }}</td><td class="num">{{ p.opening|floatformat:"2g" }}</td>
+      <td class="num">{% if p.cash_in %}{{ p.cash_in|floatformat:"2g" }}{% else %}<span class="dash">—</span>{% endif %}</td>
+      <td class="num">{% if p.cash_out %}{{ p.cash_out|floatformat:"2g" }}{% else %}<span class="dash">—</span>{% endif %}</td>
+      <td class="num{% if p.closing < 0 %} neg{% endif %}">{{ p.closing|floatformat:"2g" }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+<div class="two-col">
+  <div class="card"><div class="card-h">Money coming in</div>
+  <table class="data"><thead><tr><th>Expected</th><th>Invoice</th><th>Customer</th><th class="num">Amount</th></tr></thead><tbody>
+  {% for x in ins %}<tr><td class="nowrap">{{ x.expected|date:"M j" }}<div class="dash small">{{ x.note }}</div></td><td><a class="sku" href="{% url x.url_name x.number %}">{{ x.number }}</a></td><td>{{ x.party }}</td><td class="num">{{ x.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No open invoices in this range.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <div class="card"><div class="card-h">Money going out</div>
+  <table class="data"><thead><tr><th>Expected</th><th>Bill</th><th>Vendor</th><th class="num">Amount</th></tr></thead><tbody>
+  {% for x in outs %}<tr><td class="nowrap">{{ x.expected|date:"M j" }}<div class="dash small">{{ x.note }}</div></td><td><a class="sku" href="{% url x.url_name x.number %}">{{ x.number }}</a></td><td>{{ x.party }}</td><td class="num">{{ x.amount|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">No open bills in this range.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+<div class="card"><div class="body notes">
+  <p><b>What's included.</b> Bank accounts and Undeposited Funds as of today, open invoices, and open bills. Overdue bills count as paid today.</p>
+  <p><b>Not included.</b> Rent, payroll, loan payments, and other costs until they're entered as bills. Credit card balances. Past about a month, the real figure will usually be lower than shown.</p>
+  {% if f.beyond_in or f.beyond_out %}<p><b>After this range.</b> {{ f.beyond_in|floatformat:"2g" }} coming in and {{ f.beyond_out|floatformat:"2g" }} going out.</p>{% endif %}
+</div></div>
+<script src="{% static 'core/charts.js' %}" defer></script>
+{% endblock %}

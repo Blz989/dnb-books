@@ -2,7 +2,7 @@ from django import forms
 from django.db.models import Q
 
 from contacts.models import Customer, Vendor
-from ledger.forms import date_field
+from ledger.forms import compare_field, date_field
 from ledger.models import Account, AccountType
 
 from .models import HandlingRun, HandlingSettings, RunStatus
@@ -22,6 +22,7 @@ class OrderProfitabilityForm(forms.Form):
             Customer.objects.order_by("name"), required=False, empty_label="All customers", label="Customer",
             error_messages={"invalid_choice": "Choose a customer."})
         self.fields["unbilled"] = forms.BooleanField(required=False, label="Has unbilled handling")
+        self.fields["compare"] = compare_field()
 
     def clean(self):
         data = super().clean()

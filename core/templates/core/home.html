@@ -8,6 +8,7 @@
 <a class="btn primary" href="{% url 'sales:invoice-new' %}">New invoice</a>
 {% endblock %}
 {% block content %}
+{% load static %}<script src="{% static 'core/charts.js' %}" defer></script>
 {% if negative_stock_count %}
 <div class="banner warning">{{ negative_stock_count }} item{{ negative_stock_count|pluralize }} {{ negative_stock_count|pluralize:"is,are" }} below zero. Their cost is estimated until stock is received or counted. <a href="/reports/negative-stock/">Review →</a></div>
 {% endif %}
@@ -21,6 +22,13 @@
 <div class="banner info">Purchasing isn't set up yet. Choose the accounts payable account in Purchasing settings. <a href="{% url 'purchasing:settings' %}">Open settings</a></div>
 {% endif %}
 {% if backup.level != "ok" %}<div class="banner {{ backup.level }}">{{ backup.message }}</div>{% endif %}
+<div class="section-h">Last 12 months</div>
+<div class="charts">
+  <div>{% include "core/_chart.html" with chart_title="Cash flow" chart_sub="Money in and out of the bank accounts" svg=cash.svg legend=cash_legend rows=cash_rows head=cash_head foot=cash_foot %}
+    </div>
+  <div>{% include "core/_chart.html" with chart_title="Income and expense" chart_sub="Accrual basis. Expense includes cost of goods sold." svg=pnl.svg legend=pnl_legend rows=pnl_rows head=pnl_head foot=pnl_foot %}
+    </div>
+</div>
 <div class="section-h">Receivables</div>
 <div class="kpis">
   <div class="kpi"><div class="l">Open A/R</div><div class="v">{{ open_ar|floatformat:"2g" }}</div><div class="note"><a href="{% url 'reports:ar-aging' %}">A/R aging</a></div></div>

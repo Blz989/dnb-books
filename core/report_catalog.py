@@ -6,6 +6,7 @@ GROUPS = [
         ("profit-and-loss", "Profit and loss", "Income, cost of goods sold, and expenses for a date range."),
         ("balance-sheet", "Balance sheet", "Assets, liabilities, and equity on a date."),
         ("order-profitability", "Order profitability", "Profit per order after stock and drop-ship cost."),
+        ("cash-forecast", "Cash forecast", "Cash on hand plus what's coming in, less what's going out."),
     ]),
     ("Receivables", [
         ("ar-aging", "A/R aging", "What customers owe, by how late it is."),
@@ -33,7 +34,7 @@ GROUPS = [
     ]),
 ]
 
-FEATURED = ["profit-and-loss", "balance-sheet", "ar-aging", "ap-aging", "inventory-valuation", "order-profitability"]
+FEATURED = ["profit-and-loss", "balance-sheet", "cash-forecast", "ar-aging", "ap-aging", "order-profitability"]
 
 
 def catalog(current: str | None = None) -> list[dict]:

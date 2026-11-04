@@ -5,7 +5,8 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from . import csv_export, reports
-from .forms import AsOfForm, GeneralLedgerForm, RangeForm
+from . import comparison
+from .forms import AsOfCompareForm, GeneralLedgerForm, RangeCompareForm
 
 
 def _data(request, defaults):
@@ -32,30 +33,55 @@ def index(request):
 
 @login_required
 def trial_balance(request):
-    form = AsOfForm(_data(request, {"as_of": _today().isoformat()}))
-    report = reports.trial_balance(form.cleaned_data["as_of"]) if form.is_valid() else None
+    form = AsOfCompareForm(_data(request, {"as_of": _today().isoformat()}))
+    report = compared = None
+    if form.is_valid():
+        as_of, years = form.cleaned_data["as_of"], form.cleaned_data["compare"]
+        report = reports.trial_balance(as_of)
+        if years:
+            compared = comparison.trial_balance_comparison(as_of, years)
+    if compared and _wants_csv(request):
+        return comparison.comparison_csv(compared, f"trial-balance-comparison-{report.as_of.isoformat()}.csv")
     if report and _wants_csv(request):
         return csv_export.trial_balance_csv(report)
-    return render(request, "ledger/trial_balance.html", {"form": form, "report": report, "nav_active": "reports"})
+    return render(request, "ledger/trial_balance.html", {
+        "form": form, "report": report, "comparison": compared, "nav_active": "reports"})
 
 
 @login_required
 def profit_and_loss(request):
     today = _today()
-    form = RangeForm(_data(request, {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}))
-    report = reports.profit_and_loss(form.cleaned_data["start"], form.cleaned_data["end"]) if form.is_valid() else None
+    form = RangeCompareForm(_data(request, {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}))
+    report = compared = None
+    if form.is_valid():
+        start, end, years = form.cleaned_data["start"], form.cleaned_data["end"], form.cleaned_data["compare"]
+        report = reports.profit_and_loss(start, end)
+        if years:
+            compared = comparison.profit_and_loss_comparison(start, end, years)
+    if compared and _wants_csv(request):
+        return comparison.comparison_csv(
+            compared, f"profit-and-loss-comparison-{report.start.isoformat()}_{report.end.isoformat()}.csv")
     if report and _wants_csv(request):
         return csv_export.profit_and_loss_csv(report)
-    return render(request, "ledger/profit_and_loss.html", {"form": form, "report": report, "nav_active": "reports"})
+    return render(request, "ledger/profit_and_loss.html", {
+        "form": form, "report": report, "comparison": compared, "nav_active": "reports"})
 
 
 @login_required
 def balance_sheet(request):
-    form = AsOfForm(_data(request, {"as_of": _today().isoformat()}))
-    report = reports.balance_sheet(form.cleaned_data["as_of"]) if form.is_valid() else None
+    form = AsOfCompareForm(_data(request, {"as_of": _today().isoformat()}))
+    report = compared = None
+    if form.is_valid():
+        as_of, years = form.cleaned_data["as_of"], form.cleaned_data["compare"]
+        report = reports.balance_sheet(as_of)
+        if years:
+            compared = comparison.balance_sheet_comparison(as_of, years)
+    if compared and _wants_csv(request):
+        return comparison.comparison_csv(compared, f"balance-sheet-comparison-{report.as_of.isoformat()}.csv")
     if report and _wants_csv(request):
         return csv_export.balance_sheet_csv(report)
-    return render(request, "ledger/balance_sheet.html", {"form": form, "report": report, "nav_active": "reports"})
+    return render(request, "ledger/balance_sheet.html", {
+        "form": form, "report": report, "comparison": compared, "nav_active": "reports"})
 
 
 @login_required

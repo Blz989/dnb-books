@@ -1,0 +1,52 @@
+/* Report PDFs. Plain black on white; the screen layout's forms and buttons are hidden. */
+@page { size: letter; margin: 14mm 12mm 16mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt Inter, sans-serif; color: #6f655a; } }
+@page :first { }
+body { font-family: Inter, sans-serif; font-size: 9pt; color: #2b2620; }
+.head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5pt solid #2f6b4f; padding-bottom: 8pt; margin-bottom: 12pt; }
+.head .co { display: flex; align-items: center; gap: 8pt; font-size: 10pt; }
+.head .logo { height: 34pt; max-width: 130pt; object-fit: contain; }
+.printed { color: #6f655a; font-size: 8pt; }
+h1 { font-family: "Source Serif 4", serif; font-weight: 600; font-size: 18pt; margin: 0 0 2pt; }
+h1 .tag { display: none; }
+.sub { color: #6f655a; margin-bottom: 10pt; }
+h2, h3 { font-size: 10.5pt; margin: 12pt 0 6pt; }
+form, .filters, .btn, button, input, select, script, .report-nav, .pager { display: none !important; }
+a { color: inherit; text-decoration: none; }
+.card { border: 0; margin: 0 0 10pt; }
+.card > .body { padding: 0; }
+.kpis { display: flex; gap: 8pt; margin-bottom: 10pt; }
+.kpi { border: 0.75pt solid #e3dccd; padding: 6pt 8pt; flex: 1; }
+.kpi .l { color: #6f655a; font-size: 8pt; }
+.kpi .v { font-size: 12pt; font-weight: 650; }
+table.data { width: 100%; border-collapse: collapse; }
+table.data thead { display: table-header-group; }
+table.data tr { page-break-inside: avoid; }
+table.data th { text-align: left; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .03em; color: #6f655a; font-weight: 600; padding: 5pt 6pt; border-bottom: 0.75pt solid #2b2620; }
+table.data td { padding: 4pt 6pt; border-bottom: 0.5pt solid #eee8db; }
+table.data th.num, table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data tr.section th { background: #faf6ee; color: #2b2620; text-transform: none; font-size: 8.5pt; border-bottom: 0.5pt solid #e3dccd; }
+table.data tr.total td { font-weight: 650; border-top: 1pt solid #2b2620; border-bottom: 0; }
+.dash, .help { color: #6f655a; }
+.help { font-size: 8pt; }
+.tag { font-size: 7pt; border: 0.5pt solid #e3dccd; padding: 0 3pt; }
+.neg, .down { color: #b4541a; }
+.empty { color: #6f655a; text-align: center; padding: 10pt; }
+.chart svg { width: 100%; height: auto; }
+.chart-svg { width: 100%; height: auto; }
+.chart-svg .grid { stroke: #eee8db; stroke-width: 1; }
+.chart-svg .zero { stroke: #6f655a; stroke-width: 1; }
+.chart-svg .tick { fill: #6f655a; font-size: 11px; font-family: Inter, sans-serif; }
+.chart-svg .bar.s1 { fill: #14805a; } .chart-svg .bar.s2 { fill: #e8823a; }
+.chart-svg .line.s1 { fill: none; stroke: #14805a; stroke-width: 2; }
+.chart-svg .area.s1 { fill: #14805a; opacity: .10; }
+.chart-svg .dot { fill: #fff; stroke: #14805a; stroke-width: 2; opacity: 0; }
+.chart-svg .dot.neg { stroke: #b42318; opacity: 1; }
+.chart-svg .hit { fill: none; }
+.chart-table, .tip, .legend { display: none; }
+.chart-h { margin-bottom: 4pt; } .chart-title { font-weight: 600; }
+.seg, .tip { display: none !important; }
+.banner { border: 0.5pt solid #efcfab; background: #fbeee0; color: #8a4b14; padding: 4pt 6pt; margin-bottom: 8pt; }
+.head .co b { white-space: nowrap; }
+.two-col .card { margin-bottom: 10pt; }
+.small { font-size: 7pt; }
+.notes p { margin: 0 0 4pt; color: #6f655a; }
