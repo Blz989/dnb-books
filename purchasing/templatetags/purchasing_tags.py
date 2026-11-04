@@ -1,5 +1,6 @@
 from django import template
 
+from ..models import PurchaseOrder
 from ..posting.orders import drop_ship_candidates
 
 register = template.Library()
@@ -13,4 +14,4 @@ def drop_ship_po_button(order):
 
 @register.inclusion_tag("purchasing/_drop_ship_pos.html")
 def drop_ship_po_list(order):
-    return {"order": order, "purchase_orders": list(order.purchase_orders.select_related("vendor"))}
+    return {"order": order, "purchase_orders": list(PurchaseOrder.for_sales_order(order).select_related("vendor"))}

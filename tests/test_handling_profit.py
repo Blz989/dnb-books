@@ -9,6 +9,7 @@ from contacts.models import Customer, Terms, Vendor
 from handling.models import HandlingRun, HandlingRunLine, RunStatus
 from handling.profit import billed_to_date, order_profit, orders
 from handling.rates import add_rate
+from purchasing.models import PurchaseOrder
 from purchasing.posting.bills import bill_from_po
 from purchasing.posting.orders import POLineSpec, create_drop_ship_pos, create_po
 from sales.models import Fulfillment
@@ -55,8 +56,8 @@ def invoice(order, user, day, *qtys):
 
 
 def drop_ship_bill(order, user, day, qty, price, suffix="1"):
-    (po,) = create_drop_ship_pos(order, user=user, date=d(10, 2)) if not order.purchase_orders.exists() else (
-        order.purchase_orders.get(),)
+    existing = PurchaseOrder.for_sales_order(order)
+    (po,) = (existing.get(),) if existing.exists() else create_drop_ship_pos(order, user=user, date=d(10, 2))
     line = po.lines.get()
     return bill_from_po(po, date=day, vendor_invoice_number=f"V-{suffix}", quantities={line.pk: qty},
                         prices={line.pk: D(price)}, user=user)

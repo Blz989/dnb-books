@@ -154,10 +154,11 @@ def test_two_vendors_make_two_pos(sales_order, two_vendors, admin_user):
     pos = create_drop_ship_pos(sales_order, user=admin_user, date=d(10, 2))
     assert sorted(p.vendor.name for p in pos) == ["Acme Mfg", "Zed Parts"]
     by_vendor = {p.vendor: p for p in pos}
-    assert by_vendor[acme].sales_order == sales_order
+    assert by_vendor[acme].sales_orders() == [sales_order]
     assert sorted(l.quantity for l in by_vendor[acme].lines.all()) == [1, 2]
     zed_line = by_vendor[zed].lines.get()
-    assert zed_line.quantity == 3 and zed_line.price == D("0.5000") and zed_line.so_line.quantity == 3
+    assert zed_line.quantity == 3 and zed_line.price == D("0.5000")
+    assert [(a.so_line.quantity, a.quantity) for a in zed_line.allocations.all()] == [(3, 3)]
 
 
 def test_lines_already_on_a_po_are_skipped(sales_order, two_vendors, admin_user):

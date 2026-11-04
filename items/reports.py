@@ -164,7 +164,8 @@ def on_order_quantities() -> dict[int, int]:
     from purchasing.models import BillItemLine, OrderStatus, PurchaseOrderLine
     from sales.models import DocStatus
 
-    ordered = (PurchaseOrderLine.objects.filter(order__status=OrderStatus.OPEN, order__sales_order__isnull=True)
+    ordered = (PurchaseOrderLine.objects.filter(order__status=OrderStatus.OPEN)
+               .exclude(order__lines__allocations__isnull=False).distinct()
                .values("id", "item_id", "quantity"))
     billed = dict(BillItemLine.objects.filter(po_line_id__in=[o["id"] for o in ordered], bill__status=DocStatus.OPEN)
                   .values("po_line_id").annotate(q=Sum("quantity")).values_list("po_line_id", "q"))

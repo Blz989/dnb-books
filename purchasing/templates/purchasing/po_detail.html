@@ -2,7 +2,7 @@
 {% block title %}{{ order.number }}{% endblock %}
 {% block page_title %}{{ order.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/vendors/{{ order.vendor.pk }}/">{{ order.vendor.name }}</a> · {{ order.date|date:"Y-m-d" }}{% if order.expected_date %} · expected {{ order.expected_date|date:"Y-m-d" }}{% endif %} · <span class="tag{% if order.status == 'CLOSED' %} ns{% endif %}">{{ order.get_status_display }}</span>
-  {% if order.sales_order %}· drop ship for <a href="/sales/orders/{{ order.sales_order.number }}/">{{ order.sales_order.number }}</a>{% endif %}</div>{% endblock %}
+  {% if sales_orders %}· drop ship for {% for so in sales_orders %}<a href="{% url 'sales:order-detail' so.number %}">{{ so.number }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</div>{% endblock %}
 {% block page_actions %}
   <a class="btn" href="{% url 'purchasing:po-pdf' order.number %}" target="_blank" rel="noopener">Download PDF</a>
   {% if order.status == "OPEN" %}<a class="btn" href="{% url 'purchasing:po-edit' order.number %}">Edit</a>{% endif %}
@@ -14,13 +14,14 @@
 <h2>Lines</h2>
 <div class="card">
 <table class="data">
-  <thead><tr><th>Item</th><th>Description</th><th class="num">Price</th><th class="num">Ordered</th><th class="num">Billed</th><th class="num">Left</th></tr></thead>
+  <thead><tr><th>Item</th><th>Description</th><th class="num">Price</th><th class="num">Ordered</th><th class="num">Billed</th><th class="num">Left</th>{% if drop_ship %}<th>For</th>{% endif %}</tr></thead>
   <tbody>
   {% for l in lines %}
     <tr><td><a class="sku" href="/items/{{ l.line.item.sku }}/">{{ l.line.item.sku }}</a></td>
       <td>{{ l.line.description|default:l.line.item.name }}</td>
       <td class="num">{{ l.line.price|floatformat:"2g" }}</td><td class="num">{{ l.line.quantity }}</td>
-      <td class="num">{{ l.billed }}</td><td class="num{% if l.left > 0 %} neg{% endif %}">{{ l.left }}</td></tr>
+      <td class="num">{{ l.billed }}</td><td class="num{% if l.left > 0 %} neg{% endif %}">{{ l.left }}</td>
+      {% if drop_ship %}<td>{% for a in l.allocations %}<a class="sku" href="{% url 'sales:order-detail' a.so_line.order.number %}">{{ a.so_line.order.number }}</a> {{ a.so_line.order.customer.name }} <span class="dash">{{ a.quantity }}</span>{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="dash">—</span>{% endfor %}</td>{% endif %}</tr>
   {% endfor %}
   </tbody>
 </table>

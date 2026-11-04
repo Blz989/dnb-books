@@ -51,13 +51,13 @@ PurchaseOrder.sales_orders() -> list[SalesOrder]; PurchaseOrder.is_drop_ship -> 
 dropship.bill_pools(so_line_ids, as_of: date | None = None) -> dict[int, list[list]]  # [bill_line, qty]
 ```
 
-- [ ] Migration test first (forward: one allocation of the full PO line quantity per old link, notes kept for an
+- [x] Migration test first (forward: one allocation of the full PO line quantity per old link, notes kept for an
   unlinked drop-ship PO; reverse: links restored; reverse refuses a shared line). Confirm it fails.
-- [ ] Model, migration, services, readers. `create_po` checks allocations add up to the line quantity:
+- [x] Model, migration, services, readers. `create_po` checks allocations add up to the line quantity:
   `Line {n}: the sales order quantities must add up to the line quantity.`
-- [ ] `bill_pools` in this task gives every bill line of a PO line to its allocations in order with no cap
+- [x] `bill_pools` in this task gives every bill line of a PO line to its allocations in order with no cap
   (all existing data has one allocation); Task 3 adds the cap.
-- [ ] Full suite and the Task 1 test pass. Commit `Replace the PO to sales order link with allocations`.
+- [x] Full suite and the Task 1 test pass. Commit `Replace the PO to sales order link with allocations`.
 
 ## Task 3: Shared costing, oldest sales order first
 

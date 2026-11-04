@@ -57,7 +57,7 @@ def line_amount(spec: BillItemSpec) -> Decimal:
 
 
 def line_kind(spec: BillItemSpec) -> BillLineKind:
-    if spec.po_line is not None and spec.po_line.so_line_id:
+    if spec.po_line is not None and spec.po_line.is_drop_ship:
         return BillLineKind.DROP_SHIP
     return BillLineKind.STOCK if spec.item.is_stock else BillLineKind.NON_STOCK
 
@@ -216,7 +216,7 @@ def post_lines(
 
 
 def _drop_ship_so_lines(item_lines: Sequence[BillItemSpec]) -> set[int]:
-    return {s.po_line.so_line_id for s in item_lines if line_kind(s) == BillLineKind.DROP_SHIP}
+    return dropship.so_lines_for_po_lines(s.po_line.pk for s in item_lines if line_kind(s) == BillLineKind.DROP_SHIP)
 
 
 def create_bill(
@@ -296,10 +296,8 @@ def _active_applications(bill: Bill):
 
 
 def _old_drop_ship_so_lines(bill: Bill) -> set[int]:
-    return {
-        l.po_line.so_line_id for l in bill.item_lines.select_related("po_line")
-        if l.kind == BillLineKind.DROP_SHIP and l.po_line is not None
-    }
+    return dropship.so_lines_for_po_lines(
+        l.po_line_id for l in bill.item_lines.all() if l.kind == BillLineKind.DROP_SHIP and l.po_line_id)
 
 
 def _reverse_posting(entry, movements, *, user, when: date_type, reason: str, allow_negative: bool) -> None:

@@ -17,7 +17,7 @@ from sales.numbering import next_number
 from decimal import Decimal as _D
 
 from ..errors import MAX_PRICE_TEXT, MAX_QUANTITY, PurchasingError, UnresolvedVendors
-from ..models import BillItemLine, PurchaseOrder, PurchaseOrderLine
+from ..models import BillItemLine, PurchaseOrder, PurchaseOrderAllocation, PurchaseOrderLine
 
 
 @dataclass(frozen=True)
@@ -26,7 +26,8 @@ class POLineSpec:
     quantity: int
     price: Decimal
     description: str = ""
-    so_line: SalesOrderLine | None = None
+    # Drop ship: (sales order line, quantity) pairs that add up to `quantity`.
+    allocations: tuple[tuple[SalesOrderLine, int], ...] = ()
     line_id: int | None = None
 
 
@@ -50,18 +51,19 @@ def validate_po_lines(lines: Sequence[POLineSpec]) -> None:
             raise PurchasingError(f"Line {n}: that price is too large.")
         if line.price.as_tuple().exponent < -4:
             raise PurchasingError(f"Line {n}: price can have at most 4 decimal places.")
+        if line.allocations and sum(q for _, q in line.allocations) != line.quantity:
+            raise PurchasingError(f"Line {n}: the sales order quantities must add up to the line quantity.")
 
 
 def _line_values(spec: POLineSpec, position: int) -> dict:
     return dict(
-        item=spec.item, description=spec.description, quantity=spec.quantity, price=spec.price,
-        so_line=spec.so_line, position=position,
+        item=spec.item, description=spec.description, quantity=spec.quantity, price=spec.price, position=position,
     )
 
 
 def create_po(
     *, vendor: Vendor, date: date_type, lines: Sequence[POLineSpec], user, expected_date: date_type | None = None,
-    notes: str = "", sales_order: SalesOrder | None = None,
+    notes: str = "",
 ) -> PurchaseOrder:
     validate_po_lines(lines)
     if not vendor.is_active:
@@ -69,10 +71,12 @@ def create_po(
     with transaction.atomic():
         po = PurchaseOrder.objects.create(
             number=next_number(DocType.PO), vendor=vendor, date=date, expected_date=expected_date, notes=notes,
-            sales_order=sales_order, created_by=user,
+            created_by=user,
         )
         for position, spec in enumerate(lines):
-            PurchaseOrderLine.objects.create(order=po, **_line_values(spec, position))
+            line = PurchaseOrderLine.objects.create(order=po, **_line_values(spec, position))
+            for so_line, quantity in spec.allocations:
+                PurchaseOrderAllocation.objects.create(po_line=line, so_line=so_line, quantity=quantity)
         return po
 
 
@@ -171,7 +175,7 @@ def refresh_po_status(po: PurchaseOrder) -> None:
 def drop_ship_candidates(order: SalesOrder) -> dict[str, list[SalesOrderLine]]:
     """Drop-ship lines not yet on a PO, grouped by the vendor text as typed (outer spaces trimmed)."""
     groups: dict[str, list[SalesOrderLine]] = defaultdict(list)
-    lines = order.lines.filter(fulfillment=Fulfillment.DROP_SHIP, po_lines__isnull=True).select_related("item")
+    lines = order.lines.filter(fulfillment=Fulfillment.DROP_SHIP, po_allocations__isnull=True).select_related("item")
     for line in lines:
         groups[line.drop_ship_vendor.strip()].append(line)
     return dict(groups)
@@ -195,8 +199,9 @@ def create_drop_ship_pos(
     with transaction.atomic():
         return [
             create_po(
-                vendor=vendor, date=date, user=user, sales_order=order,
-                lines=[POLineSpec(l.item, l.quantity, l.item.purchase_cost, description=l.description, so_line=l)
+                vendor=vendor, date=date, user=user,
+                lines=[POLineSpec(l.item, l.quantity, l.item.purchase_cost, description=l.description,
+                                  allocations=((l, l.quantity),))
                        for l in lines],
             )
             for vendor, lines in sorted(resolved.values(), key=lambda pair: pair[0].name.casefold())

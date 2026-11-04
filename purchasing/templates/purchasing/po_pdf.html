@@ -21,7 +21,7 @@
     <tr><td>Purchase Order#</td><td>: <b>{{ order.number }}</b></td></tr>
     <tr><td>Order Date</td><td>: {{ order.date|date:"j M Y" }}</td></tr>
     {% if order.expected_date %}<tr><td>Expected Date</td><td>: {{ order.expected_date|date:"j M Y" }}</td></tr>{% endif %}
-    {% if drop_ship %}<tr><td>Sales Order#</td><td>: {{ order.sales_order.number }}</td></tr>{% endif %}
+    {% if drop_ship %}<tr><td>Sales Order#</td><td>: {{ sales_order_numbers }}</td></tr>{% endif %}
   </table>
   <div class="empty"></div>
 </div>
@@ -42,6 +42,18 @@
   {% endwith %}{% endfor %}
   </tbody>
 </table>
+
+{% if shipments %}
+<table class="lines ship-to">
+  <thead><tr><th style="width:34%">Ship to</th><th>Item</th><th class="num" style="width:10%">Qty</th></tr></thead>
+  <tbody>
+  {% for s in shipments %}{% for sku, description, quantity in s.items %}
+    <tr>{% if forloop.first %}<td rowspan="{{ s.items|length }}"><b>{{ s.name }}</b>{% for line in s.lines %}<br>{{ line }}{% endfor %}<div class="note">Sales Order# {{ s.order.number }}</div></td>{% endif %}
+      <td>{{ description }}<div class="note">{{ sku }}</div></td><td class="num">{{ quantity }}</td></tr>
+  {% endfor %}{% endfor %}
+  </tbody>
+</table>
+{% endif %}
 
 <div class="foot">
   <div class="left">

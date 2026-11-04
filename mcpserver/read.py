@@ -298,15 +298,20 @@ def list_purchase_orders(user, vendor: str = "", status: str = "open") -> dict:
 def get_purchase_order(user, number: str) -> dict:
     po = lookup.document(PurchaseOrder, number, "purchase order")
     lines = []
-    for l in po.lines.select_related("item"):
+    for l in po.lines.select_related("item").prefetch_related("allocations__so_line__order__customer"):
         billed = billed_quantity(l)
-        lines.append({"sku": l.item.sku, "description": l.description or l.item.name, "quantity": l.quantity,
-                      "price": fmt(l.price), "amount": fmt(l.quantity * l.price), "billed": billed,
-                      "remaining": max(l.quantity - billed, 0)})
+        row = {"sku": l.item.sku, "description": l.description or l.item.name, "quantity": l.quantity,
+               "price": fmt(l.price), "amount": fmt(l.quantity * l.price), "billed": billed,
+               "remaining": max(l.quantity - billed, 0)}
+        allocations = [{"sales_order": a.so_line.order.number, "customer": a.so_line.order.customer.name,
+                        "quantity": a.quantity} for a in l.allocations.all()]
+        if allocations:
+            row["allocations"] = allocations
+        lines.append(row)
     return {
         "number": po.number, "vendor": po.vendor.name, "date": po.date.isoformat(),
         "expected": po.expected_date.isoformat() if po.expected_date else "", "status": po.get_status_display(),
-        "drop_ship_for": po.sales_order.number if po.sales_order else "", "notes": po.notes, "lines": lines,
+        "drop_ship_for": ", ".join(o.number for o in po.sales_orders()), "notes": po.notes, "lines": lines,
         "total": fmt(sum((Decimal(x["amount"]) for x in lines), ZERO)),
         "bills": list(po.bills.values_list("number", flat=True)),
     }

@@ -76,9 +76,6 @@ class PurchaseOrder(models.Model):
     expected_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
     status = models.CharField(max_length=10, choices=OrderStatus.choices, default=OrderStatus.OPEN)
-    sales_order = models.ForeignKey(
-        SalesOrder, null=True, blank=True, on_delete=models.PROTECT, related_name="purchase_orders"
-    )
     closed_by = models.ForeignKey(USER, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     closed_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
@@ -90,6 +87,19 @@ class PurchaseOrder(models.Model):
     def __str__(self):
         return self.number
 
+    def sales_orders(self) -> list[SalesOrder]:
+        """The sales orders this PO drop-ships for, oldest first."""
+        return list(SalesOrder.objects.filter(lines__po_allocations__po_line__order=self).select_related(
+            "customer").distinct().order_by("date", "id"))
+
+    @property
+    def is_drop_ship(self) -> bool:
+        return PurchaseOrderAllocation.objects.filter(po_line__order=self).exists()
+
+    @classmethod
+    def for_sales_order(cls, order: SalesOrder):
+        return cls.objects.filter(lines__allocations__so_line__order=order).distinct()
+
 
 class PurchaseOrderLine(models.Model):
     order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name="lines")
@@ -97,13 +107,25 @@ class PurchaseOrderLine(models.Model):
     description = models.CharField(max_length=500, blank=True)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=14, decimal_places=4)
-    so_line = models.ForeignKey(
-        SalesOrderLine, null=True, blank=True, on_delete=models.PROTECT, related_name="po_lines"
-    )
     position = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["position", "id"]
+
+    @property
+    def is_drop_ship(self) -> bool:
+        return self.allocations.exists()
+
+
+class PurchaseOrderAllocation(models.Model):
+    """Part of a drop-ship PO line bought for one sales order line. A line's allocations add up to its quantity."""
+    po_line = models.ForeignKey(PurchaseOrderLine, on_delete=models.CASCADE, related_name="allocations")
+    so_line = models.ForeignKey(SalesOrderLine, on_delete=models.PROTECT, related_name="po_allocations")
+    quantity = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["so_line__order__date", "so_line__order_id", "so_line_id", "id"]
+        constraints = [models.UniqueConstraint(fields=["po_line", "so_line"], name="po_allocation_unique")]
 
 
 class Bill(models.Model):
@@ -259,8 +281,8 @@ class VendorCreditApplication(models.Model):
 
 
 for _model in (
-    PurchasingSettings, Threshold1099, PurchaseOrder, PurchaseOrderLine, Bill, BillItemLine, BillExpenseLine,
-    BillRevision, DropShipAllocation, VendorPayment, BillPaymentApplication, VendorCredit, VendorCreditLine,
-    VendorCreditApplication,
+    PurchasingSettings, Threshold1099, PurchaseOrder, PurchaseOrderLine, PurchaseOrderAllocation, Bill, BillItemLine,
+    BillExpenseLine, BillRevision, DropShipAllocation, VendorPayment, BillPaymentApplication, VendorCredit,
+    VendorCreditLine, VendorCreditApplication,
 ):
     auditlog.register(_model)
