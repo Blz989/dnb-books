@@ -18,6 +18,11 @@ if SECRET_KEY in ("", "change-me"):
             "DNB_SECRET_KEY is not set. Copy .env.example to .env and put a long random value there."
         )
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DNB_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+# Public addresses reached through a Cloudflare Tunnel, with the scheme (https://books.example.com). The browser
+# sends that as the form's Origin; Django refuses form posts from origins it doesn't trust, including the login.
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get("DNB_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
 
 DNB_DB_PATH = Path(os.environ.get("DNB_DB_PATH") or BASE_DIR / "data" / "dnb.sqlite3")
 DNB_BACKUP_DIR = Path(os.environ["DNB_BACKUP_DIR"]) if os.environ.get("DNB_BACKUP_DIR") else BASE_DIR / "data" / "backups"
