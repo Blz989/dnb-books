@@ -203,3 +203,15 @@ def drop_ship_po(request, number):
             **common.error_context(exc)})
     messages.success(request, "Created " + ", ".join(p.number for p in pos) + ".")
     return redirect(reverse("sales:order-detail", args=[order.number]))
+
+
+@login_required
+def po_pdf_view(request, number):
+    from django.http import HttpResponse
+
+    from ..pdf import po_pdf
+
+    order = po_or_404(number)
+    response = HttpResponse(po_pdf(order), content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{order.number}.pdf"'
+    return response

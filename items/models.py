@@ -68,6 +68,7 @@ class Item(models.Model):
     income_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
     cogs_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     inventory_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    reorder_point = models.PositiveIntegerField(null=True, blank=True)  # stock items only; blank means not tracked
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -239,6 +240,10 @@ class InventorySettings(models.Model):
     shrinkage_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     writedown_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     opening_equity_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    # SKU series: new items are offered sku_prefix + sku_next padded to sku_digits (DNB-0001). Blank prefix: off.
+    sku_prefix = models.CharField("base SKU", max_length=40, blank=True)
+    sku_next = models.PositiveIntegerField("next SKU number", default=1)
+    sku_digits = models.PositiveSmallIntegerField("SKU digits", default=4)
 
     class Meta:
         verbose_name_plural = "inventory settings"

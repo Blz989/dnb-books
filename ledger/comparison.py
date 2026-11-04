@@ -78,9 +78,12 @@ def _as_of_label(d: date) -> str:
     return f"{d:%b} {d.day}, {d.year}"
 
 
-def profit_and_loss_comparison(start: date, end: date, years: int) -> Comparison:
+def profit_and_loss_comparison(start: date, end: date, years: int, basis: str = "accrual") -> Comparison:
+    from .cash_basis import profit_and_loss_cash
+
+    run = profit_and_loss_cash if basis == "cash" else profit_and_loss
     periods = [(shift_years(start, n), shift_years(end, n)) for n in range(years + 1)]
-    reports = [profit_and_loss(s, e) for s, e in periods]
+    reports = [run(s, e) for s, e in periods]
     c = Comparison("Profit and loss", [_range_label(s, e) for s, e in periods])
     c.section("Income")
     c.accounts([r.income for r in reports])

@@ -1,6 +1,6 @@
 {% extends pdf|yesno:"core/report_pdf.html,core/base.html" %}
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'reports:index' %}">Reports</a></div>{% endblock %}
-{% block page_actions %}{% if pdf_url and request.resolver_match.url_name != "index" %}<a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener"><svg class="bi" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0-4-4m4 4 4-4M4 16h12"/></svg>Download PDF</a>{% endif %}{% endblock %}
+{% block page_actions %}{% block report_actions %}{% endblock %}{% if pdf_url and request.resolver_match.url_name != "index" %}<a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener"><svg class="bi" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0-4-4m4 4 4-4M4 16h12"/></svg>Download PDF</a>{% endif %}{% endblock %}
 {% block content %}
 {% if not pdf %}
 <div class="split reports">

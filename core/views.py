@@ -10,7 +10,7 @@ from banking import status as banking_status
 from core.roles import is_admin
 from handling.periods import due_periods
 from items.models import InventorySettings
-from items.reports import item_totals
+from items.reports import item_totals, low_stock
 from purchasing import reports as purchasing_reports
 from purchasing.models import PurchasingSettings
 from sales import reports as sales_reports
@@ -54,5 +54,6 @@ def home(request):
         "handling_due_count": len(handling_due),
         "nav_active": "home",
         "stock_value": stock_value,
+        "low_stock_count": len(low_stock()),
         "inventory_unconfigured": is_admin(request.user) and not InventorySettings.load().is_configured,
     })

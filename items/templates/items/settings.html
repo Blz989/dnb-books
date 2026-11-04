@@ -15,4 +15,38 @@
   <button type="submit" class="btn primary">Save settings</button>
 </form>
 </div></div>
+
+<h2>SKU series</h2>
+<div class="card"><div class="body">
+<p class="help">New items get the next SKU in this series. You can still type a different one. Saving an item with a SKU in the series moves the next number past it.</p>
+{% if sku_form.non_field_errors %}<div class="banner error">{% for e in sku_form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+<form method="post" data-sku-form>{% csrf_token %}
+  <input type="hidden" name="action" value="sku">
+  <div class="form-grid" style="max-width:40rem">
+  {% for field in sku_form %}
+  <div class="form-row">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+  </div>
+  {% endfor %}
+  </div>
+  <p class="sku-preview">Next new item: <b data-sku-preview>{% if next_sku %}{{ next_sku }}{% else %}series off{% endif %}</b></p>
+  <button type="submit" class="btn primary">Save SKU series</button>
+</form>
+</div></div>
+<script>
+  (function () {
+    var f = document.querySelector("[data-sku-form]");
+    if (!f) return;
+    var out = f.querySelector("[data-sku-preview]");
+    function show() {
+      var p = f.sku_prefix.value.trim(), n = parseInt(f.sku_next.value, 10), d = parseInt(f.sku_digits.value, 10);
+      if (!p) { out.textContent = "series off"; return; }
+      if (!(n >= 1) || !(d >= 1 && d <= 8)) { out.textContent = "—"; return; }
+      out.textContent = p + String(n).padStart(d, "0");
+    }
+    f.addEventListener("input", show);
+  })();
+</script>
 {% endblock %}

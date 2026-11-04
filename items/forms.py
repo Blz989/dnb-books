@@ -33,8 +33,12 @@ class ItemForm(forms.ModelForm):
         fields = [
             "sku", "name", "description", "item_type", "category", "unit", "packaging", "sale_price", "purchase_cost",
             "vendor_part_number", "costing_method", "income_account", "cogs_account", "inventory_account",
+            "reorder_point",
         ]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+        labels = {"reorder_point": "Reorder point"}
+        help_texts = {"reorder_point": "The item shows on Low stock when on hand plus on order falls to this. "
+                                       "Leave blank to skip. Stock items only."}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -65,6 +69,12 @@ class ItemForm(forms.ModelForm):
             self.initial.setdefault("inventory_account", s.default_inventory_account_id)
             self.initial.setdefault("costing_method", CostingMethod.FIFO)
             self.initial.setdefault("unit", "each")
+            from .sku import next_sku
+
+            suggested = next_sku(s)
+            if suggested:
+                self.initial.setdefault("sku", suggested)
+                self.fields["sku"].help_text = "Next in your SKU series. You can type a different one."
         if self.instance.pk:
             self.fields["is_active"] = forms.BooleanField(required=False, label="Active", initial=self.instance.is_active)
 
@@ -81,6 +91,8 @@ class ItemForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        if data.get("item_type") != ItemType.STOCK:
+            data["reorder_point"] = None
         if self.locked:
             # A disabled field ignores what the browser sends; this catches a hand-made request.
             if self.data.get("costing_method") not in (None, "", self.instance.costing_method):
@@ -201,3 +213,46 @@ class SettingsForm(forms.ModelForm):
             field.required = True
             field.error_messages["required"] = "Choose an account."
             field.error_messages["invalid_choice"] = "Choose an account from the list."
+
+
+class SkuSeriesForm(forms.ModelForm):
+    class Meta:
+        model = InventorySettings
+        fields = ["sku_prefix", "sku_next", "sku_digits"]
+        labels = {"sku_prefix": "Base SKU", "sku_next": "Next number", "sku_digits": "Digits"}
+        help_texts = {
+            "sku_prefix": "The start of every new SKU, for example DNB- . Leave blank to turn the series off.",
+            "sku_next": "The number the next new item gets.",
+            "sku_digits": "Numbers are padded with zeros to this many digits (4 gives 0001).",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["sku_prefix"].required = False
+        self.fields["sku_next"].error_messages["required"] = "Enter a next number of 1 or more."
+        self.fields["sku_digits"].error_messages["required"] = "Enter 1 to 8 digits."
+
+    def clean_sku_prefix(self):
+        prefix = self.cleaned_data.get("sku_prefix", "").strip()
+        if prefix and not re.match(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$", prefix):
+            raise forms.ValidationError("The base SKU can use letters, numbers, dots, dashes, and underscores.")
+        return prefix
+
+    def clean_sku_next(self):
+        n = self.cleaned_data.get("sku_next")
+        if n is None or n < 1:
+            raise forms.ValidationError("Enter a next number of 1 or more.")
+        return n
+
+    def clean_sku_digits(self):
+        d = self.cleaned_data.get("sku_digits")
+        if d is None or not 1 <= d <= 8:
+            raise forms.ValidationError("Enter 1 to 8 digits.")
+        return d
+
+    def clean(self):
+        data = super().clean()
+        prefix, n, d = data.get("sku_prefix"), data.get("sku_next"), data.get("sku_digits")
+        if prefix and n and d and len(f"{prefix}{n:0{d}d}") > 50:
+            raise forms.ValidationError("That makes SKUs longer than 50 characters. Use a shorter base.")
+        return data

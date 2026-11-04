@@ -12,6 +12,7 @@
     {% if field.name == "costing_method" and form.locked %}<span class="help">Locked: this item has stock history.</span>{% endif %}
     {% if field.name == "inventory_account" and form.locked %}<span class="help">Locked: this item has stock history.</span>{% endif %}
     {% if field.name == "item_type" and form.locked %}<span class="help">Locked: this item has stock history.</span>{% endif %}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
     {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
   </div>
   {% endfor %}

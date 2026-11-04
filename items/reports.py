@@ -9,7 +9,7 @@ from django.db.models import Count, Sum
 from ledger.balances import account_totals, money, signed_balance
 from ledger.models import Account, AccountSubtype
 
-from .models import CostRevision, Item, StockMovement
+from .models import CostRevision, Item, ItemType, StockMovement
 from .stock import effective_total, stock_value
 
 ZERO = Decimal("0.00")
@@ -140,3 +140,53 @@ def close_check(year: int, month: int) -> list[str]:
         return []
     return [f"{calendar.month_name[month]} {year} can't be closed: stock value and the inventory accounts "
             f"differ by {difference:,.2f} at month end. Check the Inventory valuation report."]
+
+
+@dataclass
+class LowStockRow:
+    item: object
+    on_hand: int
+    on_order: int
+    reorder_point: int
+
+    @property
+    def available(self) -> int:
+        return self.on_hand + self.on_order
+
+    @property
+    def short_by(self) -> int:
+        return max(self.reorder_point - self.available, 0)
+
+
+def on_order_quantities() -> dict[int, int]:
+    """Item id -> quantity on open purchase orders not yet billed. Drop-ship orders never reach stock, so they
+    don't count."""
+    from purchasing.models import BillItemLine, OrderStatus, PurchaseOrderLine
+    from sales.models import DocStatus
+
+    ordered = (PurchaseOrderLine.objects.filter(order__status=OrderStatus.OPEN, order__sales_order__isnull=True)
+               .values("id", "item_id", "quantity"))
+    billed = dict(BillItemLine.objects.filter(po_line_id__in=[o["id"] for o in ordered], bill__status=DocStatus.OPEN)
+                  .values("po_line_id").annotate(q=Sum("quantity")).values_list("po_line_id", "q"))
+    out: dict[int, int] = {}
+    for o in ordered:
+        left = o["quantity"] - (billed.get(o["id"]) or 0)
+        if left > 0:
+            out[o["item_id"]] = out.get(o["item_id"], 0) + left
+    return out
+
+
+def low_stock() -> list[LowStockRow]:
+    """Active stock items with a reorder point whose on hand plus on order is at or below it, most short first."""
+    items = list(Item.objects.filter(is_active=True, item_type=ItemType.STOCK, reorder_point__isnull=False))
+    if not items:
+        return []
+    totals = item_totals([i.pk for i in items])
+    on_order = on_order_quantities()
+    rows = []
+    for item in items:
+        row = LowStockRow(item, totals.get(item.pk, (0, 0))[0], on_order.get(item.pk, 0), item.reorder_point)
+        if row.available <= row.reorder_point:
+            rows.append(row)
+    rows.sort(key=lambda r: (-r.short_by, r.item.sku))
+    return rows

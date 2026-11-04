@@ -1,0 +1,41 @@
+{% extends "core/settings_base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block page_title %}Audit log{% endblock %}
+{% block page_subtitle %}<div class="sub">Every change to records in the books: who made it, when, and what changed. Entries can't be edited or removed.</div>{% endblock %}
+{% block settings_content %}
+{% if error %}<div class="banner error">{{ error }}</div>{% endif %}
+<div class="card">
+<form method="get" class="filters">
+  <label class="grow">Record <input type="search" name="q" value="{{ f.q }}" placeholder="Number, name, or SKU"></label>
+  <label>Type <select name="type"><option value="">All but journal lines</option>{% for pk, label in types %}<option value="{{ pk }}"{% if f.type == pk|stringformat:"d" %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>User <select name="user"><option value="">Everyone</option>{% for u in users %}<option value="{{ u.pk }}"{% if f.user == u.pk|stringformat:"d" %} selected{% endif %}>{{ u.username }}</option>{% endfor %}<option value="system"{% if f.user == "system" %} selected{% endif %}>System</option></select></label>
+  <label>Action <select name="action"><option value="">Any</option>{% for v, l in actions %}<option value="{{ v }}"{% if f.action == v|stringformat:"d" %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+  <label>From <input type="date" name="start" value="{{ f.start }}"></label>
+  <label>To <input type="date" name="end" value="{{ f.end }}"></label>
+  <button type="submit" class="btn">Filter</button>
+  {% if query %}<a class="btn ghost" href="{% url 'settings:audit' %}">Clear</a>{% endif %}
+</form>
+<div class="scroll">
+<table class="data audit">
+  <thead><tr><th>When</th><th>User</th><th>Action</th><th>Record</th><th>What changed</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="nowrap">{{ r.e.timestamp|date:"M j, Y" }}<div class="dash small">{{ r.e.timestamp|date:"g:i a" }}</div></td>
+      <td class="nowrap">{% if r.e.actor %}{{ r.e.actor.username }}{% else %}<span class="dash">System</span>{% endif %}</td>
+      <td><span class="tag{% if r.action == 'Deleted' %} void{% elif r.action == 'Changed' %} ns{% endif %}">{{ r.action }}</span></td>
+      <td><div class="dash small">{{ r.type }}</div>{{ r.record|truncatechars:60 }}</td>
+      <td>{% for c in r.changes %}<div class="chg"><span class="dash">{{ c.field }}:</span> <s>{{ c.old|default:"blank"|truncatechars:40 }}</s> → {{ c.new|default:"blank"|truncatechars:40 }}</div>{% endfor %}{% if r.more %}<div class="dash small">and {{ r.more }} more</div>{% endif %}{% if not r.changes and r.action == "Changed" %}<span class="dash">—</span>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="empty">{% if query %}No changes match these filters.{% else %}Nothing recorded yet.{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if page.paginator.num_pages > 1 %}
+<div class="foot"><span>{{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+  <span class="pager">{% if page.has_previous %}<a class="btn" href="?{% if query %}{{ query }}&{% endif %}page={{ page.previous_page_number }}">Previous</a>{% endif %}
+  {% if page.has_next %}<a class="btn" href="?{% if query %}{{ query }}&{% endif %}page={{ page.next_page_number }}">Next</a>{% endif %}</span></div>
+{% endif %}
+</div>
+{% endblock %}

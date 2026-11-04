@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ order.number }}</title>
+<style>
+@font-face { font-family: "Inter"; font-weight: 100 900; src: url("{{ font_uri }}/inter-latin-wght-normal.woff2") format("woff2"); }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">
+    {% if logo_uri %}<div class="logo"><img src="{{ logo_uri }}" alt=""></div>{% endif %}
+    <div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div>
+  </div>
+  <h1>PURCHASE ORDER</h1>
+</div>
+
+<div class="boxes head">
+  <table class="meta">
+    <tr><td>Purchase Order#</td><td>: <b>{{ order.number }}</b></td></tr>
+    <tr><td>Order Date</td><td>: {{ order.date|date:"j M Y" }}</td></tr>
+    {% if order.expected_date %}<tr><td>Expected Date</td><td>: {{ order.expected_date|date:"j M Y" }}</td></tr>{% endif %}
+    {% if drop_ship %}<tr><td>Sales Order#</td><td>: {{ order.sales_order.number }}</td></tr>{% endif %}
+  </table>
+  <div class="empty"></div>
+</div>
+<div class="boxes addr">
+  <div><div class="label">Vendor</div><div class="body"><b>{{ vendor.name }}</b>{% if vendor.contact_name %}<br>{{ vendor.contact_name }}{% endif %}{% for line in vendor_lines %}<br>{{ line }}{% endfor %}</div></div>
+  <div><div class="label">Ship To{% if drop_ship %} (drop ship){% endif %}</div><div class="body"><b>{{ ship_name }}</b>{% for line in ship_lines %}<br>{{ line }}{% endfor %}</div></div>
+</div>
+
+<table class="lines">
+  <thead><tr><th style="width:4%">#</th><th>Item &amp; Description</th><th style="width:16%">Vendor part #</th><th class="num" style="width:10%">Qty</th><th class="num" style="width:12%">Rate</th><th class="num" style="width:14%">Amount</th></tr></thead>
+  <tbody>
+  {% for row in rows %}{% with line=row.line %}
+    <tr><td class="n">{{ row.n }}</td>
+      <td>{{ line.description|default:line.item.name }}<div class="note">{{ line.item.sku }}</div></td>
+      <td>{{ line.item.vendor_part_number }}</td>
+      <td class="num">{{ line.quantity }}{% if line.item.unit %}<div class="unit">{{ line.item.unit|upper }}</div>{% endif %}</td>
+      <td class="num">{{ line.price|floatformat:"2g" }}</td><td class="num">{{ row.amount|floatformat:"2g" }}</td></tr>
+  {% endwith %}{% endfor %}
+  </tbody>
+</table>
+
+<div class="foot">
+  <div class="left">
+    <div>Items in Total {{ items_total }}</div>
+    {% if order.notes %}<div class="notes">{{ order.notes }}</div>{% endif %}
+  </div>
+  <div class="right">
+    <table class="totals">
+      <tr class="due"><td>Total</td><td class="num">${{ total|floatformat:"2g" }}</td></tr>
+    </table>
+    <div class="sign">Authorized Signature</div>
+  </div>
+</div>
+</body>
+</html>
