@@ -64,11 +64,11 @@ dropship.bill_pools(so_line_ids, as_of: date | None = None) -> dict[int, list[li
 Files: `purchasing/dropship.py`, `purchasing/posting/bills.py`, `handling/profit.py`, new
 `tests/test_shared_dropship.py`.
 
-- [ ] Tests: two customers on one PO line (6 + 4); two bills mixed (4 then 6) fill the older order first; partial
+- [x] Tests: two customers on one PO line (6 + 4); two bills mixed (4 then 6) fill the older order first; partial
   bills leave the newer order pending; void a bill and the shares move; void an invoice and its share is freed
   for the next invoice of the same order line; editing a bill rebuilds both orders; as-of profit replay on dates
   between the bills. Confirm they fail.
-- [ ] Cap each allocation, overflow to the last; bill create/edit/void rebuild every sales order line on the PO
+- [x] Cap each allocation, overflow to the last; bill create/edit/void rebuild every sales order line on the PO
   lines touched. Commit `Allocate shared drop-ship bills oldest sales order first`.
 
 ## Task 4: Drop-ship POs from several orders

@@ -28,10 +28,21 @@ def bill_pools(so_line_ids: Iterable[int], as_of: date | None = None) -> dict[in
     if as_of is not None:
         bills = bills.filter(bill__date__lte=as_of)
     pools: dict[int, list[list]] = defaultdict(list)
+    filled: dict[int, int] = defaultdict(int)  # allocation id -> quantity billed to it so far
     for bl in bills.order_by("bill__date", "bill_id", "id"):
         targets = allocations[bl.po_line_id]
-        if targets:
-            pools[targets[0].so_line_id].append([bl, bl.quantity])
+        left = bl.quantity
+        for n, a in enumerate(targets):
+            # Each allocation takes up to its quantity; the last also takes anything past the line's total, so a
+            # line with one allocation gets every bill on it, as when a PO line had a single sales order line.
+            room = left if n == len(targets) - 1 else min(left, a.quantity - filled[a.pk])
+            if room <= 0:
+                continue
+            pools[a.so_line_id].append([bl, room])
+            filled[a.pk] += room
+            left -= room
+            if left == 0:
+                break
     return {so_line_id: pools.get(so_line_id, []) for so_line_id in so_line_ids}
 
 
