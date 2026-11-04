@@ -43,8 +43,12 @@ def account_list(request):
         r.bank_account_id: r.statement_date
         for r in Reconciliation.objects.filter(status=ReconStatus.FINISHED).order_by("statement_date")
     }
+    show_inactive = request.GET.get("inactive") == "1"
     accounts = BankAccount.objects.select_related("ledger_account", "plaid_item").annotate(
         inbox=Count("transactions", filter=Q(transactions__status=TxnStatus.NEW)))
+    hidden = 0 if show_inactive else accounts.filter(is_active=False).count()
+    if not show_inactive:
+        accounts = accounts.filter(is_active=True)
     rows = []
     for a in accounts:
         debit, credit = totals.get(a.ledger_account_id, (Decimal("0.00"), Decimal("0.00")))
@@ -54,6 +58,7 @@ def account_list(request):
         })
     return render(request, "banking/accounts.html", {
         "rows": rows, "plaid_ready": plaid_configured(), "nav_active": "bank-accounts",
+        "show_inactive": show_inactive, "hidden": hidden,
     })
 
 

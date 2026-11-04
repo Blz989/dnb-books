@@ -77,6 +77,7 @@ Nothing is booked from the bank feed until you confirm it. Confirming a row that
 | Task | Where |
 |---|---|
 | Add a bank, card, or loan account (once, admin) | Bank accounts, Add account. Pick the ledger account and its kind. Set the next check number for a checking account |
+| Hide a closed account | Edit it and mark it inactive. Bank accounts lists only active accounts; tick Show inactive to see the rest |
 | Bring in a statement | Bank accounts, Import file. OFX and QFX files read themselves. The first CSV for an account asks which column is which and remembers it. Rows already imported are skipped |
 | Bring in transactions automatically (admin) | Bank accounts, Link with Plaid. The bank's own sign-in opens in a pop-up. It syncs four times a day, or press Sync now |
 | Look at one account | Bank accounts, click its name. Amount in books and the last balance the bank reported, then Dashboard (30-day balance chart, recent activity), Uncategorized (that account's inbox, every inbox action works here), and All transactions (the register: every posted line with a running balance, filters, CSV and PDF). Also Reports, Bank register, and Chart of accounts, Bank page |
