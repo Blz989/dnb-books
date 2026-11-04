@@ -20,6 +20,7 @@
       <td class="dash">{{ r.account.get_subtype_display }}</td>
       <td class="num">{{ r.balance|floatformat:"2g" }}</td>
       <td class="nowrap">{% if not r.account.is_active %}<span class="tag ns">Inactive</span>{% endif %}
+        {% if r.bank_page %}<a class="row-link" href="{% url 'banking:account-detail' r.bank_page %}">Bank page</a>{% endif %}
         <a class="row-link" href="{% url 'reports:general-ledger' %}?account={{ r.account.pk }}">Ledger</a></td>
     </tr>
     {% endfor %}

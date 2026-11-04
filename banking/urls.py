@@ -1,12 +1,13 @@
 from django.urls import path
 
-from .views import accounts, checks, inbox, reconcile, transfers
+from .views import account_page, accounts, checks, inbox, reconcile, transfers
 
 app_name = "banking"
 
 urlpatterns = [
     path("", accounts.account_list, name="accounts"),
     path("new/", accounts.account_new, name="account-new"),
+    path("<int:pk>/", account_page.account_detail, name="account-detail"),
     path("<int:pk>/edit/", accounts.account_edit, name="account-edit"),
     path("<int:pk>/import/", accounts.import_file, name="import-file"),
     path("<int:pk>/import/map/", accounts.import_map, name="import-map"),

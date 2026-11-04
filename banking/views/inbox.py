@@ -6,6 +6,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from contacts.models import Customer, Vendor
@@ -24,15 +25,19 @@ STATUS_CHOICES = [(TxnStatus.NEW, "New"), (TxnStatus.MATCHED, "Matched"), (TxnSt
 
 
 def _inbox_url(request) -> str:
-    return request.POST.get("next") or reverse("banking:inbox")
+    """Where an inbox action returns: the page it came from (a bank account's Uncategorized tab or the Inbox).
+    Only a path on this site is followed."""
+    target = request.POST.get("next") or request.GET.get("next") or ""
+    if target.startswith("/") and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return target
+    return reverse("banking:inbox")
 
 
-@login_required
-def inbox_list(request):
-    status = request.GET.get("status", TxnStatus.NEW)
+def inbox_context(request, account_id: str, status: str) -> dict:
+    """Rows, paging, and tokens for the inbox table. The Inbox page and a bank account's Uncategorized tab both
+    render banking/_inbox_table.html from this."""
     if status not in dict(STATUS_CHOICES):
         status = TxnStatus.NEW
-    account_id = request.GET.get("account", "")
     rows = BankTransaction.objects.select_related("bank_account__ledger_account", "match")
     if status != "ALL":
         rows = rows.filter(status=status)
@@ -48,10 +53,18 @@ def inbox_list(request):
         elif txn.status in (TxnStatus.MATCHED, TxnStatus.BOOKED) and hasattr(txn, "match"):
             item["matched"] = match_label(txn.match)
         items.append(item)
+    params = request.GET.copy()
+    params.pop("page", None)
+    params["status"], params["account"] = status, account_id
+    return {"items": items, "page": page, "status": status, "statuses": STATUS_CHOICES, "account_id": account_id,
+            "bulk_token": common.new_token(), "page_query": params.urlencode()}
+
+
+@login_required
+def inbox_list(request):
+    context = inbox_context(request, request.GET.get("account", ""), request.GET.get("status", TxnStatus.NEW))
     return render(request, "banking/inbox.html", {
-        "items": items, "page": page, "status": status, "statuses": STATUS_CHOICES, "account_id": account_id,
-        "accounts": BankAccount.objects.select_related("ledger_account"), "bulk_token": common.new_token(),
-        "nav_active": "inbox"})
+        **context, "accounts": BankAccount.objects.select_related("ledger_account"), "nav_active": "inbox"})
 
 
 def _result_message(request, txn, match) -> None:
@@ -106,14 +119,14 @@ def change_row(request, pk):
     context = {
         "txn": txn, "candidates": [{"c": c, "key": candidate_key(c)} for c in found], "token": common.new_token(),
         "accounts": Account.objects.filter(is_active=True).exclude(pk=txn.bank_account.ledger_account_id).order_by("number"),
-        "nav_active": "inbox",
+        "nav_active": "inbox", "next": _inbox_url(request),
     }
     if request.method != "POST":
         return render(request, "banking/inbox_change.html", context)
     context["token"] = request.POST.get("token", "") or context["token"]
     if txn.status != TxnStatus.NEW:
         messages.info(request, common.ALREADY_DONE)
-        return redirect(reverse("banking:inbox"))
+        return redirect(_inbox_url(request))
     if request.POST.get("action") == "candidate":
         chosen = next((c for c in found if candidate_key(c) == request.POST.get("candidate", "")), None)
         if chosen is None:
@@ -129,7 +142,7 @@ def change_row(request, pk):
         memo = request.POST.get("memo", "").strip()
         response = _run(request, txn, lambda: inbox.new_entry(txn, account=account, user=request.user, memo=memo),
                         context)
-    return response or redirect(reverse("banking:inbox"))
+    return response or redirect(_inbox_url(request))
 
 
 @login_required
@@ -298,10 +311,10 @@ def _catchup(request, pk, *, kind):
     pay = kind == "vendor"
     if txn.status != TxnStatus.NEW:
         messages.info(request, common.ALREADY_DONE)
-        return redirect(reverse("banking:inbox"))
+        return redirect(_inbox_url(request))
     if not (can_pay_bills(txn) if pay else can_receive(txn)):
         messages.error(request, "Pay bills is for money going out." if pay else "Receive payment is for money coming in.")
-        return redirect(reverse("banking:inbox"))
+        return redirect(_inbox_url(request))
     party_model = Vendor if pay else Customer
     data = request.POST if request.method == "POST" else request.GET
     party_id = data.get(kind, "")
@@ -324,7 +337,7 @@ def _catchup(request, pk, *, kind):
                 with transaction.atomic():
                     if not common._claim_token(token):
                         messages.info(request, common.ALREADY_DONE)
-                        return redirect(reverse("banking:inbox"))
+                        return redirect(_inbox_url(request))
                     if pay:
                         inbox.pay_bills_from_row(txn, vendor=party, amounts=amounts, user=request.user)
                     else:
@@ -335,7 +348,7 @@ def _catchup(request, pk, *, kind):
             else:
                 done = "Paid bills" if pay else "Recorded payment"
                 messages.success(request, f"{done} for {party.name}: {bank_amount:,.2f}, matched to the bank row.")
-                return redirect(reverse("banking:inbox"))
+                return redirect(_inbox_url(request))
     elif rows and data.get("fill") == "1":
         filled = inbox.fill_oldest_first([(r["doc"].pk, r["balance"]) for r in rows], bank_amount)
         typed = {f"amt-{pk}": f"{amount:.2f}" for pk, amount in filled.items()}
@@ -349,7 +362,7 @@ def _catchup(request, pk, *, kind):
             pass
     return render(request, "banking/inbox_pay_bills.html" if pay else "banking/inbox_receive_payment.html", {
         "txn": txn, "party": party, "rows": rows, "errors": errors, "token": token, "total": total,
-        "bank_amount": bank_amount, "balanced": total == bank_amount, "method": method, "nav_active": "inbox",
+        "bank_amount": bank_amount, "balanced": total == bank_amount, "method": method, "nav_active": "inbox", "next": _inbox_url(request),
         "parties": party_model.objects.filter(is_active=True).order_by("name"),
         "methods": [(PaymentMethod.ACH, "ACH"), (PaymentMethod.WIRE, "Wire"), (PaymentMethod.CHECK, "Check")],
         "total_rows": sum((r["balance"] for r in rows), Decimal("0.00"))})

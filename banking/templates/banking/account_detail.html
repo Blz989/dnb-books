@@ -1,0 +1,75 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}{{ account.ledger_account.name }}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'banking:accounts' %}">Bank accounts</a></div>{% endblock %}
+{% block page_title %}{{ account.ledger_account.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if account.mask %}···· {{ account.mask }} · {% endif %}{{ account.get_kind_display }} · {{ account.ledger_account.number }}{% if not account.is_active %} · <span class="tag ns">Inactive</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+<a class="btn" href="{% url 'books:journal-new' %}">Add transaction</a>
+<a class="btn" href="{% url 'sales:deposit-new' %}">Record deposit</a>
+<a class="btn primary" href="{% url 'banking:inbox' %}?account={{ account.pk }}">Quick categorize</a>
+{% endblock %}
+{% block content %}
+<div class="kpis bank-tiles">
+  <div class="kpi"><div class="l">Amount in books</div><div class="v{% if books < 0 %} neg{% endif %}">{{ books|floatformat:"2g" }}</div>{% if account.is_liability %}<div class="note">Owed</div>{% endif %}</div>
+  <div class="kpi"><div class="l">Amount in bank</div><div class="v">{% if bank.value is not None %}{{ bank.value|floatformat:"2g" }}{% else %}<span class="dash">—</span>{% endif %}</div><div class="note">{{ bank.note }}</div></div>
+  <div class="kpi"><div class="l">Last feed date</div><div class="v">{% if counts.last_feed %}{{ counts.last_feed|date:"Y-m-d" }}{% else %}<span class="dash">None yet</span>{% endif %}</div></div>
+  <div class="kpi"><div class="l">Bank feed</div>
+    {% if item %}
+      <div class="v small">{% if item.last_sync_at %}Bank feeds last fetched on {{ item.last_sync_at|date:"Y-m-d H:i" }}{% else %}Not synced yet{% endif %}</div>
+      <div class="note">{{ item.institution_name }}{% if item.status != "OK" %} · <span class="tag overdue">{{ item.get_status_display }}</span>{% endif %}</div>
+      {% if is_admin %}<form method="post" action="{% url 'banking:sync-now' item.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn small">Sync now</button></form>{% endif %}
+    {% else %}
+      <div class="v small">File import</div>
+      <div class="note"><a href="{% url 'banking:import-file' account.pk %}">Import statement</a></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="tabs" role="navigation" aria-label="Account views">
+  <a href="?tab=dashboard"{% if tab == "dashboard" %} class="on" aria-current="page"{% endif %}>Dashboard</a>
+  <a href="?tab=uncategorized"{% if tab == "uncategorized" %} class="on" aria-current="page"{% endif %}>Uncategorized ({{ counts.new }})</a>
+  <a href="?tab=all"{% if tab == "all" %} class="on" aria-current="page"{% endif %}>All transactions</a>
+</div>
+
+{% if tab == "dashboard" %}
+<div class="section-h">Activity summary</div>
+<div class="tiles activity">
+  <div class="tile"><span class="tile-desc">Last import</span><span class="tile-name">{% if counts.last_import %}{{ counts.last_import|date:"Y-m-d H:i" }}{% else %}No file imported{% endif %}</span><a href="{% url 'banking:import-file' account.pk %}">Import statement</a></div>
+  <div class="tile"><span class="tile-desc">Last reconciliation</span><span class="tile-name">{% if last_rec %}{{ last_rec.statement_date|date:"Y-m-d" }}{% else %}Never{% endif %}</span><a href="{% url 'banking:reconcile-start' account.pk %}">Reconcile</a></div>
+  <div class="tile"><span class="tile-desc">Transaction rules</span><span class="tile-name">{{ rules }} active</span><a href="{% url 'banking:rules' %}">Rules</a></div>
+</div>
+<script src="{% static 'core/charts.js' %}" defer></script>
+<div class="bank-dash">
+  <div>{% include "core/_chart.html" with chart_title="Closing balance, last 30 days" chart_sub="Ledger balance at the end of each day" svg=chart_svg rows=chart_rows head=chart_head %}</div>
+  <div class="bank-counts">
+    <div class="kpi"><div class="l">Total uncategorized</div><div class="v"><a href="?tab=uncategorized">{{ counts.new }}</a></div><div class="note">Bank rows waiting for you</div></div>
+    <div class="kpi"><div class="l">Total recognized</div><div class="v">{{ counts.recognized }}</div><div class="note">Matched or booked from the bank</div></div>
+  </div>
+</div>
+<div class="section-h">Recent transactions</div>
+<div class="card">
+  {% include "banking/_register_table.html" with rows=recent page=None %}
+  <div class="foot"><span></span><a href="?tab=all">View more →</a></div>
+</div>
+
+{% elif tab == "uncategorized" %}
+<div class="card">
+  <div class="filters"><span class="grow">{% if status == "EXCLUDED" %}Excluded rows. Restore one to send it back for categorizing.{% else %}From the bank statement. Confirm a suggestion, or choose what it is.{% endif %}</span>
+    {% if status == "EXCLUDED" %}<a class="btn" href="?tab=uncategorized">Hide excluded</a>{% else %}<a class="btn" href="?tab=uncategorized&amp;status=EXCLUDED">Show excluded</a>{% endif %}</div>
+  {% include "banking/_inbox_table.html" %}
+</div>
+
+{% else %}
+<div class="card">
+  <form method="get" class="filters"><input type="hidden" name="tab" value="all">
+    {{ form.non_field_errors }}
+    {% for field in form %}<label>{{ field.label }} {{ field }}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>{% endfor %}
+    <button type="submit" class="btn primary">Filter</button>
+    <a class="btn" href="{% url 'reports:bank-register' %}?{{ export_query }}&amp;format=csv">Download CSV</a>
+    <a class="btn" href="{% url 'reports:bank-register' %}?{{ export_query }}&amp;format=pdf" target="_blank" rel="noopener">Download PDF</a>
+  </form>
+  {% if rows is not None %}{% include "banking/_register_table.html" %}{% endif %}
+</div>
+{% endif %}
+{% endblock %}

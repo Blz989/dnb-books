@@ -228,6 +228,12 @@ def accounts(request):
             rows.append({"account": a, "balance": net if account_type in DEBIT_NORMAL else -net})
         if rows:
             groups.append({"label": GROUP_LABELS[account_type], "rows": rows})
+    from banking.models import BankAccount
+
+    bank_pages = dict(BankAccount.objects.values_list("ledger_account_id", "pk"))
+    for g in groups:
+        for r in g["rows"]:
+            r["bank_page"] = bank_pages.get(r["account"].pk)
     return render(request, "books/accounts.html", _ctx(
         "accounts", groups=groups, show_inactive=show_inactive,
         can_edit=request.user.has_perm("ledger.change_account") or is_admin(request.user),

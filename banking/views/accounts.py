@@ -254,7 +254,9 @@ def sync_now(request, pk):
     item = get_object_or_404(PlaidItem, pk=pk)
     result = sync_item(item)
     _report_sync(request, item, result)
-    return redirect(reverse("banking:accounts"))
+    back = request.POST.get("next", "")
+    # Only back to a bank account page, so the field can't send anyone off the site.
+    return redirect(back if back.startswith("/banking/") and "//" not in back else reverse("banking:accounts"))
 
 
 # ---- file import ----

@@ -236,8 +236,8 @@ Files: `banking/views/account_page.py` (new), `banking/urls.py`, `banking/templa
 - `sync_now`: redirect to `request.POST.get("next")` when it starts with `/banking/`, else the accounts list.
 - Links: Bank accounts list name → account page; chart of accounts row with a bank account → "Bank page" link beside "Ledger" (one query: `BankAccount.objects.values_list("ledger_account_id", "pk")`).
 - Tests (`tests/test_bank_account_page.py`): tiles values (books equals register top row and `ledger_balance`; bank from `bank_balance`; fallback to reconciliation statement; "Not reported"); tab counts; uncategorized tab shows only this account's NEW rows and an exclude/restore round trip from the tab returns to it; excluded toggle; all-transactions tab running balance top row equals Amount in books; chart has 30 points ending today; links present on accounts list and chart of accounts; standard user can view, Sync now hidden for standard users; query count of each tab flat as rows grow.
-- [ ] Screenshots: each tab (light and dark), dashboard at 390px, account with no bank activity (empty states), Plaid-linked account header vs file-only header.
-- [ ] Commit: `Bank account page with dashboard, uncategorized, and register tabs`
+- [x] Screenshots: each tab (light and dark), dashboard at 390px, account with no bank activity (empty states), Plaid-linked account header vs file-only header.
+- [x] Commit: `Bank account page with dashboard, uncategorized, and register tabs`
 
 ## Task 7: README and demo data
 
