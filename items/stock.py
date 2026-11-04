@@ -40,16 +40,16 @@ def _live_movements(item: Item):
     return StockMovement.objects.filter(item=item, voided=False).order_by("date", "id")
 
 
+def _move(m: StockMovement) -> Move:
+    if m.quantity > 0:
+        return Move(m.pk, m.date, m.quantity, m.unit_cost)
+    if m.quantity < 0:
+        return Move(m.pk, m.date, m.quantity)
+    return Move(m.pk, m.date, 0, value_change=m.total_cost)
+
+
 def _moves(item: Item) -> list[Move]:
-    moves = []
-    for m in _live_movements(item):
-        if m.quantity > 0:
-            moves.append(Move(m.pk, m.date, m.quantity, m.unit_cost))
-        elif m.quantity < 0:
-            moves.append(Move(m.pk, m.date, m.quantity))
-        else:
-            moves.append(Move(m.pk, m.date, 0, value_change=m.total_cost))
-    return moves
+    return [_move(m) for m in _live_movements(item)]
 
 
 def _replay(item: Item, extra: Move | None = None) -> costing.ReplayResult:
@@ -70,6 +70,15 @@ def stock_value(item: Item) -> Decimal:
 
 def current_unit_cost(item: Item) -> Decimal:
     return _replay(item).unit_cost
+
+
+def current_unit_costs(items: Sequence[Item]) -> dict[int, Decimal]:
+    """current_unit_cost for each stock item in `items`, reading all their movements in one query (the item list)."""
+    stock = [i for i in items if i.is_stock]
+    moves: dict[int, list[Move]] = {i.pk: [] for i in stock}
+    for m in StockMovement.objects.filter(item__in=stock, voided=False).order_by("date", "id"):
+        moves[m.item_id].append(_move(m))
+    return {i.pk: replay(CostingMethod(i.costing_method), moves[i.pk], i.purchase_cost).unit_cost for i in stock}
 
 
 def effective_total(movement: StockMovement) -> Decimal:

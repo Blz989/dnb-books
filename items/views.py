@@ -34,8 +34,8 @@ from .models import (
     Category, CountStatus, InventorySettings, Item, ItemType, MovementKind, StockCount, StockMovement, SubmittedToken,
 )
 from .stock import (
-    StockLine, current_unit_cost, effective_total, on_hand, record_movements, record_value_adjustment, stock_value,
-    void_movement,
+    StockLine, current_unit_cost, current_unit_costs, effective_total, on_hand, record_movements,
+    record_value_adjustment, stock_value, void_movement,
 )
 
 PAGE_SIZE = 50
@@ -75,11 +75,11 @@ def item_list(request):
 
     page = Paginator(items, PAGE_SIZE).get_page(request.GET.get("page"))
     totals = reports.item_totals([i.pk for i in page.object_list])
+    unit_costs = current_unit_costs(page.object_list)
     rows = []
     for item in page.object_list:
         quantity, value = totals.get(item.pk, (0, Decimal("0.00")))
-        rows.append({"item": item, "quantity": quantity, "value": value,
-                     "unit_cost": current_unit_cost(item) if item.is_stock else None})
+        rows.append({"item": item, "quantity": quantity, "value": value, "unit_cost": unit_costs.get(item.pk)})
 
     all_totals = reports.item_totals()
     active = Item.objects.filter(is_active=True)

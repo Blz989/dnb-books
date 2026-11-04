@@ -5,10 +5,10 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 
 from contacts.models import Customer, Vendor
-from ledger.models import Account, JournalEntry
+from ledger.models import Account, JournalEntry, JournalLine
 from ledger.posting import LineSpec, post_entry
 from purchasing.models import VendorPayment, VendorPaymentMethod
 from sales.models import Deposit, DocStatus, Payment, PaymentMethod, Refund
@@ -19,6 +19,7 @@ from .models import AccountKind, BankTransaction, Match, Rule, Transfer, Transfe
 ZERO = Decimal("0.00")
 DOCUMENT_WINDOW_DAYS = 10
 DEPOSIT_WINDOW_DAYS = 5
+TRANSFER_WINDOW_DAYS = 5
 ALREADY_MATCHED = "That item is already matched to another bank transaction."
 
 
@@ -58,30 +59,85 @@ def _is_matched(target, txn: BankTransaction | None = None) -> bool:
     return False
 
 
-def _window(txn: BankTransaction, days: int) -> dict:
-    return {"date__gte": txn.date - timedelta(days=days), "date__lte": txn.date + timedelta(days=days)}
+def _within(txn: BankTransaction, day, days: int) -> bool:
+    return txn.date - timedelta(days=days) <= day <= txn.date + timedelta(days=days)
 
 
-def _document_candidates(txn: BankTransaction) -> list[Candidate]:
-    ledger = txn.bank_account.ledger_account
+class CandidatePool:
+    """Everything the suggestion rules can match for a set of bank rows, read in a fixed number of queries.
+
+    The inbox builds one pool per page; a single row gets a pool of its own. Each rule below filters the pool in
+    Python with the same conditions it once sent to the database, in the same order (each model's default ordering).
+    """
+
+    def __init__(self, txns: Sequence[BankTransaction]):
+        txns = list(txns)
+        self.rules = list(Rule.objects.filter(is_active=True).select_related("account").order_by("position", "id"))
+        if not txns:
+            self.payments = self.refunds = self.vendor_payments = self.deposits = self.transfers = []
+            self.deposit_totals, self.matched_transfers = {}, set()
+            return
+        ledgers = {t.bank_account.ledger_account_id for t in txns}
+        accounts = {t.bank_account_id for t in txns}
+        amounts = {t.amount for t in txns}
+        negated = {-a for a in amounts}
+        first, last = min(t.date for t in txns), max(t.date for t in txns)
+        doc_window = {"date__gte": first - timedelta(days=DOCUMENT_WINDOW_DAYS),
+                      "date__lte": last + timedelta(days=DOCUMENT_WINDOW_DAYS)}
+        deposit_window = {"date__gte": first - timedelta(days=DEPOSIT_WINDOW_DAYS),
+                          "date__lte": last + timedelta(days=DEPOSIT_WINDOW_DAYS)}
+        transfer_window = {"date__gte": first - timedelta(days=TRANSFER_WINDOW_DAYS),
+                           "date__lte": last + timedelta(days=TRANSFER_WINDOW_DAYS)}
+
+        self.payments = list(Payment.objects.filter(
+            status=DocStatus.OPEN, deposited_to_id__in=ledgers, method__in=(PaymentMethod.ACH, PaymentMethod.WIRE),
+            amount__in=amounts, bank_match__isnull=True, **doc_window,
+        ).select_related("customer"))
+        self.refunds = list(Refund.objects.filter(
+            status=DocStatus.OPEN, bank_account_id__in=ledgers, amount__in=negated, bank_match__isnull=True, **doc_window,
+        ).select_related("customer"))
+        self.vendor_payments = list(VendorPayment.objects.filter(
+            status=DocStatus.OPEN, paid_from_id__in=ledgers, amount__in=negated, bank_match__isnull=True,
+        ).select_related("vendor"))
+
+        if any(t.amount > 0 for t in txns):
+            self.deposits = list(Deposit.objects.filter(
+                status=DocStatus.OPEN, bank_account_id__in=ledgers, bank_match__isnull=True, **deposit_window,
+            ).select_related("journal_entry"))
+        else:
+            self.deposits = []
+        self.deposit_totals = {
+            (r["entry_id"], r["account_id"]): r["t"] or ZERO
+            for r in JournalLine.objects.filter(entry_id__in=[d.journal_entry_id for d in self.deposits],
+                                                account_id__in=ledgers)
+            .values("entry_id", "account_id").annotate(t=Sum("debit"))
+        } if self.deposits else {}
+
+        self.transfers = list(Transfer.objects.filter(
+            Q(from_account_id__in=accounts) | Q(to_account_id__in=accounts),
+            status=TransferStatus.POSTED, amount__in={abs(a) for a in amounts}, **transfer_window,
+        ).select_related("from_account__ledger_account", "to_account__ledger_account"))
+        self.matched_transfers = set(Match.objects.filter(
+            journal_entry_id__in=[t.journal_entry_id for t in self.transfers], bank_transaction__bank_account_id__in=accounts,
+        ).values_list("journal_entry_id", "bank_transaction__bank_account_id")) if self.transfers else set()
+
+
+def _document_candidates(txn: BankTransaction, pool: CandidatePool) -> list[Candidate]:
+    ledger_id = txn.bank_account.ledger_account_id
     found: list[Candidate] = []
-    window = _window(txn, DOCUMENT_WINDOW_DAYS)
 
-    for p in Payment.objects.filter(
-        status=DocStatus.OPEN, deposited_to=ledger, method__in=(PaymentMethod.ACH, PaymentMethod.WIRE),
-        amount=txn.amount, bank_match__isnull=True, **window,
-    ).select_related("customer"):
-        found.append(Candidate("document", p, 80 - _days(txn, p.date), f"Payment {p.number} from {p.customer.name}"))
+    for p in pool.payments:
+        if p.deposited_to_id == ledger_id and p.amount == txn.amount and _within(txn, p.date, DOCUMENT_WINDOW_DAYS):
+            found.append(Candidate("document", p, 80 - _days(txn, p.date), f"Payment {p.number} from {p.customer.name}"))
 
-    for r in Refund.objects.filter(
-        status=DocStatus.OPEN, bank_account=ledger, amount=-txn.amount, bank_match__isnull=True, **window,
-    ).select_related("customer"):
-        found.append(Candidate("document", r, 80 - _days(txn, r.date), f"Refund {r.number} to {r.customer.name}"))
+    for r in pool.refunds:
+        if r.bank_account_id == ledger_id and r.amount == -txn.amount and _within(txn, r.date, DOCUMENT_WINDOW_DAYS):
+            found.append(Candidate("document", r, 80 - _days(txn, r.date), f"Refund {r.number} to {r.customer.name}"))
 
     wanted_check = normalize(txn.check_number)
-    for v in VendorPayment.objects.filter(
-        status=DocStatus.OPEN, paid_from=ledger, amount=-txn.amount, bank_match__isnull=True,
-    ).select_related("vendor"):
+    for v in pool.vendor_payments:
+        if v.paid_from_id != ledger_id or v.amount != -txn.amount:
+            continue
         if wanted_check and v.method == VendorPaymentMethod.CHECK and normalize(v.check_number) == wanted_check:
             found.append(Candidate(
                 "vendor_check", v, 100, f"Check {v.check_number} to {v.vendor.name} ({v.number})"))
@@ -91,22 +147,21 @@ def _document_candidates(txn: BankTransaction) -> list[Candidate]:
     return found
 
 
-def _deposit_candidates(txn: BankTransaction) -> list[Candidate]:
+def _deposit_candidates(txn: BankTransaction, pool: CandidatePool) -> list[Candidate]:
     if txn.amount <= 0:
         return []
-    ledger = txn.bank_account.ledger_account
+    ledger_id = txn.bank_account.ledger_account_id
     found = []
-    deposits = Deposit.objects.filter(
-        status=DocStatus.OPEN, bank_account=ledger, bank_match__isnull=True, **_window(txn, DEPOSIT_WINDOW_DAYS))
-    for dep in deposits.select_related("journal_entry"):
-        total = dep.journal_entry.lines.filter(account=ledger).aggregate(t=Sum("debit"))["t"] or ZERO
-        if total == txn.amount:
+    for dep in pool.deposits:
+        if dep.bank_account_id != ledger_id or not _within(txn, dep.date, DEPOSIT_WINDOW_DAYS):
+            continue
+        if pool.deposit_totals.get((dep.journal_entry_id, ledger_id), ZERO) == txn.amount:
             found.append(Candidate("deposit", dep, 85 - _days(txn, dep.date), f"Deposit {dep.number}"))
     return found
 
 
-def _rule_candidate(txn: BankTransaction) -> list[Candidate]:
-    for rule in Rule.objects.filter(is_active=True).select_related("account").order_by("position", "id"):
+def _rule_candidate(txn: BankTransaction, pool: CandidatePool) -> list[Candidate]:
+    for rule in pool.rules:
         if rule.bank_account_id not in (None, txn.bank_account_id):
             continue
         if rule.matches(txn.description):
@@ -114,34 +169,30 @@ def _rule_candidate(txn: BankTransaction) -> list[Candidate]:
     return []
 
 
-def candidates(txn: BankTransaction) -> list[Candidate]:
-    found = _document_candidates(txn) + _deposit_candidates(txn) + _transfer_candidates(txn) + _rule_candidate(txn)
+def candidates(txn: BankTransaction, pool: CandidatePool | None = None) -> list[Candidate]:
+    pool = pool or CandidatePool([txn])
+    found = (_document_candidates(txn, pool) + _deposit_candidates(txn, pool) + _transfer_candidates(txn, pool)
+             + _rule_candidate(txn, pool))
     return sorted(found, key=lambda c: (-c.score, _days(txn, getattr(c.target, "date", txn.date)), _number(c.target)))
 
 
-TRANSFER_WINDOW_DAYS = 5
-
-
-def _transfer_candidates(txn: BankTransaction) -> list[Candidate]:
+def _transfer_candidates(txn: BankTransaction, pool: CandidatePool) -> list[Candidate]:
     """A transfer posted from the other account's row, seen from this account: same amount, right direction."""
-    account = txn.bank_account
+    account_id = txn.bank_account_id
     found = []
-    if txn.amount < 0:
-        sides = Transfer.objects.filter(from_account=account)
-    else:
-        sides = Transfer.objects.filter(to_account=account)
-    for t in sides.filter(
-        status=TransferStatus.POSTED, amount=abs(txn.amount), **_window(txn, TRANSFER_WINDOW_DAYS),
-    ).select_related("from_account__ledger_account", "to_account__ledger_account"):
-        if Match.objects.filter(journal_entry=t.journal_entry, bank_transaction__bank_account=account).exists():
+    for t in pool.transfers:
+        side = t.from_account_id if txn.amount < 0 else t.to_account_id
+        if side != account_id or t.amount != abs(txn.amount) or not _within(txn, t.date, TRANSFER_WINDOW_DAYS):
+            continue
+        if (t.journal_entry_id, account_id) in pool.matched_transfers:
             continue
         found.append(Candidate(
             "transfer", t, 75 - _days(txn, t.date), f"Transfer {t.from_account} to {t.to_account} on {t.date:%b} {t.date.day}"))
     return found
 
 
-def suggest(txn: BankTransaction) -> Candidate | None:
-    found = candidates(txn)
+def suggest(txn: BankTransaction, pool: CandidatePool | None = None) -> Candidate | None:
+    found = candidates(txn, pool)
     return found[0] if found else None
 
 
