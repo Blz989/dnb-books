@@ -134,6 +134,7 @@ You need Docker with the Compose plugin, and git.
 2. Copy `.env.example` to `.env` and fill in:
    - `DNB_SECRET_KEY`: any long random text (for example the output of `openssl rand -hex 32`).
    - `DNB_ALLOWED_HOSTS`: the server's name and IP address as people will type them, plus `localhost`.
+   - Reaching it through a Cloudflare Tunnel (for example `books.example.com`): add that name to `DNB_ALLOWED_HOSTS`, set `DNB_CSRF_TRUSTED_ORIGINS=https://books.example.com`, and don't override the Host header on the tunnel rule. Without the trusted origin, every form there, including the sign-in, is refused.
    - `DNB_TIME_ZONE`: your time zone, for example `America/Los_Angeles`. Backup times use it.
 3. Build and start: `docker compose up -d --build`. The first start creates the database in `./data`.
 4. Create the backup key and the first admin user:
