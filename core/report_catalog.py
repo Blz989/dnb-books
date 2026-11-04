@@ -27,6 +27,7 @@ GROUPS = [
     ("Inventory", [
         ("inventory-valuation", "Inventory valuation", "Stock on hand and its value against the books."),
         ("stock-movements", "Stock movements", "Every receipt, sale, and adjustment."),
+        ("fifo-lots", "FIFO cost lot tracking", "Each receipt of one item and the sales that used it."),
         ("low-stock", "Low stock", "Items at or below their reorder point."),
         ("negative-stock", "Negative stock", "Items below zero."),
     ]),

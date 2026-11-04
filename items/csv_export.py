@@ -30,3 +30,27 @@ def negative_stock_csv(rows):
 def low_stock_csv(rows):
     return csv_response("low-stock.csv", ["SKU", "Name", "On hand", "On order", "Reorder point", "Short by"], [
         [r.item.sku, r.item.name, r.on_hand, r.on_order, r.reorder_point, r.short_by] for r in rows])
+
+
+def fifo_lots_csv(r):
+    body = []
+    for row in r.rows:
+        lot = row.lot
+        note = row.tag
+        if row.first and lot.opening:
+            note = "; ".join(x for x in (f"Opening, {lot.on_hand_at_start} on hand at {r.start.isoformat()}",
+                                         f"{lot.used_before_start} used before {r.start.isoformat()}" if lot.used_before_start else "",
+                                         note) if x)
+        body.append([
+            lot.date.isoformat(), lot.label, lot.party, lot.quantity, r.item.unit, lot.age_days, f"{lot.unit_cost:.4f}",
+            amt(lot.total), row.out_date.isoformat() if row.out_date else "", row.out_label, row.out_party,
+            row.out_quantity if row.out_quantity is not None else "", note])
+    for s in r.shorts:
+        body.append(["", "", "", "", r.item.unit, "", "", "", s.date.isoformat(), s.label, s.party, s.quantity,
+                     f"Sold with no matching receipt, estimated {amt(s.estimate)}. {s.resolved}"])
+    body.append([r.end.isoformat(), "On hand", "", r.on_hand, r.item.unit, "", "", amt(r.value), "", "", "", "",
+                 f"Lots remaining {r.lots_quantity}, {amt(r.lots_value)}"])
+    return csv_response(
+        f"fifo-lots-{r.item.sku}-{r.start.isoformat()}_{r.end.isoformat()}.csv",
+        ["In date", "In transaction", "Received from", "In quantity", "Unit", "Age", "Cost per unit", "In total",
+         "Out date", "Out transaction", "Dispersed to", "Out quantity", "Note"], body)

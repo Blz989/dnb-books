@@ -61,6 +61,32 @@ class ReplayResult:
     unit_cost: Decimal
 
 
+@dataclass(frozen=True)
+class Consume:
+    """An outflow took `quantity` units from the FIFO layer created by inflow `layer_id`."""
+    layer_id: int
+    outflow_id: int
+    quantity: int
+    cost: Decimal
+
+
+@dataclass(frozen=True)
+class Short:
+    """An outflow took more than was on hand; `quantity` units were costed at `estimate`."""
+    outflow_id: int
+    quantity: int
+    estimate: Decimal
+
+
+@dataclass(frozen=True)
+class Fill:
+    """A later inflow filled `quantity` units of an earlier outflow's shortfall."""
+    inflow_id: int
+    outflow_id: int
+    quantity: int
+    cost: Decimal
+
+
 class _Backlog:
     """Outflow units that were costed at an estimate because stock was short, oldest first."""
 
@@ -79,7 +105,10 @@ class _Backlog:
         return sum((e[2] for e in self.entries), ZERO)
 
 
-def replay(method: CostingMethod, moves: Sequence[Move], fallback_unit_cost: Decimal) -> ReplayResult:
+def replay(
+    method: CostingMethod, moves: Sequence[Move], fallback_unit_cost: Decimal, trace: list | None = None,
+) -> ReplayResult:
+    """With a trace list, FIFO replay also appends Consume, Short, and Fill events; the result is the same."""
     keys = [(m.date, m.id) for m in moves]
     assert keys == sorted(keys), "moves must be sorted by (date, id)"
     fifo = method == CostingMethod.FIFO
@@ -121,6 +150,8 @@ def replay(method: CostingMethod, moves: Sequence[Move], fallback_unit_cost: Dec
                 entry[1] -= k
                 entry[2] -= released
                 fill_cost += cost
+                if trace is not None and fifo:
+                    trace.append(Fill(m.id, entry[0], k, cost))
                 if entry[1] == 0:
                     estimated[entry[0]] = False
             backlog.entries = [e for e in backlog.entries if e[1] > 0]
@@ -155,6 +186,8 @@ def replay(method: CostingMethod, moves: Sequence[Move], fallback_unit_cost: Dec
                         layer[3] -= part
                         cost += part
                         left -= k
+                        if trace is not None:
+                            trace.append(Consume(layer[0], m.id, k, part))
                         if layer[2] == 0:
                             layers.pop(0)
                     phys_qty = sum(l[2] for l in layers)
@@ -167,6 +200,8 @@ def replay(method: CostingMethod, moves: Sequence[Move], fallback_unit_cost: Dec
             if short:
                 estimate = round_cents(last_unit_cost * short)
                 backlog.add(m.id, short, estimate)
+                if trace is not None and fifo:
+                    trace.append(Short(m.id, short, estimate))
             totals[m.id] = -(cost + estimate)
             estimated[m.id] = bool(short)
 

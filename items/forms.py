@@ -27,6 +27,33 @@ class MovementsForm(RangeForm):
         return item
 
 
+NOT_FIFO = "Lot tracking needs an item that uses FIFO costing."
+
+
+class _ItemChoice(forms.ModelChoiceField):
+    def label_from_instance(self, item):
+        return f"{item.sku} · {item.name}"
+
+
+class FifoLotsForm(RangeForm):
+    # Every stock item is accepted here so a weighted-average one gets the plain message, not "invalid choice".
+    item = _ItemChoice(Item.objects.filter(item_type=ItemType.STOCK).order_by("sku"), required=False,
+                       label="Item", empty_label="Pick an item")
+    field_order = ["item", "start", "end"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["item"].widget.choices = [("", "Pick an item")] + [
+            (i.pk, f"{i.sku} · {i.name}")
+            for i in Item.objects.filter(item_type=ItemType.STOCK, costing_method=CostingMethod.FIFO).order_by("sku")]
+
+    def clean_item(self):
+        item = self.cleaned_data["item"]
+        if item is not None and item.costing_method != CostingMethod.FIFO:
+            raise forms.ValidationError(NOT_FIFO)
+        return item
+
+
 class ItemForm(forms.ModelForm):
     class Meta:
         model = Item

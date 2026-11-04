@@ -1,0 +1,1 @@
+{# A lot or sale transaction: document type on a small line, then the number as a link. #}{% if url %}{% with parts=label.split %}<div class="on-hand">{{ parts|slice:":-1"|join:" " }}</div><a class="nowrap" href="{{ url }}">{{ parts|last }}</a>{% endwith %}{% else %}{{ label }}{% endif %}

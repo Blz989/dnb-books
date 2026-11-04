@@ -144,15 +144,15 @@ Form `FifoLotsForm(RangeForm)` with `item = forms.ModelChoiceField(queryset=Item
 Template: title block "FIFO cost lot tracking"; subtitle "{item name} · SKU {sku} · {start} to {end}"; KPI tiles Received, Sold, On hand at {end}, Value at {end}; main table with a two-cell group header row "PRODUCT IN" (colspan 7) / "PRODUCT OUT" (colspan 4); "Sold with no matching receipt" card (only if shorts); closing line and the mismatch banner exactly as the spec words them. CSV per spec.
 
 Tests (`tests/test_fifo_lots.py`), building data through `record_movements` / bill and invoice posting services (see `tests/test_stock.py`, `tests/test_bills.py`, `tests/test_invoicing.py` for helpers):
-- [ ] property-style: for a few random move sequences (use hypothesis like `tests/test_costing.py` if it does), `replay(..., trace=[])` returns a result equal to `replay(...)`; sum of Consume quantities per outflow + Short quantities == outflow quantity.
-- [ ] two bills and three invoices where one invoice spans both lots and one lot feeds two invoices → rows pair correctly, quantities and costs right, links to bill and invoice.
-- [ ] a bill with no invoice → tag "No invoice yet"; an invoice before any receipt → listed in shorts, then filled by a later bill → "Filled by Bill …" and the lot row tagged "Sold before received"; unfilled → "Still estimated".
-- [ ] opening lot: received before From with units left → "Opening", on-hand-at-start and used-before-start right.
-- [ ] closing on hand and value equal `inventory_valuation(end)` row for the item; `difference == 0`; lots remaining match `FifoLayer` rows when end is today.
-- [ ] voided invoice excluded; item required; non-FIFO error message; CSV header; PDF content type; catalog entry.
-- [ ] query count independent of the number of invoices (bulk lookups).
-- [ ] Screenshots: report with gaps (light, dark), no-item empty state, non-FIFO error, PDF first page.
-- [ ] Commit: `FIFO cost lot tracking report`
+- [x] property-style: for a few random move sequences (use hypothesis like `tests/test_costing.py` if it does), `replay(..., trace=[])` returns a result equal to `replay(...)`; sum of Consume quantities per outflow + Short quantities == outflow quantity.
+- [x] two bills and three invoices where one invoice spans both lots and one lot feeds two invoices → rows pair correctly, quantities and costs right, links to bill and invoice.
+- [x] a bill with no invoice → tag "No invoice yet"; an invoice before any receipt → listed in shorts, then filled by a later bill → "Filled by Bill …" and the lot row tagged "Sold before received"; unfilled → "Still estimated".
+- [x] opening lot: received before From with units left → "Opening", on-hand-at-start and used-before-start right.
+- [x] closing on hand and value equal `inventory_valuation(end)` row for the item; `difference == 0`; lots remaining match `FifoLayer` rows when end is today.
+- [x] voided invoice excluded; item required; non-FIFO error message; CSV header; PDF content type; catalog entry.
+- [x] query count independent of the number of invoices (bulk lookups).
+- [x] Screenshots: report with gaps (light, dark), no-item empty state, non-FIFO error, PDF first page.
+- [x] Commit: `FIFO cost lot tracking report`
 
 ## Task 4: Bank-reported balance from feeds
 
