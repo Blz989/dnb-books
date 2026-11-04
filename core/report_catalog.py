@@ -34,6 +34,7 @@ GROUPS = [
     ("Accountant", [
         ("trial-balance", "Trial balance", "Every account's debit or credit balance."),
         ("general-ledger", "General ledger", "Every line posted to one account."),
+        ("bank-register", "Bank register", "Every posted line on one bank or card account, with a running balance."),
     ]),
 ]
 

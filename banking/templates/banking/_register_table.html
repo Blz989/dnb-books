@@ -1,0 +1,25 @@
+{# Register rows. Needs: rows; optional page and querystring for paging. #}
+<table class="data register">
+  <thead><tr><th>Date</th><th>Reference #</th><th>Type</th><th>Status</th><th class="num">Deposits</th><th class="num">Withdrawals</th><th class="num">Balance</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="nowrap">{{ r.date|date:"Y-m-d" }}</td>
+      <td class="nowrap">{% if r.url %}<a href="{{ r.url }}">{{ r.reference|default:"—" }}</a>{% else %}{{ r.reference|default:"—" }}{% endif %}</td>
+      <td>{{ r.type_label }}{% if r.counterparty %}<div class="on-hand">{{ r.counterparty }}</div>{% endif %}</td>
+      <td class="nowrap">{% if r.status == "Reconciled" %}<span class="tag">{{ r.status }}</span>{% elif r.status == "Manually added" %}<span class="tag ns">{{ r.status }}</span>{% else %}<span class="tag info">{{ r.status }}</span>{% endif %}</td>
+      <td class="num">{% if r.deposit is not None %}{{ r.deposit|floatformat:"2g" }}{% endif %}</td>
+      <td class="num">{% if r.withdrawal is not None %}{{ r.withdrawal|floatformat:"2g" }}{% endif %}</td>
+      <td class="num{% if r.balance < 0 %} neg{% endif %}">{{ r.balance|floatformat:"2g" }}</td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="empty">No transactions match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if page %}
+<div class="foot">
+  <span>Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+  <span>{% if page.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.previous_page_number }}">← Newer</a>{% else %}← Newer{% endif %} ·
+    {% if page.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page.next_page_number }}">Older →</a>{% else %}Older →{% endif %}</span>
+</div>
+{% endif %}

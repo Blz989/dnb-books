@@ -1,0 +1,14 @@
+{% extends "core/report_base.html" %}
+{% block title %}Bank register{% endblock %}
+{% block page_title %}Bank register{% endblock %}
+{% block page_subtitle %}{% if account %}<div class="sub">{{ account.ledger_account.name }}{% if account.mask %} ···· {{ account.mask }}{% endif %} · {{ account.get_kind_display }}{% if form.cleaned_data.start or form.cleaned_data.end %} · {{ form.cleaned_data.start|date:"Y-m-d"|default:"start" }} to {{ form.cleaned_data.end|date:"Y-m-d"|default:"today" }}{% endif %}</div>{% endif %}{% endblock %}
+{% block report %}
+<div class="card">
+{% include "ledger/_filter_form.html" with report=account %}
+{% if account %}
+{% include "banking/_register_table.html" %}
+{% else %}
+<p class="empty">Pick an account to see its register.</p>
+{% endif %}
+</div>
+{% endblock %}

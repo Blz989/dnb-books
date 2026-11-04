@@ -315,3 +315,4 @@ table.lots th, table.lots td { padding-left: 8px; padding-right: 8px; }
 table.lots .group-h th { font-size: 11px; letter-spacing: .07em; color: var(--muted); border-bottom: 0; padding-bottom: 0; }
 table.lots .out-start { border-left: 1px solid var(--border); }
 table.lots tr.lot-start td { border-top: 1px solid var(--border); }
+.tag.info { background: var(--info-bg); color: var(--info-text); }

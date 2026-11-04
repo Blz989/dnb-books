@@ -1,6 +1,6 @@
 from django.urls import path
 
-from banking.views import forecast as forecast_views
+from banking.views import forecast as forecast_views, register as register_views
 from core.report_pdf import pdf_export
 from handling import views as handling_views
 from items import views as item_views
@@ -16,6 +16,7 @@ urlpatterns = [
     path("trial-balance/", pdf_export(views.trial_balance), name="trial-balance"),
     path("profit-and-loss/", pdf_export(views.profit_and_loss), name="profit-and-loss"),
     path("balance-sheet/", pdf_export(views.balance_sheet), name="balance-sheet"),
+    path("bank-register/", pdf_export(register_views.bank_register), name="bank-register"),
     path("general-ledger/", pdf_export(views.general_ledger), name="general-ledger"),
     path("inventory-valuation/", pdf_export(item_views.inventory_valuation), name="inventory-valuation"),
     path("stock-movements/", pdf_export(item_views.stock_movements), name="stock-movements"),

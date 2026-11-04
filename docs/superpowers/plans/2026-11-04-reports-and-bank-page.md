@@ -211,17 +211,17 @@ Search: `entry__memo__icontains | entry__reference__icontains | entry__source_id
 Report view `bank_register` (route `reports:bank-register` at `bank-register/`, catalog Accountant group: `("bank-register", "Bank register", "Every posted line on one bank or card account, with a running balance.")`): form with Account (select of bank accounts, required, empty state "Pick an account to see its register."), From, To, Type, Search, Reconciled. Default dates: none (whole history) unless given. Screen paginates 50 per page; `?format=csv` and PDF export every filtered row (no pagination). CSV `bank-register-{ledger number}.csv`: Date, Reference, Type, Counterparty, Status, Deposit, Withdrawal, Balance. Table include `_register_table.html` is shared with Task 6.
 
 Tests (`tests/test_bank_register.py`):
-- [ ] every row's balance equals `signed balance of account_totals(start=None, end=row date)` restricted to lines up to and including that row (compute expected in the test by summing in Python over the account's ordered lines); newest row equals `ledger_balance`.
-- [ ] balances unchanged when filters (date range, type, search, reconciled) are applied.
-- [ ] a voided invoice payment: the original and its reversal both show and net to zero.
-- [ ] only in-ledger lines (a DRAFT entry on the account is absent).
-- [ ] each filter narrows correctly; amount search matches.
-- [ ] status values for a reconciled line, a matched payment, a line booked from the bank, and a manual entry.
-- [ ] liability (card) account sign.
-- [ ] query count of the report page flat (10 vs 60 lines).
-- [ ] CSV and PDF; catalog entry.
-- [ ] Screenshots: report with an account (light, dark), empty state, PDF first page.
-- [ ] Commit: `Bank register with a SQL running balance`
+- [x] every row's balance equals `signed balance of account_totals(start=None, end=row date)` restricted to lines up to and including that row (compute expected in the test by summing in Python over the account's ordered lines); newest row equals `ledger_balance`.
+- [x] balances unchanged when filters (date range, type, search, reconciled) are applied.
+- [x] a voided invoice payment: the original and its reversal both show and net to zero.
+- [x] only in-ledger lines (a DRAFT entry on the account is absent).
+- [x] each filter narrows correctly; amount search matches.
+- [x] status values for a reconciled line, a matched payment, a line booked from the bank, and a manual entry.
+- [x] liability (card) account sign.
+- [x] query count of the report page flat (10 vs 60 lines).
+- [x] CSV and PDF; catalog entry.
+- [x] Screenshots: report with an account (light, dark), empty state, PDF first page.
+- [x] Commit: `Bank register with a SQL running balance`
 
 ## Task 6: Bank account page
 
