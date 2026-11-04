@@ -1,19 +1,23 @@
-{% extends "core/base.html" %}
+{% extends pdf|yesno:"core/report_pdf.html,core/base.html" %}
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'reports:index' %}">Reports</a></div>{% endblock %}
+{% block page_actions %}{% if pdf_url and request.resolver_match.url_name != "index" %}<a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener"><svg class="bi" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0-4-4m4 4 4-4M4 16h12"/></svg>Download PDF</a>{% endif %}{% endblock %}
 {% block content %}
+{% if not pdf %}
 <div class="split reports">
   <nav class="subnav report-nav" aria-label="Reports">
     <input type="search" class="report-search" placeholder="Find a report" aria-label="Find a report" data-report-search>
     {% for g in report_groups %}
     <div class="report-group">
-      <div class="subnav-h">{{ g.label }}</div>
+      <div class="report-group-h">{{ g.label }}</div>
       {% for r in g.reports %}<a href="{{ r.url }}"{% if r.on %} class="on" aria-current="page"{% endif %}>{{ r.name }}</a>{% endfor %}
     </div>
     {% endfor %}
     <p class="empty small" data-report-none hidden>No report matches.</p>
   </nav>
   <section class="split-main">
-    {% block report %}{% endblock %}
+{% endif %}
+{% block report %}{% endblock %}
+{% if not pdf %}
   </section>
 </div>
 <script>
@@ -34,4 +38,5 @@
     });
   })();
 </script>
+{% endif %}
 {% endblock %}

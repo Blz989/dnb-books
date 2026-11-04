@@ -1,0 +1,15 @@
+{# A chart card. Needs: chart_title, chart_sub, svg, legend (list of (css, name)), rows, head (table header list). #}
+<div class="card chart">
+  <div class="chart-h">
+    <div><div class="chart-title">{{ chart_title }}</div>{% if chart_sub %}<div class="chart-sub">{{ chart_sub }}</div>{% endif %}</div>
+    {% if legend %}<div class="legend">{% for css, name in legend %}<span class="key"><i class="sw {{ css }}"></i>{{ name }}</span>{% endfor %}</div>{% endif %}
+  </div>
+  <div class="chart-body" data-chart>{{ svg|safe }}<div class="tip" hidden></div></div>
+  {% if foot %}<div class="chart-foot">{% for l, v in foot %}<span>{{ l }} <b>{{ v }}</b></span>{% endfor %}</div>{% endif %}
+  {% if rows %}
+  <details class="chart-table"><summary>Show as table</summary>
+    <table class="data"><thead><tr>{% for h in head %}<th{% if not forloop.first %} class="num"{% endif %}>{{ h }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for r in rows %}<tr>{% for c in r %}<td{% if not forloop.first %} class="num"{% endif %}>{{ c }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+  </details>
+  {% endif %}
+</div>

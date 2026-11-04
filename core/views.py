@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from backup.service import backup_status
+from core import dashboard
 from banking import status as banking_status
 from core.roles import is_admin
 from handling.periods import due_periods
@@ -23,7 +24,18 @@ def home(request):
     overdue = sales_reports.open_invoices(today, overdue_only=True)
     bills = purchasing_reports.bills_due_summary(today)
     handling_due = due_periods(today)
+    cash = dashboard.cash_flow(today)
+    pnl = dashboard.income_expense(today)
     return render(request, "core/home.html", {
+        "cash": cash, "pnl": pnl,
+        "cash_legend": [("s1", "Cash in"), ("s2", "Cash out")], "pnl_legend": [("s1", "Income"), ("s2", "Expense")],
+        "cash_foot": [("In", f"{cash['total_in']:,.2f}"), ("Out", f"{cash['total_out']:,.2f}"),
+                      ("Cash today", f"{cash['ending']:,.2f}")],
+        "pnl_foot": [("Income", f"{pnl['total_income']:,.2f}"), ("Expense", f"{pnl['total_expense']:,.2f}"),
+                     ("Net", f"{pnl['total_income'] - pnl['total_expense']:,.2f}")],
+        "cash_head": ["Month", "Cash in", "Cash out", "Ending cash"], "pnl_head": ["Month", "Income", "Expense", "Net"],
+        "cash_rows": [[f"{m.start:%b %Y}", f"{m.a:,.2f}", f"{m.b:,.2f}", f"{m.balance:,.2f}"] for m in cash["months"]],
+        "pnl_rows": [[f"{m.start:%b %Y}", f"{m.a:,.2f}", f"{m.b:,.2f}", f"{m.net:,.2f}"] for m in pnl["months"]],
         "open_ar": sales_reports.ar_aging(today).totals.total,
         "overdue_total": sum((r.balance for r in overdue), 0),
         "overdue_count": len(overdue),

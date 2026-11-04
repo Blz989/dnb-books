@@ -38,7 +38,7 @@ def _totals(rows) -> dict:
 def order_profitability(request):
     today = timezone.localdate()
     form = OrderProfitabilityForm(_data(request, {"from": today.replace(day=1).isoformat(), "to": today.isoformat()}))
-    rows = totals = date_from = date_to = None
+    rows = totals = date_from = date_to = compared = None
     if form.is_valid():
         f = form.cleaned_data
         date_from, date_to = f["from"], f["to"]
@@ -47,9 +47,36 @@ def order_profitability(request):
         if f["unbilled"]:
             rows = [o for o in rows if o.balance != ZERO]
         totals = _totals(rows)
+        if f["compare"]:
+            compared = _profit_comparison(today, f, totals)
     return render(request, "handling/order_profitability.html", {
         "form": form, "rows": rows, "totals": totals, "date_from": date_from, "date_to": date_to,
-        "nav_active": "reports"})
+        "comparison": compared, "nav_active": "reports"})
+
+
+def _profit_comparison(today, f, current_totals):
+    """Totals for the same dates in earlier years. Per-order rows don't line up across years, so only totals."""
+    from ledger.comparison import Comparison, _range_label, shift_years
+
+    columns, all_totals = [], []
+    for n in range(f["compare"] + 1):
+        start, end = shift_years(f["from"], n), shift_years(f["to"], n)
+        columns.append(_range_label(start, end))
+        if n == 0:
+            t, count = current_totals, None
+        else:
+            found = orders(max(today, end), date_from=start, date_to=end, customer=f["customer"])
+            if f["unbilled"]:
+                found = [o for o in found if o.balance != ZERO]
+            t, count = _totals(found), len(found)
+        all_totals.append((t, count))
+    c = Comparison("Order profitability", columns, first_header="Total")
+    c.line("Sales", [t["sales"] for t, _ in all_totals])
+    c.line("Cost", [t["cost"] for t, _ in all_totals])
+    c.total("Profit", [t["profit"] for t, _ in all_totals])
+    c.line("Handling owed", [t["owed"] for t, _ in all_totals])
+    c.line("Handling billed", [t["billed"] for t, _ in all_totals])
+    return c
 
 
 @login_required

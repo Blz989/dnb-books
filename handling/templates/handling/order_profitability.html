@@ -5,7 +5,12 @@
 {% block report %}
 <div class="card">
 {% include "ledger/_filter_form.html" %}
+{% if comparison %}
+<h3 class="pad-h">Totals by year</h3>
+{% include "ledger/_comparison.html" %}
+{% endif %}
 {% if rows is not None %}
+{% if comparison %}<h3 class="pad-h">Orders, {{ comparison.columns.0 }}</h3>{% endif %}
 <table class="data" id="order-profitability">
   <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th class="num">Sales</th><th class="num">Cost</th><th class="num">Profit</th><th class="num">Margin</th><th class="num">Handling owed</th><th class="num">Billed</th><th class="num">Balance</th></tr></thead>
   <tbody>

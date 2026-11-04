@@ -29,6 +29,21 @@ class RangeForm(forms.Form):
         return data
 
 
+def compare_field():
+    from .comparison import COMPARE_CHOICES
+
+    return forms.TypedChoiceField(label="Compare with", choices=COMPARE_CHOICES, coerce=int, required=False,
+                                  empty_value=0)
+
+
+class AsOfCompareForm(AsOfForm):
+    compare = compare_field()
+
+
+class RangeCompareForm(RangeForm):
+    compare = compare_field()
+
+
 class GeneralLedgerForm(RangeForm):
     account = forms.ModelChoiceField(
         Account.objects.all(), error_messages={"invalid_choice": "Choose an account.", "required": "Choose an account."}
