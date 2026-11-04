@@ -36,7 +36,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 
 | Task | Where |
 |---|---|
-| Set the company name, address, and logo (once, admin) | Settings, Company profile. The logo shows in the sidebar, on the sign-in page, and on every PDF |
+| Set the company name, address, and logo (once, admin) | Settings, Company profile. The logo shows in the sidebar, on the sign-in page, on every PDF, and as the browser tab icon (with no logo, a green D&B mark) |
 | Set up sales accounts, default invoice notes, and the next document numbers (once, admin) | Settings, Sales. Set the next numbers to carry on from Zoho's |
 | Add a customer | Customers, New customer. Terms default to Net 30 |
 | Take an order, then invoice it a shipment at a time | Sales orders, New sales order, then Invoice a shipment. Lower a quantity or set it to 0 to leave it for later |

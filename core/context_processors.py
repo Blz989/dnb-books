@@ -8,7 +8,10 @@ def nav(request):
     from sales.models import SalesSettings
 
     config = SalesSettings.objects.filter(pk=1).only("company_name", "logo").first()
-    brand = {"name": (config.company_name if config else "") or "DNB Books", "has_logo": bool(config and config.logo)}
+    from core.favicon import icon_version
+
+    brand = {"name": (config.company_name if config else "") or "DNB Books", "has_logo": bool(config and config.logo),
+             "icon_version": icon_version(config) if config else icon_version()}
     user = getattr(request, "user", None)
     if not getattr(user, "is_authenticated", False):
         return {"negative_stock_count": 0, "is_admin": False, "brand": brand}

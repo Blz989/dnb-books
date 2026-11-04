@@ -4,7 +4,7 @@ from django.conf import settings
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from starlette.datastructures import Headers
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 
 from . import access
 from .runtime import tidy_connections
@@ -42,6 +42,14 @@ class AccessMiddleware:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
+            return
+        if scope.get("path") == "/favicon.ico" and scope.get("method") in ("GET", "HEAD"):
+            # The same icon as the web app, read from the same database; it carries nothing private.
+            from core.favicon import render_ico
+
+            body = await sync_to_async(render_ico, thread_sensitive=True)()
+            await Response(body, media_type="image/x-icon",
+                           headers={"Cache-Control": "public, max-age=86400"})(scope, receive, send)
             return
         token = Headers(scope=scope).get(access.HEADER, "")
         try:

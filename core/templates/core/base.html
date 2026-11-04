@@ -13,6 +13,9 @@
       document.documentElement.classList.add("js");  // the phone menu stays open without JavaScript
     })();
   </script>
+  <link rel="icon" type="image/png" sizes="32x32" href="{% url 'brand-icon' 32 %}?v={{ brand.icon_version }}">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="{% url 'brand-icon' 180 %}?v={{ brand.icon_version }}">
   <link rel="stylesheet" href="{% static 'core/app.css' %}">
   <script src="{% static 'core/theme.js' %}" defer></script>
 </head>
