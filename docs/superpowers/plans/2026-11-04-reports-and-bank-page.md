@@ -261,7 +261,7 @@ Files: `sales/static/sales/invoice_pdf.css`, `sales/static/sales/statement_pdf.c
 ## Task 9: Mobile menu behind a hamburger (added by the owner mid-session)
 
 Files: `core/templates/core/base.html`, `core/static/core/app.css`, tests.
-- [ ] Under 900px the sidebar no longer stacks its full nav above the page. A compact top bar shows the brand and a "Menu" button (hamburger icon, `aria-expanded`, `aria-controls`); pressing it opens the nav, settings, theme toggle, and user block; pressing again or choosing a link closes it. Works without JavaScript (falls back to a `<details>`-style toggle or the nav stays reachable). Desktop unchanged.
-- [ ] Test: base template renders the menu button with aria attributes; CSS hides the nav under 900px until opened.
-- [ ] Screenshots at 390px: closed and open, light and dark; desktop unchanged.
-- [ ] Commit: `Mobile menu behind a menu button`
+- [x] Under 900px the sidebar no longer stacks its full nav above the page. A compact top bar shows the brand and a "Menu" button (hamburger icon, `aria-expanded`, `aria-controls`); pressing it opens the nav, settings, theme toggle, and user block; pressing again or choosing a link closes it. Works without JavaScript (falls back to a `<details>`-style toggle or the nav stays reachable). Desktop unchanged.
+- [x] Test: base template renders the menu button with aria attributes; CSS hides the nav under 900px until opened.
+- [x] Screenshots at 390px: closed and open, light and dark; desktop unchanged.
+- [x] Commit: `Mobile menu behind a menu button`

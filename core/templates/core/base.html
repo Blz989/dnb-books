@@ -10,6 +10,7 @@
         var t = localStorage.getItem("dnb-theme");
         if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
       } catch (e) { /* storage unavailable: Auto */ }
+      document.documentElement.classList.add("js");  // the phone menu stays open without JavaScript
     })();
   </script>
   <link rel="stylesheet" href="{% static 'core/app.css' %}">
@@ -18,7 +19,8 @@
 <body>
 <div class="app{% if not user.is_authenticated %} bare{% endif %}">
   {% if user.is_authenticated %}
-  <aside>
+  <aside id="side">
+    <div class="side-head">
     {% if brand.has_logo %}
     <a class="brand with-logo" href="{% url 'home' %}" title="{{ brand.name }}">
       <span class="brand-logo"><img src="{% url 'brand-logo' %}" alt="{{ brand.name }}"></span>
@@ -29,6 +31,9 @@
       <span class="brand-text"><span class="brand-name">{{ brand.name }}</span>{% if brand.name != "DNB Books" %}<span class="brand-app">DNB Books</span>{% endif %}</span>
     </a>
     {% endif %}
+    <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="side-menu"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5.5h14M3 10h14M3 14.5h14"/></svg>Menu</button>
+    </div>
+    <div class="side-body" id="side-menu">
     <nav>
       <a href="{% url 'home' %}"{% if nav_active == "home" %} class="on"{% endif %}><span class="ni"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9.5 10 4l7 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-5V17H4a1 1 0 0 1-1-1z"/></svg>Home</span></a>
       <a href="{% url 'reports:index' %}"{% if nav_active == "reports" %} class="on"{% endif %}><span class="ni"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16V9m4 7V5m4 11v-5m4 5V7"/></svg>Reports</span></a>
@@ -101,7 +106,18 @@
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
       </div>
     </div>
+    </div>
   </aside>
+  <script>
+    // Phones: the Menu button opens and closes the sidebar; Escape closes it.
+    (function () {
+      var side = document.getElementById("side"), btn = side.querySelector(".menu-toggle");
+      function set(open) { side.classList.toggle("open", open); btn.setAttribute("aria-expanded", open ? "true" : "false"); }
+      btn.addEventListener("click", function () { set(!side.classList.contains("open")); });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape") set(false); });
+      side.querySelectorAll(".side-body a").forEach(function (a) { a.addEventListener("click", function () { set(false); }); });
+    })();
+  </script>
   {% endif %}
   <main>
     {% block top %}
