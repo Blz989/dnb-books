@@ -131,6 +131,25 @@ def ar_aging(as_of: date, customer: Customer | None = None) -> Aging:
 
 
 @dataclass
+class HomeReceivables:
+    open_ar: Decimal
+    overdue_total: Decimal
+    overdue_count: int
+
+
+def home_receivables(today: date) -> HomeReceivables:
+    """The Home tiles: A/R aging's total, and open_invoices(today, overdue_only=True) summed, from one pass over
+    open items. Skips the ledger comparison A/R aging does, which Home doesn't show."""
+    invoices, credits = aged_open_items(today)
+    overdue = [a for a in invoices if a.balance > 0 and a.days_past_due > 0]
+    return HomeReceivables(
+        open_ar=_sum_rows(_aging_rows(invoices, credits).values()).total,
+        overdue_total=sum((a.balance for a in overdue), 0),
+        overdue_count=len(overdue),
+    )
+
+
+@dataclass
 class UnpaidGroup:
     customer: Customer
     invoices: list[AgedInvoice]

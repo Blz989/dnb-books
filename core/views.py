@@ -21,7 +21,7 @@ from sales.models import SalesSettings
 def home(request):
     stock_value = sum((value for _, value in item_totals().values()), 0)
     today = timezone.localdate()
-    overdue = sales_reports.open_invoices(today, overdue_only=True)
+    receivables = sales_reports.home_receivables(today)
     bills = purchasing_reports.bills_due_summary(today)
     handling_due = due_periods(today)
     cash = dashboard.cash_flow(today)
@@ -36,9 +36,9 @@ def home(request):
         "cash_head": ["Month", "Cash in", "Cash out", "Ending cash"], "pnl_head": ["Month", "Income", "Expense", "Net"],
         "cash_rows": [[f"{m.start:%b %Y}", f"{m.a:,.2f}", f"{m.b:,.2f}", f"{m.balance:,.2f}"] for m in cash["months"]],
         "pnl_rows": [[f"{m.start:%b %Y}", f"{m.a:,.2f}", f"{m.b:,.2f}", f"{m.net:,.2f}"] for m in pnl["months"]],
-        "open_ar": sales_reports.ar_aging(today).totals.total,
-        "overdue_total": sum((r.balance for r in overdue), 0),
-        "overdue_count": len(overdue),
+        "open_ar": receivables.open_ar,
+        "overdue_total": receivables.overdue_total,
+        "overdue_count": receivables.overdue_count,
         "undeposited": sales_reports.undeposited_funds().total,
         "awaiting_bill": len(sales_reports.drop_ship_awaiting_bill()),
         "sales_unconfigured": is_admin(request.user) and not SalesSettings.load().is_configured,
