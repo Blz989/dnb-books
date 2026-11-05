@@ -185,3 +185,31 @@ def test_long_purchase_order_repeats_column_headers(admin_user, vendor, make_ite
     document = HTML(string=render_po_html(po)).render(stylesheets=[CSS(filename=str(INVOICE_CSS))])
     with_lines = [p for p in _page_texts(document) if "Line " in p]
     assert len(with_lines) >= 2 and all("Item & Description" in p for p in with_lines)
+
+
+def _line_tops_of(document, words):
+    """Vertical positions of the text boxes holding any of the given words on page 1."""
+    tops = set()
+    for box in document.pages[0]._page_box.descendants():
+        text = getattr(box, "text", None)
+        if text and any(w in text for w in words):
+            tops.add(round(box.position_y, 1))
+    return tops
+
+
+def test_company_name_stays_on_one_line_next_to_a_wide_logo(invoice, sales_settings, settings, tmp_path):
+    from io import BytesIO
+
+    from PIL import Image
+
+    settings.MEDIA_ROOT = tmp_path
+    (tmp_path / "logo").mkdir()
+    buf = BytesIO()
+    Image.new("RGB", (480, 300), "red").save(buf, format="PNG")
+    (tmp_path / "logo" / "logo.png").write_bytes(buf.getvalue())
+    sales_settings.logo = "logo/logo.png"
+    sales_settings.company_name = "D&B Goods Trading LLC"
+    sales_settings.company_address = "232 N 9th St.\nKenilworth NJ, 07033"
+    sales_settings.company_email = "info@dandbgoods.com"
+    sales_settings.save()
+    assert len(_line_tops_of(invoice_document(invoice), ["Trading", "LLC"])) == 1
