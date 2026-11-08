@@ -1,7 +1,7 @@
 # Attachments
 
 - **Date:** 2026-11-08
-- **Status:** Draft for review
+- **Status:** Approved by the owner 2026-11-08
 - **Parent spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md`. Attachments are new. Where they differ, this document wins.
 - **Builds on:** Phase 1 (backups and the restore drill), Phase 3 (customer payments), Phase 4 (bills and vendor payments), and the MCP server (`docs/superpowers/specs/2026-11-04-mcp-server-design.md`).
 - **Visual reference:** `docs/design/items-mockup.html` ("Ledger paper", with the Auto/Light/Dark toggle).
@@ -197,7 +197,9 @@ On failure: "Restore drill failed: {n} files in {manifest} are missing or don't 
 
 The MCP file-upload standard is still being worked out (the File Uploads Working Group; SEP-2356 and SEP-2631 were both closed without landing in the spec as of 2026-11-08). If one lands and Claude supports it, a later change can accept files directly. The storage, panels, and backups here stay the same.
 
-## 13. Open questions for the owner
+## 13. Settled at approval
 
-1. **Card charges.** Card and bank charges booked from the bank inbox with "New entry" are journal entries, not bills. Under this spec their receipts can't be attached. Add journal entries to the first version, or enter receipts that need to be kept as expense bills?
-2. **iPhone photos.** Some iPhones save photos as HEIC. Safari usually converts to JPEG when uploading, but this should be checked on the owner's phone before deciding whether HEIC needs support.
+The owner approved the spec as written, so:
+
+1. **Card charges.** Charges booked from the bank inbox with "New entry" are journal entries, and journal entries stay out of this version. A receipt that must be kept is entered as an expense bill. Adding journal entries later is a small change to the list of allowed targets.
+2. **iPhone photos.** HEIC is not supported. After the build, the owner uploads a photo from their iPhone to check that it arrives as JPEG (a manual check in the PR).
