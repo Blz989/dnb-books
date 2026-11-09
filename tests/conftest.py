@@ -6,6 +6,12 @@ from django.core.management import call_command
 from core.roles import ADMIN_GROUP, STANDARD_GROUP
 
 
+@pytest.fixture(autouse=True)
+def _media_root(settings, tmp_path_factory):
+    """Uploaded files go to a fresh folder in every test, never to data/media."""
+    settings.MEDIA_ROOT = tmp_path_factory.mktemp("media")
+
+
 def _user(username, group_name):
     call_command("setup_roles")
     user = get_user_model().objects.create_user(username, password="pw", is_staff=True)
@@ -28,7 +34,12 @@ from datetime import date  # noqa: E402
 from decimal import Decimal  # noqa: E402
 
 from ledger.models import (  # noqa: E402
-    Account, AccountSubtype, AccountType, EntryStatus, JournalEntry, JournalLine,
+    Account,
+    AccountSubtype,
+    AccountType,
+    EntryStatus,
+    JournalEntry,
+    JournalLine,
 )
 
 
@@ -343,3 +354,25 @@ def handling_setup(db, admin_user):
     s.save()
     add_rate(effective_from=date(2026, 10, 1), percent=Decimal("55"), user=admin_user)
     return s
+
+
+# ---- attachments fixtures ----
+@pytest.fixture
+def attachment_docs(sales_settings, purchasing_settings, customer, vendor, cash, freight, admin_user):
+    """One expense bill, one customer payment (check), and one vendor payment (ACH)."""
+    from types import SimpleNamespace
+
+    from purchasing.models import VendorPaymentMethod
+    from purchasing.posting.bills import BillExpenseSpec, create_bill
+    from purchasing.posting.payments import pay_vendor
+    from sales.models import PaymentMethod
+    from sales.posting.receipts import receive_payment
+
+    bill = create_bill(vendor=vendor, date=date(2026, 11, 2), vendor_invoice_number="A-100", user=admin_user,
+                       expense_lines=[BillExpenseSpec(freight, Decimal("80.00"), "Freight")])
+    payment = receive_payment(customer=customer, date=date(2026, 11, 3), method=PaymentMethod.CHECK,
+                              amount=Decimal("50.00"), user=admin_user, reference="1001")
+    vendor_payment = pay_vendor(vendor=vendor, date=date(2026, 11, 4), method=VendorPaymentMethod.ACH,
+                                amount=Decimal("80.00"), paid_from=cash, user=admin_user,
+                                applications=[(bill, Decimal("80.00"))])
+    return SimpleNamespace(bill=bill, payment=payment, vendor_payment=vendor_payment)

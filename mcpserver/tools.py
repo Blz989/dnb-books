@@ -157,7 +157,8 @@ def register(mcp):
                         date: str = "", bank_account: str = "", reference: str = "",
                         apply_to: list[InvoicePayment] | None = None) -> dict:
         """Preview a customer payment. ACH and wire need the bank account it went to; checks and cash go to
-        undeposited funds. Without apply_to, it pays the oldest invoices first. Nothing is saved until confirm_change."""
+        undeposited funds. Without apply_to, it pays the oldest invoices first. Nothing is saved until confirm_change.
+        The preview includes an upload link for the bill or receipt; pass it on to the person."""
         payload = {"customer": customer, "amount": amount, "method": method, "date": date,
                    "bank_account": bank_account, "reference": reference, "apply_to": _dump(apply_to)}
         return run(ctx, "receive_payment", write.preview, operation="receive_payment", payload=payload)
@@ -168,7 +169,7 @@ def register(mcp):
                     purchase_order: str = "", terms: str = "", notes: str = "") -> dict:
         """Preview a new bill with item lines, expense lines, or both. With purchase_order, item lines receive
         that PO's open lines by SKU. A duplicate vendor invoice number shows as a warning. Nothing is saved until
-        confirm_change."""
+        confirm_change. The preview includes an upload link for the bill or receipt; pass it on to the person."""
         payload = {"vendor": vendor, "vendor_invoice_number": vendor_invoice_number, "date": date,
                    "item_lines": _dump(item_lines), "expense_lines": _dump(expense_lines),
                    "purchase_order": purchase_order, "terms": terms, "notes": notes}
@@ -179,7 +180,8 @@ def register(mcp):
                   bills: list[BillPayment] | None = None, amount: str = "", date: str = "", check_number: str = "",
                   reference: str = "") -> dict:
         """Preview a vendor payment. paid_from is the bank or card account number or name. amount defaults to the
-        bills paid. A check without a number goes to Checks to print. Nothing is saved until confirm_change."""
+        bills paid. A check without a number goes to Checks to print. Nothing is saved until confirm_change.
+        The preview includes an upload link for the bill or receipt; pass it on to the person."""
         payload = {"vendor": vendor, "method": method, "paid_from": paid_from, "bills": _dump(bills),
                    "amount": amount, "date": date, "check_number": check_number, "reference": reference}
         return run(ctx, "pay_bills", write.preview, operation="pay_bills", payload=payload)
@@ -212,6 +214,12 @@ def register(mcp):
         packaging, sale_price, purchase_cost, vendor_part_number, costing_method, income_account, cogs_account,
         inventory_account (account numbers), reorder_point, is_active. Nothing is saved until confirm_change."""
         return run(ctx, "save_item", write.preview, operation="save_item", payload={"sku": sku, "fields": fields or {}})
+
+    @mcp.tool(annotations=PREVIEW)
+    def attach_file(ctx: Context, document: str) -> dict:
+        """Get a one-time link for attaching a PDF or photo to an existing bill or payment. The person opens the
+        link to upload; nothing else changes. document is a bill or payment number, like BILL-00045."""
+        return run(ctx, "attach_file", write.attach_file, document=document)
 
     # ---- write: confirm ----
 

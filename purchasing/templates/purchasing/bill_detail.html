@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ bill.number }}{% endblock %}
 {% block page_title %}{{ bill.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/vendors/{{ bill.vendor.pk }}/">{{ bill.vendor.name }}</a> · {{ bill.date|date:"Y-m-d" }} · due {{ bill.due_date|date:"Y-m-d" }} · {{ bill.get_terms_display }}
@@ -93,4 +94,5 @@
   </tbody>
 </table>
 </div>
+{% attachments_panel bill %}
 {% endblock %}

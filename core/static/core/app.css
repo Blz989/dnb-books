@@ -344,3 +344,10 @@ table.lots tr.lot-start td { border-top: 1px solid var(--border); }
 .tiles.activity .tile a { font-size: 13px; margin-top: 4px; }
 /* Phones: a wide table scrolls inside its card instead of being cut off. */
 @media (max-width: 900px) { .card { overflow-x: auto; } }
+
+/* Attachments panel */
+.attach-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.attach-form input[type=file] { max-width: 100%; font: inherit; color: var(--text); }
+.attach-form .help { color: var(--muted); font-size: 12px; }
+details.removed-files > summary { cursor: pointer; list-style: revert; }
+@media (max-width: 600px) { .attachments-table .narrow-hide { display: none; } }

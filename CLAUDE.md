@@ -5,17 +5,18 @@ Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. 
 ## Source of truth
 
 - **System spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md` (whole system, approved).
-- **Current spec:** `docs/superpowers/specs/2026-11-04-reports-and-bank-page-design.md` (sidebar width, FIFO lot tracking, unpaid invoices, bank account page; in review).
-- **Current plan:** `docs/superpowers/plans/2026-11-04-reports-and-bank-page.md`.
+- **Current spec:** `docs/superpowers/specs/2026-11-08-attachments-design.md` (attachments on bills and payments, upload links from Claude, file backups; approved).
+- **Current plan:** `docs/superpowers/plans/2026-11-08-attachments.md`.
+- **In review:** `docs/superpowers/specs/2026-11-04-reports-and-bank-page-design.md` and its plan (sidebar width, FIFO lot tracking, unpaid invoices, bank account page).
 - **Visual references:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`; all screens match it) `docs/design/invoice-mockup.html` (invoice PDF), and `docs/design/check-mockup.html` (printed check).
-- **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment, Order profitability and handling, Phase 5b (Zoho migration and catch-up), shared drop-ship POs.
+- **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment, Order profitability and handling, Phase 5b (Zoho migration and catch-up), shared drop-ship POs. Attachments (bills and payments, upload links from Claude, file backups) is in review.
 
 Read the specs and the current plan before starting. The plan's Global Constraints, Review Focus, and per-task Interfaces blocks are binding. If the plan and spec conflict, or a plan step cannot work as written, stop and ask the owner rather than improvising a different design. Small mechanical fixes to the plan (a wrong import path, a typo in a test) are fine; note them in the PR.
 
 ## How to execute the current plan
 
 1. Work on a new branch from `main` named after the work.
-2. Use the `superpowers:subagent-driven-development` skill to execute the plan task by task, unless the owner chooses inline execution (`superpowers:executing-plans`). Follow TDD as each task's steps describe: failing test, confirm it fails, implement, confirm it passes, commit.
+2. Execute the plan task by task in the session itself. Do not use the superpowers plugin or its skills; it was removed on purpose. (The `docs/superpowers/` folder name is only where specs and plans are kept.) Follow TDD as each task's steps describe: failing test, confirm it fails, implement, confirm it passes, commit.
 3. One commit per task at minimum, using the commit message given in the task.
 4. Tick the plan's checkboxes (`- [ ]` to `- [x]`) as steps complete, and commit that with the task.
 5. Use the finance skills where the plan names them (`finance:journal-entry`, `finance:financial-statements`, `finance:reconciliation`). Record findings in that task's commit body.

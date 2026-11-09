@@ -8,6 +8,12 @@ from django.utils import timezone
 from backup.scheduler import next_run, parse_time
 
 
+def cleanup_time(backup_h: int, backup_m: int) -> dict:
+    """Held upload files are cleaned 15 minutes before the nightly backup, so the backup skips them."""
+    minutes = (backup_h * 60 + backup_m - 15) % (24 * 60)
+    return {"hour": minutes // 60, "minute": minutes % 60}
+
+
 def upcoming_jobs(now):
     """Each scheduled command with its next run time after `now`."""
     backup_h, backup_m = parse_time(settings.DNB_BACKUP_TIME)
@@ -15,6 +21,7 @@ def upcoming_jobs(now):
     jobs = [
         (next_run(now, hour=backup_h, minute=backup_m), "backup_now"),
         (next_run(now, hour=drill_h, minute=drill_m, day=1), "restore_drill"),
+        (next_run(now, **cleanup_time(backup_h, backup_m)), "clean_uploads"),
     ]
     for entry in settings.DNB_BANK_SYNC_TIMES.split(","):
         if entry.strip():
@@ -29,7 +36,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(f"Scheduler started: backup daily at {settings.DNB_BACKUP_TIME}, "
                           f"restore drill on the 1st at {settings.DNB_DRILL_TIME}, "
-                          f"bank sync at {settings.DNB_BANK_SYNC_TIMES}.", ending="\n")
+                          f"bank sync at {settings.DNB_BANK_SYNC_TIMES}, "
+                          f"upload cleanup daily before the backup.", ending="\n")
         while True:
             now = timezone.localtime().replace(tzinfo=None)
             when, command = min(upcoming_jobs(now))

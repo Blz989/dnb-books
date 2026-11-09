@@ -14,6 +14,12 @@ class BackupRun(models.Model):
     size_bytes = models.BigIntegerField(null=True, blank=True)
     ledger_fingerprint = models.CharField(max_length=64, blank=True)
     error = models.TextField(blank=True)
+    # Uploaded files (attachments, the logo): the encrypted manifest of this run and its counts.
+    media_manifest = models.CharField(max_length=200, blank=True)
+    media_files = models.PositiveIntegerField(null=True, blank=True)
+    media_new = models.PositiveIntegerField(null=True, blank=True)
+    media_bytes = models.BigIntegerField(null=True, blank=True)
+    drill_passed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-started_at", "-id"]

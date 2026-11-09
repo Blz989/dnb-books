@@ -14,7 +14,9 @@ Records are named by their visible numbers and names: invoice INV-000123, bill B
 Amounts are strings like "125.00". Dates are YYYY-MM-DD.
 Changes are two steps. A create or save tool only returns a preview and a confirmation_id; nothing is saved.
 Show the preview to the person, and call confirm_change with the confirmation_id only after they say yes.
-A preview expires after 15 minutes. Voids, refunds, credit notes, deposits, journal entries, and month close are done in the app."""
+A preview expires after 15 minutes. Voids, refunds, credit notes, deposits, journal entries, and month close are done in the app.
+Bill and payment previews include an upload link. Give it to the person so they can attach the bill or receipt.
+You can't send files yourself. For an existing bill or payment, attach_file gives a new link."""
 
 
 def build_mcp() -> MCPServer:

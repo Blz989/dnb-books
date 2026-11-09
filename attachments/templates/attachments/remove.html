@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+{% block title %}Remove {{ attachment.original_name }}{% endblock %}
+{% block page_title %}Remove {{ attachment.original_name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">From {{ number }}</div>{% endblock %}
+{% block content %}
+{% if error %}<div class="banner error">{{ error }}</div>{% endif %}
+<div class="banner info">The file stays on record and in the backup. It moves to Removed files on {{ number }}.</div>
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  <div class="form-row"><label for="id_reason">Reason</label>
+    <input type="text" name="reason" id="id_reason" maxlength="200" value="{{ reason }}" required></div>
+  <button type="submit" class="btn danger">Remove file</button>
+  <a class="btn" href="{{ back }}">Cancel</a>
+</form>
+</div></div>
+{% endblock %}

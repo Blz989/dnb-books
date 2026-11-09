@@ -31,6 +31,9 @@ DNB_MCP_ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get("DNB_MCP_ALLOWED_HOSTS", "mcp.lopezhome.casa").split(",") if h.strip()
 ]
 
+# Main app address, used to build Claude upload links (like https://books.lopezhome.casa). Empty turns links off.
+DNB_APP_URL = os.environ.get("DNB_APP_URL", "").strip().rstrip("/")
+
 DNB_DB_PATH = Path(os.environ.get("DNB_DB_PATH") or BASE_DIR / "data" / "dnb.sqlite3")
 DNB_BACKUP_DIR = Path(os.environ["DNB_BACKUP_DIR"]) if os.environ.get("DNB_BACKUP_DIR") else BASE_DIR / "data" / "backups"
 DNB_BACKUP_KEY = os.environ.get("DNB_BACKUP_KEY", "")
@@ -71,6 +74,7 @@ INSTALLED_APPS = [
     "backup",
     "migration",
     "mcpserver",
+    "attachments",
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,19 @@
+{% extends "core/base.html" %}
+{% block title %}Attach files{% endblock %}
+{% block page_title %}Attach files{% endblock %}
+{% block page_subtitle %}{% if heading %}<div class="sub">{{ heading }}</div>{% endif %}{% endblock %}
+{% block content %}
+{% if error %}
+<div class="banner error">{{ error }}</div>
+{% else %}
+{% for name, message in added %}<div class="banner ok">{{ message }}</div>{% endfor %}
+{% for name, message in refused %}<div class="banner error">{% if name %}{{ name }}: {% endif %}{{ message }}</div>{% endfor %}
+<div class="card"><div class="body">
+<form method="post" enctype="multipart/form-data" class="attach-form">{% csrf_token %}
+  <input type="file" name="files" accept="application/pdf,image/jpeg,image/png" multiple aria-label="Files to attach">
+  <button type="submit" class="btn primary">Add files</button>
+  <span class="help">PDF, JPEG, or PNG, up to 10 MB each. This link works until {{ link.expires_at|time:"g:i A" }}.</span>
+</form>
+</div></div>
+{% endif %}
+{% endblock %}

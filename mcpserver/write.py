@@ -12,6 +12,7 @@ from django.db import transaction
 from django.forms.models import model_to_dict
 from django.utils import timezone
 
+from attachments import links
 from contacts.forms import CustomerForm
 from contacts.models import Customer, Terms, Vendor
 from items.errors import NegativeStockWarning
@@ -38,6 +39,7 @@ EXPIRES = timedelta(minutes=15)
 EXPIRED = "That preview expired. Ask for it again."
 USED = "That change was already made."
 CHANGED = "Something changed since the preview: {warning} Ask for a new preview."
+LINK_TOOLS = set(links.TOOL_MODEL)  # previews that offer an upload link for the bill or receipt
 
 
 class _Rollback(Exception):
@@ -366,10 +368,39 @@ def preview(user, operation: str, payload: dict) -> dict:
         note = "Nothing is saved yet."
     else:
         note = f"Nothing is saved yet. The number {number} is the next free one and may change if someone saves first."
-    return {"preview": summary, "warnings": warnings, "confirmation_id": change.id,
-            "expires_in_minutes": int(EXPIRES.total_seconds() // 60),
-            "next_step": "Show this to the person. Call confirm_change with the confirmation_id only after they agree.",
-            "note": note}
+    result = {"preview": summary, "warnings": warnings, "confirmation_id": change.id,
+              "expires_in_minutes": int(EXPIRES.total_seconds() // 60),
+              "next_step": "Show this to the person. Call confirm_change with the confirmation_id only after they agree.",
+              "note": note}
+    if tool in LINK_TOOLS:
+        if links.enabled():
+            link = links.make_link(user, pending_change=change)
+            result.update(upload_link=links.url(link), upload_link_expires=link.expires_at.isoformat(),
+                          attach_note=f"To attach the bill or receipt, open this link: {links.url(link)}")
+        else:
+            result["attach_note"] = links.LINK_OFF
+    return result
+
+
+def _clock(when) -> str:
+    t = timezone.localtime(when)
+    return f"{t.hour % 12 or 12}:{t:%M} {t:%p}"
+
+
+def _saved(change, number) -> str:
+    """The confirm message. Held files from the preview's upload links join the document here, in the same
+    transaction as the posting."""
+    if change.tool not in LINK_TOOLS:
+        return f"Saved {number}."
+    change_links = list(change.upload_links.all())
+    if not change_links:
+        return f"Saved {number}."
+    document = links.TOOL_MODEL[change.tool].objects.get(number=number)
+    count = links.attach_held(change, document)
+    if count:
+        return f"Saved {number} with {count} file{'s' if count != 1 else ''} attached."
+    until = max(l.expires_at for l in change_links)
+    return f"Saved {number}. No files attached yet; the upload link works until {_clock(until)}."
 
 
 def confirm(user, confirmation_id: str) -> dict:
@@ -389,4 +420,22 @@ def confirm(user, confirmation_id: str) -> dict:
         except (NegativeStockWarning, DuplicateBillWarning) as w:
             raise Refused(CHANGED.format(warning=str(w).removesuffix(" Save anyway?"))) from None
         PendingChange.objects.filter(pk=change.pk).update(document=number)
-    return {"done": f"Saved {number}.", "document": number, "result": summary}
+        done = _saved(change, number)
+    return {"done": done, "document": number, "result": summary}
+
+
+def attach_file(user, document: str) -> dict:
+    """A one-time upload link for a bill or payment that already exists. It changes no figures."""
+    number = (document or "").strip()
+    target = None
+    for model in links.TOOL_MODEL.values():
+        target = model.objects.filter(number__iexact=number).first()
+        if target is not None:
+            break
+    if target is None:
+        raise Refused(f"No bill or payment numbered {number}.")
+    if not links.enabled():
+        raise Refused(links.LINK_OFF)
+    link = links.make_link(user, target=target)
+    return {"upload_link": links.url(link), "upload_link_expires": link.expires_at.isoformat(),
+            "note": f"Open this link to attach files to {target.number}."}

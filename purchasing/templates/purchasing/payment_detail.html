@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% load banking_tags %}
 {% block title %}{{ payment.number }}{% endblock %}
 {% block page_title %}{{ payment.number }}{% endblock %}
@@ -30,4 +31,5 @@
 </table>
 </div>
 {% if payment.journal_entry %}<p class="help">Journal entry <a href="{% url 'books:journal-detail' payment.journal_entry.pk %}">{{ payment.journal_entry.display_number }}</a></p>{% endif %}
+{% attachments_panel payment %}
 {% endblock %}

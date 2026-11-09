@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ payment.number }}{% endblock %}
 {% block page_title %}{{ payment.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/customers/{{ payment.customer.pk }}/">{{ payment.customer.name }}</a> · {{ payment.date|date:"Y-m-d" }} · {{ payment.get_method_display }}{% if payment.reference %} {{ payment.reference }}{% endif %}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
@@ -38,4 +39,5 @@
 </div>
 {% endif %}
 {% if payment.journal_entry %}<p class="help">Journal entry <a href="{% url 'books:journal-detail' payment.journal_entry.pk %}">{{ payment.journal_entry.display_number }}</a></p>{% endif %}
+{% attachments_panel payment %}
 {% endblock %}
