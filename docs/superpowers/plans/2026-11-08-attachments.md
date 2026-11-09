@@ -74,15 +74,15 @@ def list_dir(remote_subdir: str) -> set[str]                   # rclone lsf <rem
 - `tests/fake_rclone.py`: `copy` accepts a directory source (copies files not already present); add `lsf <remote-dir>` (prints file names).
 
 Tests (`tests/test_backup_media.py`):
-- [ ] `list_media` finds the logo and nested files with correct size and SHA-256; empty or missing `MEDIA_ROOT` gives `[]`.
-- [ ] First backup encrypts every file; a second backup with one new file encrypts only that one (`media_new == 1`), and existing `.enc` files are unchanged (mtime and bytes).
-- [ ] The manifest decrypts to every file; `BackupRun` media fields are set.
-- [ ] With the fake remote, new files and the manifest are uploaded; nothing under remote `media/` is deleted by retention.
-- [ ] A write failure in the media step fails the run with the message above.
-- [ ] Drill passes on a good backup; fails with the message when a remote file is deleted, and when one is replaced with other bytes; a pre-feature run passes with the "weren't checked" message.
-- [ ] `restore_backup --media-to` restores the files byte for byte; refuses an existing folder.
-- [ ] Existing `tests/test_backup.py`, `tests/test_restore.py`, `tests/test_docker_backup.py` pass untouched.
-- [ ] Commit: `Back up uploaded files with the database and check them in the restore drill`
+- [x] `list_media` finds the logo and nested files with correct size and SHA-256; empty or missing `MEDIA_ROOT` gives `[]`.
+- [x] First backup encrypts every file; a second backup with one new file encrypts only that one (`media_new == 1`), and existing `.enc` files are unchanged (mtime and bytes).
+- [x] The manifest decrypts to every file; `BackupRun` media fields are set.
+- [x] With the fake remote, new files and the manifest are uploaded; nothing under remote `media/` is deleted by retention.
+- [x] A write failure in the media step fails the run with the message above.
+- [x] Drill passes on a good backup; fails with the message when a remote file is deleted, and when one is replaced with other bytes; a pre-feature run passes with the "weren't checked" message.
+- [x] `restore_backup --media-to` restores the files byte for byte; refuses an existing folder.
+- [x] Existing `tests/test_backup.py`, `tests/test_restore.py`, `tests/test_docker_backup.py` pass untouched.
+- [x] Commit: `Back up uploaded files with the database and check them in the restore drill`
 
 ## Task 2: Attachments app, file checks, and serving
 

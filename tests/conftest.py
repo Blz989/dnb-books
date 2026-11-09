@@ -6,6 +6,12 @@ from django.core.management import call_command
 from core.roles import ADMIN_GROUP, STANDARD_GROUP
 
 
+@pytest.fixture(autouse=True)
+def _media_root(settings, tmp_path_factory):
+    """Uploaded files go to a fresh folder in every test, never to data/media."""
+    settings.MEDIA_ROOT = tmp_path_factory.mktemp("media")
+
+
 def _user(username, group_name):
     call_command("setup_roles")
     user = get_user_model().objects.create_user(username, password="pw", is_staff=True)

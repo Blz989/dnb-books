@@ -1,6 +1,7 @@
 """Stand-in for the rclone binary in tests. Remote "fake:<path>" maps to $FAKE_RCLONE_ROOT/<path>.
 
-Supports: copy <file> <remote-dir>, copyto <remote-file> <local-file>, deletefile <remote-file>.
+Supports: copy <file or dir> <remote-dir>, copyto <remote-file> <local-file>, deletefile <remote-file>,
+lsf <remote-dir>.
 Set FAKE_RCLONE_FAIL to make every call fail with that message on stderr.
 """
 import os
@@ -20,9 +21,18 @@ def main(argv):
         return 1
     command, *args = argv
     if command == "copy":
-        src, dst = args[0], local(args[1])
+        src, dst = Path(args[0]), local(args[1])
         dst.mkdir(parents=True, exist_ok=True)
-        shutil.copy(src, dst / Path(src).name)
+        if src.is_dir():
+            for f in src.iterdir():
+                if f.is_file() and not (dst / f.name).exists():
+                    shutil.copy(f, dst / f.name)
+        else:
+            shutil.copy(src, dst / src.name)
+    elif command == "lsf":
+        folder = local(args[0])
+        for f in sorted(folder.iterdir()) if folder.is_dir() else []:
+            print(f.name)
     elif command == "copyto":
         src = local(args[0])
         if not src.exists():

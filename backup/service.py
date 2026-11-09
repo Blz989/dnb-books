@@ -1,5 +1,7 @@
 import hashlib
+import json
 import os
+import random
 import re
 import sqlite3
 import tempfile
@@ -17,6 +19,10 @@ from . import remote
 from .models import BackupRun
 
 FILENAME_RE = re.compile(r"^dnb-(\d{8})-(\d{6})\.sqlite3\.enc$")
+MANIFEST_RE = re.compile(r"^dnb-(\d{8})-(\d{6})\.media\.json\.enc$")
+MEDIA_DIRNAME = "media"
+MEDIA_SKIP = ("tmp",)  # uploads still being written
+DRILL_SAMPLE = 5
 CENT = Decimal("0.01")
 DAILY_DAYS = 30
 
@@ -75,7 +81,8 @@ def _file_timestamp(path: Path) -> datetime | None:
 
 
 def apply_retention(directory: Path, today: date) -> list[Path]:
-    """Keep the last 30 days of files plus the newest file of every calendar month."""
+    """Keep the last 30 days of files plus the newest file of every calendar month. A files manifest goes with
+    the database file of the same time. The media folder is never touched: removed attachments stay backed up."""
     cutoff = today - timedelta(days=DAILY_DAYS - 1)
     dated = [(ts, p) for p in Path(directory).iterdir() if (ts := _file_timestamp(p))]
     newest_per_month = {}
@@ -90,7 +97,96 @@ def apply_retention(directory: Path, today: date) -> list[Path]:
             continue
         p.unlink()
         deleted.append(p)
+        manifest = Path(directory) / manifest_filename(_stamp(ts))
+        if manifest.exists():
+            manifest.unlink()
+            deleted.append(manifest)
     return deleted
+
+
+# ---- uploaded files (attachments, the logo) ----
+
+@dataclass(frozen=True)
+class MediaFile:
+    path: str  # relative to MEDIA_ROOT, forward slashes
+    size: int
+    sha256: str
+
+
+def _stamp(ts: datetime) -> str:
+    return f"{ts:%Y%m%d-%H%M%S}"
+
+
+def manifest_filename(stamp: str) -> str:
+    return f"dnb-{stamp}.media.json.enc"
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def list_media() -> list[MediaFile]:
+    root = Path(settings.MEDIA_ROOT)
+    if not root.is_dir():
+        return []
+    files = []
+    for path in root.rglob("*"):
+        rel = path.relative_to(root)
+        if not path.is_file() or rel.parts[0] in MEDIA_SKIP:
+            continue
+        files.append(MediaFile(rel.as_posix(), path.stat().st_size, _sha256(path)))
+    return sorted(files, key=lambda f: f.path)
+
+
+def read_manifest(path: Path, key: str) -> list[MediaFile]:
+    data = json.loads(Fernet(key.encode()).decrypt(Path(path).read_bytes()))
+    return [MediaFile(f["path"], f["size"], f["sha256"]) for f in data["files"]]
+
+
+def backup_media(stamp: str, key: str) -> tuple[str, int, int, int]:
+    """Encrypt each file not yet backed up and write this run's manifest, in the local backup folder.
+    Returns (manifest name, files listed, files new, total bytes)."""
+    try:
+        files = list_media()
+        folder = Path(settings.DNB_BACKUP_DIR) / MEDIA_DIRNAME
+        folder.mkdir(exist_ok=True)
+        new = 0
+        for f in files:
+            target = folder / f"{f.sha256}.enc"
+            if target.exists():
+                continue
+            partial = folder / f"{f.sha256}.enc.part"
+            encrypt_file(Path(settings.MEDIA_ROOT) / f.path, partial, key)
+            os.replace(partial, target)
+            new += 1
+        name = manifest_filename(stamp)
+        body = json.dumps({"files": [{"path": f.path, "size": f.size, "sha256": f.sha256} for f in files]})
+        manifest = Path(settings.DNB_BACKUP_DIR) / name
+        manifest.write_bytes(Fernet(key.encode()).encrypt(body.encode()))
+    except OSError as exc:
+        raise BackupError(f"Backup saved the database but not the files: {exc.strerror or exc}.") from exc
+    return name, len(files), new, sum(f.size for f in files)
+
+
+def upload_media(manifest_name: str) -> None:
+    """Send new encrypted files, then the manifest, off-site. Runs after the database file is uploaded."""
+    try:
+        remote.upload_dir(Path(settings.DNB_BACKUP_DIR) / MEDIA_DIRNAME, MEDIA_DIRNAME)
+        remote.upload(Path(settings.DNB_BACKUP_DIR) / manifest_name)
+    except remote.RemoteError as exc:
+        raise BackupError(f"Backup saved the database but not the files: {exc}.") from exc
+
+
+def restore_media(files: list[MediaFile], source_dir: Path, dest_root: Path, key: str) -> int:
+    for f in files:
+        target = Path(dest_root) / f.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        decrypt_file(Path(source_dir) / f"{f.sha256}.enc", target, key)
+    return len(files)
 
 
 def run_backup(now: datetime | None = None) -> BackupRun:
@@ -124,11 +220,17 @@ def run_backup(now: datetime | None = None) -> BackupRun:
             except OSError as exc:
                 partial.unlink(missing_ok=True)
                 raise BackupError(f"Couldn't write to the backup folder {dest_dir}: {exc.strerror or exc}.") from exc
-        deleted = apply_retention(dest_dir, now.date())
         run.filename = name
+        (run.media_manifest, run.media_files, run.media_new,
+         run.media_bytes) = backup_media(_stamp(now.replace(tzinfo=None)), key)
+        deleted = apply_retention(dest_dir, now.date())
         if remote.enabled():
             try:
                 remote.upload(final)
+            except remote.RemoteError as exc:
+                raise BackupError(f"Backup saved locally but not uploaded: {exc}") from exc
+            upload_media(run.media_manifest)
+            try:
                 remote.delete([p.name for p in deleted])
             except remote.RemoteError as exc:
                 raise BackupError(f"Backup saved locally but not uploaded: {exc}") from exc
@@ -189,10 +291,73 @@ def restore_drill() -> DrillResult:
             return fail(f"the restored file isn't a readable database ({exc}).")
     if actual != run.ledger_fingerprint:
         return fail(f"the ledger in {run.filename} does not match what was backed up.", actual)
-    return DrillResult(
-        True, run.filename, run.ledger_fingerprint, actual,
-        f"Restore drill passed: {run.filename} restores and its ledger matches.",
-    )
+    passed = f"Restore drill passed: {run.filename} restores and its ledger matches."
+    if not run.media_manifest:
+        return DrillResult(True, run.filename, run.ledger_fingerprint, actual,
+                           f"{passed} It was made before file backups, so files weren't checked.")
+    problem = _check_media(run)
+    if problem:
+        return fail(problem, actual)
+    BackupRun.objects.filter(pk=run.pk).update(drill_passed_at=timezone.now())
+    return DrillResult(True, run.filename, run.ledger_fingerprint, actual, passed)
+
+
+def _check_media(run: BackupRun) -> str:
+    """Every file in the run's manifest is backed up; new files since the last passing drill, plus a few others,
+    decrypt to the right bytes. Returns a failure message, or "" when all is well."""
+    key = settings.DNB_BACKUP_KEY
+    local_dir = Path(settings.DNB_BACKUP_DIR)
+    with tempfile.TemporaryDirectory() as tmp:
+        manifest_path = local_dir / run.media_manifest
+        try:
+            if remote.enabled():
+                manifest_path = Path(tmp) / run.media_manifest
+                remote.download(run.media_manifest, manifest_path)
+                present = remote.list_dir(MEDIA_DIRNAME)
+            else:
+                folder = local_dir / MEDIA_DIRNAME
+                present = {p.name for p in folder.iterdir()} if folder.is_dir() else set()
+            files = read_manifest(manifest_path, key)
+        except remote.RemoteError as exc:
+            return f"couldn't read the file backups for {run.filename}: {exc}"
+        except (OSError, InvalidToken, ValueError):
+            return f"{run.media_manifest} is missing or can't be read."
+
+        earlier = (BackupRun.objects.filter(status=BackupRun.Status.SUCCESS, drill_passed_at__isnull=False)
+                   .exclude(pk=run.pk).exclude(media_manifest="").order_by("-started_at", "-id").first())
+        seen: set[str] = set()
+        if earlier is not None:
+            try:
+                path = local_dir / earlier.media_manifest
+                if remote.enabled():
+                    path = Path(tmp) / earlier.media_manifest
+                    remote.download(earlier.media_manifest, path)
+                seen = {f.sha256 for f in read_manifest(path, key)}
+            except (remote.RemoteError, OSError, InvalidToken, ValueError):
+                seen = set()  # the older manifest was trimmed by retention: check everything below
+
+        bad = [f for f in files if f"{f.sha256}.enc" not in present]
+        candidates = [f for f in files if f not in bad]
+        new = [f for f in candidates if f.sha256 not in seen]
+        others = [f for f in candidates if f.sha256 in seen]
+        sample = new + random.Random(run.pk).sample(others, min(DRILL_SAMPLE, len(others)))
+        for f in sample:
+            source = local_dir / MEDIA_DIRNAME / f"{f.sha256}.enc"
+            try:
+                if remote.enabled():
+                    source = Path(tmp) / f"{f.sha256}.enc"
+                    remote.download(f"{MEDIA_DIRNAME}/{f.sha256}.enc", source)
+                plain = Path(tmp) / "check.bin"
+                decrypt_file(source, plain, key)
+                ok = _sha256(plain) == f.sha256
+                plain.unlink()
+            except (remote.RemoteError, OSError, InvalidToken, ValueError):
+                ok = False
+            if not ok:
+                bad.append(f)
+    if bad:
+        return f"{len(bad)} files in {run.media_manifest} are missing or don't match."
+    return ""
 
 
 @dataclass
