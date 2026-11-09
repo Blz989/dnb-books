@@ -179,12 +179,12 @@ def attachments_panel(context, target): ...   # active, removed (admin only), is
 - Sizes print as "240 KB" or "3.1 MB".
 
 Tests (`tests/test_attachment_views.py`):
-- [ ] Each of the three pages shows the panel with the empty state, then the file after adding; a refused file shows its message and the good files in the same submission are still added.
-- [ ] Standard sees no Remove links and gets 403 on the remove URL; Admin removes with a reason and the file moves to "Removed files"; a missing reason shows the message.
-- [ ] A voided bill and a voided payment still accept files; a bill edit (new revision) keeps its attachments.
-- [ ] Unknown document number gives 404.
-- [ ] Screenshots: bill page with no files, with three files (one tagged From Claude), the remove confirm page, Removed files as an admin, each refusal message; customer payment and vendor payment pages with files; a PDF and a photo opened from the panel; the bill page at 390px wide.
-- [ ] Commit: `Attachments panel on bills, customer payments, and vendor payments`
+- [x] Each of the three pages shows the panel with the empty state, then the file after adding; a refused file shows its message and the good files in the same submission are still added.
+- [x] Standard sees no Remove links and gets 403 on the remove URL; Admin removes with a reason and the file moves to "Removed files"; a missing reason shows the message.
+- [x] A voided bill and a voided payment still accept files; a bill edit (new revision) keeps its attachments.
+- [x] Unknown document number gives 404.
+- [x] Screenshots: bill page with no files, with three files (one tagged From Claude), the remove confirm page, Removed files as an admin, each refusal message; customer payment and vendor payment pages with files; a PDF and a photo opened from the panel; the bill page at 390px wide.
+- [x] Commit: `Attachments panel on bills, customer payments, and vendor payments`
 
 ## Task 4: Upload links
 

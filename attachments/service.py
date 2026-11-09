@@ -54,6 +54,18 @@ def removed(target) -> QuerySet[Attachment]:
     return _for_target(target).filter(removed_at__isnull=False).select_related("removed_by", "uploaded_by")
 
 
+KINDS = {"bill": Bill, "payment": Payment, "vendor-payment": VendorPayment}
+
+
+def target_kind(target) -> str:
+    return next(k for k, model in KINDS.items() if isinstance(target, model))
+
+
+def find_document(kind: str, number: str):
+    model = KINDS.get(kind)
+    return model.objects.filter(number=number).first() if model else None
+
+
 def label(target) -> str:
     return target.number
 

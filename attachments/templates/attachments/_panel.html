@@ -1,0 +1,37 @@
+{% load attachments %}
+<h2 id="attachments">Attachments</h2>
+<div class="card">
+<table class="data attachments-table">
+  <thead><tr><th>File</th><th class="num">Size</th><th class="narrow-hide">Uploaded by</th><th>Date</th><th></th></tr></thead>
+  <tbody>
+  {% for f in files %}
+    <tr><td><a href="{% url 'attachments:serve' f.pk %}" target="_blank" rel="noopener">{{ f.original_name }}</a>{% if f.source == "CLAUDE_LINK" %} <span class="tag info">From Claude</span>{% endif %}</td>
+      <td class="num">{{ f.size_bytes|filesize }}</td><td class="narrow-hide">{{ f.uploaded_by.get_full_name|default:f.uploaded_by.get_username }}</td>
+      <td>{{ f.uploaded_at|date:"Y-m-d" }}</td>
+      <td class="num">{% if is_admin %}<a class="btn small" href="{% url 'attachments:remove' f.pk %}">Remove</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">No files attached.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="body">
+<form method="post" action="{{ add_url }}" enctype="multipart/form-data" class="attach-form">
+  <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+  <input type="file" name="files" accept="application/pdf,image/jpeg,image/png" multiple aria-label="Files to attach">
+  <button type="submit" class="btn">Add files</button>
+  <span class="help">PDF, JPEG, or PNG, up to 10 MB each.</span>
+</form>
+</div>
+</div>
+{% if removed_files %}
+<details class="card removed-files"><summary class="card-h">Removed files ({{ removed_files|length }})</summary>
+<table class="data">
+  <thead><tr><th>File</th><th>Removed by</th><th>Date</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for f in removed_files %}
+    <tr><td><a href="{% url 'attachments:serve' f.pk %}" target="_blank" rel="noopener">{{ f.original_name }}</a></td>
+      <td>{{ f.removed_by.get_full_name|default:f.removed_by.get_username }}</td><td>{{ f.removed_at|date:"Y-m-d" }}</td><td>{{ f.removed_reason }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</details>
+{% endif %}
