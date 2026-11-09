@@ -16,7 +16,7 @@ Read the specs and the current plan before starting. The plan's Global Constrain
 ## How to execute the current plan
 
 1. Work on a new branch from `main` named after the work.
-2. Use the `superpowers:subagent-driven-development` skill to execute the plan task by task, unless the owner chooses inline execution (`superpowers:executing-plans`). Follow TDD as each task's steps describe: failing test, confirm it fails, implement, confirm it passes, commit.
+2. Execute the plan task by task in the session itself. Do not use the superpowers plugin or its skills; it was removed on purpose. (The `docs/superpowers/` folder name is only where specs and plans are kept.) Follow TDD as each task's steps describe: failing test, confirm it fails, implement, confirm it passes, commit.
 3. One commit per task at minimum, using the commit message given in the task.
 4. Tick the plan's checkboxes (`- [ ]` to `- [x]`) as steps complete, and commit that with the task.
 5. Use the finance skills where the plan names them (`finance:journal-entry`, `finance:financial-statements`, `finance:reconciliation`). Record findings in that task's commit body.
