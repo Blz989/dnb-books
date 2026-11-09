@@ -223,14 +223,14 @@ def clean_expired(now=None) -> int
 - `clean_uploads` command runs `clean_expired` and prints "Removed {n} files from expired previews."; the scheduler runs it daily at `DNB_BACKUP_TIME` minus 15 minutes (compute from `parse_time`; add to `upcoming_jobs` and the start-up line).
 
 Tests (`tests/test_upload_links.py`):
-- [ ] Another user's link, an expired link, and an unknown token give the message or 404; the link page needs sign-in.
-- [ ] Before confirm, uploads are held (no target) and the page says to go back to Claude; after the pending change has a document, uploads go straight to it.
-- [ ] A preview that expired unconfirmed shows its message and accepts nothing.
-- [ ] `attach_held` sets the target for every held file of that change and none of another change's.
-- [ ] `clean_expired` deletes held files of expired, unconfirmed previews and their disk files; keeps held files of a change still in time, every attached file, and a disk file shared with an attached copy.
-- [ ] Scheduler lists `clean_uploads` once a day at the computed time.
-- [ ] Screenshots: link page for a bill preview, for an existing bill, after an upload, and each error page; link page at 390px wide.
-- [ ] Commit: `Upload links for adding files from Claude`
+- [x] Another user's link, an expired link, and an unknown token give the message or 404; the link page needs sign-in.
+- [x] Before confirm, uploads are held (no target) and the page says to go back to Claude; after the pending change has a document, uploads go straight to it.
+- [x] A preview that expired unconfirmed shows its message and accepts nothing.
+- [x] `attach_held` sets the target for every held file of that change and none of another change's.
+- [x] `clean_expired` deletes held files of expired, unconfirmed previews and their disk files; keeps held files of a change still in time, every attached file, and a disk file shared with an attached copy.
+- [x] Scheduler lists `clean_uploads` once a day at the computed time.
+- [x] Screenshots: link page for a bill preview, for an existing bill, after an upload, and each error page; link page at 390px wide.
+- [x] Commit: `Upload links for adding files from Claude`
 
 ## Task 5: Upload links in the MCP
 

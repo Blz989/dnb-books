@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from attachments.views import link_page
 from core.views import brand_icon, favicon_ico, home
 from sales.views.settings import logo as sales_logo
 
@@ -21,5 +22,6 @@ urlpatterns = [
     path("brand/icon-<int:size>.png", brand_icon, name="brand-icon"),
     path("favicon.ico", favicon_ico, name="favicon"),
     path("attachments/", include("attachments.urls")),
+    path("attach/<str:token>/", link_page, name="attach-link"),
     path("admin/", admin.site.urls),
 ]

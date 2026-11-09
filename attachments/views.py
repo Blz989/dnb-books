@@ -74,3 +74,28 @@ def remove_view(request, pk):
         messages.success(request, f"Removed {attachment.original_name}.")
         return redirect(back)
     return render(request, "attachments/remove.html", context)
+
+
+@login_required
+def link_page(request, token):
+    from . import links
+    from .models import Source, UploadLink
+
+    link = get_object_or_404(UploadLink.objects.select_related("pending_change"), token=token)
+    error = links.problem(link, request.user)
+    added, refused = [], []
+    if request.method == "POST" and not error:
+        target = links.resolve_target(link)
+        files = request.FILES.getlist("files")
+        if not files:
+            refused.append(("", "Choose a file to add."))
+        else:
+            result = add_files(request.user, target, files, source=Source.CLAUDE_LINK, link=link)
+            added = [(a.original_name, f"Added {a.original_name} to {target.number}." if target is not None
+                      else f"Added {a.original_name}. Go back to Claude and confirm the change.")
+                     for a in result.added]
+            refused = result.refused
+    return render(request, "attachments/link.html", {
+        "link": link, "error": error, "heading": "" if error and error == links.SOMEONE_ELSE else links.heading(link),
+        "added": added, "refused": refused,
+    })
