@@ -265,14 +265,14 @@ def attach_file(user, document: str) -> dict:
 - `McpCall` logs `attach_file` like any tool. No file bytes or names go into `McpCall.arguments` beyond the document number.
 
 Tests (`tests/test_mcp_attachments.py`), using the `books`, `owner`, `clerk`, and `ctx_for` helpers from `tests/test_mcp.py` (move shared fixtures to `tests/conftest.py` if needed without changing them):
-- [ ] The three previews include the link and note; other previews don't; with `DNB_APP_URL` empty the note says links are off.
-- [ ] End to end in-process: preview a bill, upload a PDF to the link as the same user through the test client, confirm, and find the file on the bill with source CLAUDE_LINK; "done" says 1 file attached.
-- [ ] Confirm with no upload gives the "No files attached yet" message; an upload after confirm lands on the bill.
-- [ ] A confirm that fails (month closed in between) leaves held files without a target.
-- [ ] `attach_file` for a bill, a customer payment, and a vendor payment; unknown number refused with the message; the link works only for the caller.
-- [ ] `get_bill` lists active attachments and not removed ones.
-- [ ] Existing `tests/test_mcp.py` passes untouched.
-- [ ] Commit: `Upload links in Claude previews and an attach_file tool`
+- [x] The three previews include the link and note; other previews don't; with `DNB_APP_URL` empty the note says links are off.
+- [x] End to end in-process: preview a bill, upload a PDF to the link as the same user through the test client, confirm, and find the file on the bill with source CLAUDE_LINK; "done" says 1 file attached.
+- [x] Confirm with no upload gives the "No files attached yet" message; an upload after confirm lands on the bill.
+- [x] A confirm that fails (month closed in between) leaves held files without a target.
+- [x] `attach_file` for a bill, a customer payment, and a vendor payment; unknown number refused with the message; the link works only for the caller.
+- [x] `get_bill` lists active attachments and not removed ones.
+- [x] Existing `tests/test_mcp.py` passes untouched.
+- [x] Commit: `Upload links in Claude previews and an attach_file tool`
 
 ## Task 6: README and final checks
 

@@ -5,6 +5,8 @@ from decimal import Decimal
 from django.db.models import Q, Sum
 from django.utils import timezone
 
+from attachments.files import human_size
+from attachments.service import active as active_attachments
 from contacts.models import Customer, Vendor
 from items.models import Item, ItemType
 from items.reports import inventory_valuation, item_totals, low_stock, on_order_quantities
@@ -272,6 +274,9 @@ def get_bill(user, number: str) -> dict:
         "expense_lines": [{"account": str(l.account), "description": l.description, "amount": fmt(l.amount)}
                           for l in b.expense_lines.select_related("account")],
         "total": fmt(bill_total(b)), "payments": pays, "balance": fmt(bill_balance(b)),
+        "attachments": [{"name": a.original_name, "kind": a.kind, "size": human_size(a.size_bytes),
+                         "uploaded_at": timezone.localtime(a.uploaded_at).isoformat(timespec="minutes"),
+                         "uploaded_by": a.uploaded_by.get_username()} for a in active_attachments(b)],
     }
 
 
