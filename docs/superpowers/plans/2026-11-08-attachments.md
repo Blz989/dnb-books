@@ -151,13 +151,13 @@ def can_view(user, attachment) -> bool              # signed in and active; held
 - Route: `path("attachments/", include("attachments.urls"))` with `<int:pk>/` named `attachments:serve`.
 
 Tests (`tests/test_attachments.py`):
-- [ ] `sniff` for each type; a PNG named `bill.pdf` is stored as PNG; a renamed `.exe` and a text file are refused with the message.
-- [ ] 10 MB plus one byte refused; the eleventh file refused; the same file twice refused with the number in the message; the stored name is the SHA-256 and two documents sharing a file share one disk file.
-- [ ] `remove` as Standard raises the role error; without a reason raises the message; as Admin sets removed fields and leaves the disk file.
-- [ ] `serve`: signed out redirects to login; content type from kind even when uploaded with a false label; `nosniff` header; a removed file is 404 for Standard and served for Admin; `/media/...` is 404.
-- [ ] Attaching to each of the three targets works; any other model raises.
-- [ ] No `JournalEntry` or `JournalLine` rows are created by any attachment action.
-- [ ] Commit: `Attachments app: file checks, storage, and signed-in serving`
+- [x] `sniff` for each type; a PNG named `bill.pdf` is stored as PNG; a renamed `.exe` and a text file are refused with the message.
+- [x] 10 MB plus one byte refused; the eleventh file refused; the same file twice refused with the number in the message; the stored name is the SHA-256 and two documents sharing a file share one disk file.
+- [x] `remove` as Standard raises the role error; without a reason raises the message; as Admin sets removed fields and leaves the disk file.
+- [x] `serve`: signed out redirects to login; content type from kind even when uploaded with a false label; `nosniff` header; a removed file is 404 for Standard and served for Admin; `/media/...` is 404.
+- [x] Attaching to each of the three targets works; any other model raises.
+- [x] No `JournalEntry` or `JournalLine` rows are created by any attachment action.
+- [x] Commit: `Attachments app: file checks, storage, and signed-in serving`
 
 ## Task 3: Attachments panels on bills and payments
 

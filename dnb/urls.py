@@ -20,5 +20,6 @@ urlpatterns = [
     path("brand/logo/", sales_logo, name="brand-logo"),
     path("brand/icon-<int:size>.png", brand_icon, name="brand-icon"),
     path("favicon.ico", favicon_ico, name="favicon"),
+    path("attachments/", include("attachments.urls")),
     path("admin/", admin.site.urls),
 ]

@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "backup",
     "migration",
     "mcpserver",
+    "attachments",
 ]
 
 MIDDLEWARE = [
