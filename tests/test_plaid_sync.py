@@ -185,7 +185,7 @@ def test_scheduler_runs_sync_banks_at_0600(settings):
     jobs = upcoming_jobs(datetime(2026, 3, 1, 0, 0))
     syncs = sorted(when for when, command in jobs if command == "sync_banks")
     assert [w.strftime("%H:%M") for w in syncs] == ["06:00", "10:00", "14:00", "18:00"]
-    assert {c for _, c in jobs} == {"backup_now", "restore_drill", "sync_banks"}
+    assert {c for _, c in jobs} == {"backup_now", "restore_drill", "sync_banks", "clean_uploads"}
 
 
 def test_sandbox_check_refuses_outside_sandbox(settings):

@@ -278,8 +278,8 @@ Tests (`tests/test_mcp_attachments.py`), using the `books`, `owner`, `clerk`, an
 
 Files: `README.md`, `docs/superpowers/specs/2026-11-08-attachments-design.md` (only the status line if it changes), `CLAUDE.md` (Done list).
 
-- [ ] README: under Purchasing and Sales tables, rows for "Keep the bill or receipt with a bill" and "Keep a check image or remittance with a payment" (where: open the bill or payment, Attachments, Add files; removal is admin only with a reason). Under "Use DNB Books from Claude": the upload link flow and `DNB_APP_URL`. Under backups: files are backed up with the database and checked by the restore drill; `restore_backup --media-to`. Set-up steps from spec section 10. Update the Status line.
-- [ ] CLAUDE.md: add "Attachments" to Done once the PR is ready.
-- [ ] Run `uv run pytest -q`; paste the output in the PR body.
-- [ ] Open the PR with the title above, listing each task with its status, the test output, deviations, screenshot sets sent, and the manual checks: set `DNB_APP_URL`, add other users to the `books.lopezhome.casa` Access policy if they will use links, run `backup_now` once and check the home screen, and upload a photo from the owner's iPhone to check whether it arrives as JPEG.
-- [ ] Commit: `Attachments: README and status`
+- [x] README: under Purchasing and Sales tables, rows for "Keep the bill or receipt with a bill" and "Keep a check image or remittance with a payment" (where: open the bill or payment, Attachments, Add files; removal is admin only with a reason). Under "Use DNB Books from Claude": the upload link flow and `DNB_APP_URL`. Under backups: files are backed up with the database and checked by the restore drill; `restore_backup --media-to`. Set-up steps from spec section 10. Update the Status line.
+- [x] CLAUDE.md: add "Attachments" to Done once the PR is ready.
+- [x] Run `uv run pytest -q`; paste the output in the PR body.
+- [x] Open the PR with the title above, listing each task with its status, the test output, deviations, screenshot sets sent, and the manual checks: set `DNB_APP_URL`, add other users to the `books.lopezhome.casa` Access policy if they will use links, run `backup_now` once and check the home screen, and upload a photo from the owner's iPhone to check whether it arrives as JPEG.
+- [x] Commit: `Attachments: README and status`

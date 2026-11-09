@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are built and tested. A page for each bank account (dashboard, its inbox, and a register with a running balance), FIFO cost lot tracking, unpaid invoices by customer, tighter print margins, and a phone menu are ready for review. Faster pages through the Cloudflare tunnel (CSS, scripts, and fonts kept by the browser, the next page loaded while its link is hovered in Chrome and Edge, and fewer database queries on the bank inbox and item list) is ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are built and tested. A page for each bank account (dashboard, its inbox, and a register with a running balance), FIFO cost lot tracking, unpaid invoices by customer, tighter print margins, and a phone menu are ready for review. Faster pages through the Cloudflare tunnel (CSS, scripts, and fonts kept by the browser, the next page loaded while its link is hovered in Chrome and Edge, and fewer database queries on the bank inbox and item list) is ready for review. Attachments on bills and payments, upload links from Claude for adding them, and backups of uploaded files are ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -44,6 +44,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Fix a saved invoice | Invoices, open it, Edit. The number stays, the books are reposted, and the old version stays under Revisions |
 | Print or save an invoice | Invoices, open it, Download PDF |
 | Record a payment | Customers or Payments, Receive payment. Checks and cash wait in Undeposited Funds; ACH and wire go straight to the bank |
+| Keep a check image or remittance with a payment | Open the payment, Attachments, Add files. PDF, JPEG, or PNG, up to 10 MB each and 10 per payment. Only an admin can remove a file, with a reason, and it stays on record |
 | Take checks to the bank | Deposits, New deposit. Tick the payments going in this deposit |
 | Give a credit or money back | Credit notes, New credit note, then Apply to an invoice. A refund is admin only, from a payment or credit with an unapplied amount |
 | Void a sales document | Admin only, with a reason. Voided documents keep their numbers |
@@ -64,6 +65,7 @@ Accounting and inventory system for DNB, built to replace Zoho Books and Zoho In
 | Buy something that ships straight to the customer | Open the sales order, then Create drop-ship PO. Billing it posts the cost and clears the invoice from Drop shipments awaiting bill |
 | Buy drop-ship lines for several orders on one PO | Sales orders, check the orders, then Create drop-ship PO. One PO per vendor; the same item at the same cost goes on one line, with each order's quantity listed under "For" on the PO and in a ship-to list on its PDF. Bills on that PO are costed to the orders automatically, oldest sales order first, and rebuilt whenever a bill or invoice changes |
 | Fix a saved bill | Bills, open it, Edit. The number stays, the books are reposted, and the old version stays under Revisions. Voids are admin only |
+| Keep the vendor's bill or receipt with a bill | Open the bill, Attachments, Add files. PDF, JPEG, or PNG, up to 10 MB each and 10 per bill. On a phone this offers the camera. Only an admin can remove a file, with a reason, and it stays on record. Vendor payments have the same panel |
 | Pay bills | Pay bills. Tick amounts (partial is fine), choose check, ACH, or company card. One payment is made for each vendor, and each check needs its own number |
 | Pay a vendor ahead, or without a bill | Pay bills, Single payment. Anything not applied stays as credit with the vendor |
 | Send stock back, or get a credit with no return | Vendor credits, Return to vendor or Credit without a return, then Apply to a bill |
@@ -216,6 +218,10 @@ Do these once:
 4. **DNB Books.** Make sure your user has the same email as your Cloudflare login (Settings, Users and roles), then turn on Claude access for yourself in Settings, Claude connections.
 5. **Claude.** Add a custom connector with the URL `https://mcp.lopezhome.casa/mcp` and sign in through Cloudflare when asked.
 
+**Attaching files from Claude.** Bill, customer payment, and vendor payment previews include an upload link. Open it, sign in to DNB Books if asked, and choose the bill or receipt (a photo works). The file is held until you confirm the change in Claude, then attached to the new document. A link works for 60 minutes and only for the person who asked for the preview; files held for a preview that expired are deleted the next night. For a bill or payment that already exists, ask Claude to attach a file and it will give you a link (the `attach_file` tool). Claude can't send a file itself.
+
+For upload links, set `DNB_APP_URL` in `.env` to the main app address (for example `https://books.lopezhome.casa`) and restart. Without it, previews say "Upload links are off." Anyone besides the owner who uses links must also be allowed by the Access policy for that address.
+
 To stop everything at once, use Turn off Claude access in Settings, Claude connections. To sign everyone out, revoke sessions in Cloudflare Access. Check `docker compose logs mcp` if a connection fails.
 
 ### Import from Zoho (Phase 5b, once)
@@ -285,19 +291,25 @@ The Zoho export ends before the cutover, so bring the books up to today in this 
 
 The `scheduler` service runs `backup_now` every day at 1:15 AM, `restore_drill` on the 1st of each month at 2:15 AM, and `sync_banks` at the times in `DNB_BANK_SYNC_TIMES` (server time zone; change with `DNB_BACKUP_TIME` and `DNB_DRILL_TIME`). Each backup is encrypted, written to `./data/backups`, and copied to Google Drive. The app keeps the last 30 days plus the newest backup of every month, in both places. The restore drill downloads the backup from Google Drive, so it proves the off-site copy works.
 
-If a backup or upload fails, the home screen shows a red warning, for example "Backup saved locally but not uploaded: …".
+Uploaded files (attachments and the company logo) are backed up too. Each file is encrypted once into `./data/backups/media` and copied to `dnb-backups/media` on Google Drive, and every backup writes a file list (`dnb-<date>-<time>.media.json.enc`) that follows the same 30-day and monthly rule. Files in `media` are never deleted from the backup, even after an attachment is removed. The restore drill checks that every listed file is in Google Drive, and decrypts the files added since the last passing drill plus 5 others. The scheduler also runs `clean_uploads` every night 15 minutes before the backup, to delete files held for Claude previews that expired.
+
+If a backup or upload fails, the home screen shows a red warning, for example "Backup saved locally but not uploaded: …" or "Backup saved the database but not the files: …".
 
 **Restore**
 
 ```bash
 # 1. Copy the backup down from Google Drive (skip if it is still in ./data/backups)
 docker compose run --rm app rclone copy gdrive:dnb-backups/<backup file> /data/backups/
-# 2. Decrypt it to a new file (never overwrites)
-docker compose run --rm app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3
+#    For the files too, copy the file list with the same date and time, and the media folder
+docker compose run --rm app rclone copy gdrive:dnb-backups/<file list> /data/backups/
+docker compose run --rm app rclone copy gdrive:dnb-backups/media /data/backups/media
+# 2. Decrypt it to a new file and folder (never overwrites)
+docker compose run --rm app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3 --media-to /data/restored-media
 # 3. Swap it in
 docker compose down
 mv data/dnb.sqlite3 data/dnb-before-restore.sqlite3 && rm -f data/dnb.sqlite3-wal data/dnb.sqlite3-shm
 mv data/restored.sqlite3 data/dnb.sqlite3
+mv data/media data/media-before-restore && mv data/restored-media data/media
 docker compose up -d
 ```
 
