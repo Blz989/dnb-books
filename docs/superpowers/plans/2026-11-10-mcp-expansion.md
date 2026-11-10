@@ -82,7 +82,7 @@ Files: `mcpserver/views.py`, the Claude connections template, `README.md`, `test
 - [x] The call log page gets a filter "Voids and edits".
 - [x] README: update the MCP section's tool list and the "not available" line; keep the Status line current.
 - [x] End-to-end test with the SDK client: list tools, run a new report, preview and confirm a credit note, preview and confirm a void with `confirm_document`.
-- [ ] Screenshots of the call log page with the filter, sent with `SendUserFile` (throwaway demo database).
+- [x] Screenshots of the call log page with the filter, sent with `SendUserFile` (throwaway demo database).
 - [x] Commit: `MCP: call log filter, README, end to end test`.
 
 ## Out of scope
