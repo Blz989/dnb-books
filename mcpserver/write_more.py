@@ -16,11 +16,12 @@ from ledger.models import AccountType
 from ledger.posting import LineSpec, post_entry
 from purchasing.balances import bill_balance, credit_total as vendor_credit_total, vendor_credit_unapplied
 from purchasing.models import Bill, VendorCreditKind
+from purchasing.posting.orders import create_drop_ship_pos, drop_ship_candidates
 from purchasing.posting.credits import (
     AllowanceLineSpec, ReturnLineSpec, apply_vendor_credit, create_allowance_credit, create_return_credit,
 )
 from sales.balances import credit_total, credit_unapplied, invoice_balance, payment_unapplied
-from sales.models import CreditNote, Fulfillment, Invoice, Payment, RefundMethod
+from sales.models import CreditNote, Fulfillment, Invoice, Payment, RefundMethod, SalesOrder
 from sales.posting.deposits import make_deposit
 from sales.posting.orders import OrderLineSpec, create_order
 from sales.posting.receipts import CreditLineSpec, apply_credit, create_credit_note, issue_refund
@@ -76,6 +77,34 @@ def _sales_order(user, p, flags):
         "total": fmt(sum((l.quantity * l.price for l in lines), ZERO)),
         "posts": "Nothing posts to the ledger until the invoice.",
     }
+
+
+# ---- drop-ship purchase orders ----
+
+def _drop_ship_pos(user, p, flags):
+    """One PO per vendor for the drop-ship lines of these sales orders that are not already on a PO, as the
+    Purchase orders, Drop-ship screen does."""
+    numbers = [n for n in p.get("sales_orders") or [] if str(n).strip()]
+    if not numbers:
+        raise Refused("Give at least one sales order number.")
+    orders = [lookup.document(SalesOrder, n, "sales order") for n in numbers]
+    if not drop_ship_candidates(orders):
+        raise Refused("Every drop-ship line on " + ("this order" if len(orders) == 1 else "these orders")
+                      + " is already on a purchase order, or none is a drop-ship line.")
+    choices = {typed: lookup.vendor(name) for typed, name in (p.get("vendors") or {}).items()}
+    pos = create_drop_ship_pos(orders, user=user, date=_day(p), vendor_choices=choices)
+    out = []
+    for po in pos:
+        lines = list(po.lines.select_related("item").prefetch_related("allocations__so_line__order__customer"))
+        out.append({
+            "purchase_order": po.number, "vendor": po.vendor.name,
+            "lines": [{"sku": l.item.sku, "quantity": l.quantity, "price": fmt(l.price),
+                       "amount": fmt(l.quantity * l.price),
+                       "for": [{"sales_order": a.so_line.order.number, "customer": a.so_line.order.customer.name,
+                                "quantity": a.quantity} for a in l.allocations.all()]} for l in lines],
+            "total": fmt(sum((l.quantity * l.price for l in lines), ZERO))})
+    return ", ".join(po.number for po in pos), {
+        "purchase_orders": out, "posts": "Nothing posts to the ledger until the vendor's bill."}
 
 
 # ---- credit notes, vendor credits, refunds ----
@@ -236,6 +265,7 @@ def _journal_entry(user, p, flags):
 
 OPERATIONS = {
     "create_sales_order": _sales_order,
+    "create_drop_ship_pos": _drop_ship_pos,
     "create_credit_note": _credit_note,
     "create_vendor_credit": _vendor_credit,
     "issue_refund": _refund,

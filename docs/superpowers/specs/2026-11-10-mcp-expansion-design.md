@@ -107,3 +107,11 @@ Month close and reopen writes, bank inbox and reconciliation, check printing, im
 1. Decision A: **A1, post on confirm.** Settled.
 2. Voids and edits: **Admin only.** Settled.
 3. Open: should edits be limited to documents with no payments applied, or follow the app's rules exactly? Default if not answered: follow the app's rules exactly.
+
+## 13. Addendum, 2026-11-10: drop-ship purchase orders
+
+Asked after the first expansion merged (PR 46): the MCP could create drop-ship sales orders and bill a PO, but could not create the drop-ship PO. Owner approved adding it.
+
+- New tool `create_drop_ship_pos(sales_orders, vendors, date)`. It calls `purchasing.posting.orders.create_drop_ship_pos`, the function behind Purchase orders, Drop-ship: one PO per vendor for the drop-ship lines not already on a PO, each PO line linked to its sales order lines. Same permission as the screen (any signed-in user).
+- A line's vendor text that matches no vendor fails with the app's message ("No vendor named X. Choose a vendor for these lines."). `vendors` maps the text as typed to a real vendor name, which is what the screen's vendor picker does.
+- Billing is unchanged: `create_bill` with `purchase_order` and item lines by SKU. The posting service treats a drop-ship PO line as drop-ship cost. A test now covers sales order, then PO, then bill through the MCP.
