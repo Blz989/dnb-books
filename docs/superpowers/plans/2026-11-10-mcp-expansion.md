@@ -38,10 +38,10 @@ Files: `mcpserver/read.py`, `mcpserver/tools.py`.
 
 Adds `general_ledger`, `bank_register`, `stock_movements`, `fifo_lots`, `negative_stock`, `customer_balances`, `vendor_balances`, `open_sales_orders`, `open_purchase_orders`, `undeposited_funds`, `drop_ship_awaiting_bill`, `unpaid_invoices`, `1099_summary`. New optional argument: `account` (for general ledger and bank register), `sku`.
 
-- [ ] Tests: for each, MCP totals equal the report function's totals on shared data; `general_ledger` without `account` says "Choose an account for the general ledger."
-- [ ] Implement by calling the function behind each screen in `ledger/reports.py`, `items/reports.py`, `sales/reports.py`, `purchasing/reports.py`, `banking/`.
-- [ ] Update `REPORTS` and the tool's `Literal`.
-- [ ] Commit: `MCP: thirteen more reports`.
+- [x] Tests: for each, MCP totals equal the report function's totals on shared data; `general_ledger` without `account` says "Choose an account for the general ledger."
+- [x] Implement by calling the function behind each screen in `ledger/reports.py`, `items/reports.py`, `sales/reports.py`, `purchasing/reports.py`, `banking/`.
+- [x] Update `REPORTS` and the tool's `Literal`.
+- [x] Commit: `MCP: thirteen more reports`.
 
 ### Task 3: New creates
 

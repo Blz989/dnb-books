@@ -92,3 +92,75 @@ def test_stock_movements_list(books, owner, activity):
     assert "movements" in out
     with pytest.raises(Refused, match="No item has SKU"):
         read_more.list_stock_movements(owner, sku="NOPE")
+
+
+# ---- extra reports ----
+
+from purchasing.posting.bills import BillExpenseSpec, create_bill  # noqa: E402
+from sales import reports as sales_reports  # noqa: E402
+from purchasing import reports as purchasing_reports  # noqa: E402
+
+
+def test_balance_reports_match_the_screens(books, owner, activity):
+    from mcpserver import read
+
+    out = read.run_report(owner, "customer_balances", as_of="2026-12-31")
+    rows = sales_reports.customer_balances(date(2026, 12, 31))
+    assert out["total"] == f"{sum(r.balance for r in rows):.2f}" and out["customers"][0]["customer"] == books.customer.name
+    unpaid = read.run_report(owner, "unpaid_invoices", as_of="2026-12-31")
+    assert unpaid["totals"]["total"] == f"{sales_reports.unpaid_by_customer(date(2026, 12, 31)).totals.total:.2f}"
+    create_bill(vendor=books.vendor, date=DAY, user=owner, vendor_invoice_number="V-1", item_lines=[],
+                expense_lines=[BillExpenseSpec(books.freight, D("40.00"))])
+    vb = read.run_report(owner, "vendor_balances", as_of="2026-12-31")
+    assert vb["total"] == f"{sum(r.balance for r in purchasing_reports.vendor_balances(date(2026, 12, 31))):.2f}"
+
+
+def test_order_and_undeposited_reports(books, owner, activity):
+    from mcpserver import read
+
+    order, _, _ = activity
+    lines = read.run_report(owner, "open_sales_orders")["lines"]
+    assert lines[0]["order"] == order.number and lines[0]["left"] == 4
+    assert read.run_report(owner, "open_purchase_orders") == {"lines": []}
+    und = read.run_report(owner, "undeposited_funds")
+    assert und["total"] == "150.00" and und["payments"][0]["amount"] == "150.00"
+    assert read.run_report(owner, "drop_ship_awaiting_bill") == {"lines": []}
+    assert read.run_report(owner, "negative_stock") == {"items": []}
+
+
+def test_ledger_register_and_1099_reports(books, owner, activity):
+    from mcpserver import read
+
+    gl = read.run_report(owner, "general_ledger", account="1200", start="2026-01-01", end="2026-12-31")
+    assert gl["lines"]
+    with pytest.raises(Refused, match="Choose an account for the general ledger."):
+        read.run_report(owner, "general_ledger")
+    with pytest.raises(Refused, match="Choose a bank account for the register."):
+        read.run_report(owner, "bank_register")
+    BankAccount.objects.create(ledger_account=books.bank, kind=AccountKind.CHECKING)
+    reg = read.run_report(owner, "bank_register", account="1000", start="2026-01-01", end="2026-12-31")
+    assert reg["account"].startswith("1000") and "rows" in reg
+    assert read.run_report(owner, "1099_summary", end="2026-12-31")["year"] == 2026
+    assert "movements" in read.run_report(owner, "stock_movements", start="2026-01-01", end="2026-12-31")
+
+
+def test_fifo_report_needs_a_fifo_item(books, owner):
+    from mcpserver import read
+
+    with pytest.raises(Refused, match="Choose an item"):
+        read.run_report(owner, "fifo_lots")
+    with pytest.raises(Refused, match="Choose a report"):
+        read.run_report(owner, "nonsense")
+
+
+def test_fifo_report_lists_lots(books, owner):
+    from mcpserver import read
+    from purchasing.posting.bills import BillItemSpec
+
+    create_bill(vendor=books.vendor, date=DAY, user=owner, vendor_invoice_number="V-2",
+                item_lines=[BillItemSpec(books.widget, 10, D("10.00"))], expense_lines=[])
+    out = read.run_report(owner, "fifo_lots", sku="WID-1", start="2026-01-01", end="2026-12-31")
+    assert out["received"] == 10 and out["on_hand"] == 10 and out["value"] == "100.00"
+    assert out["lots"][0]["quantity"] == 10 and out["lots"][0]["unit_cost"] == "10.00"
+    with pytest.raises(Refused, match="is not costed by FIFO"):
+        read.run_report(owner, "fifo_lots", sku="SVC")

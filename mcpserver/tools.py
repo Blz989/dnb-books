@@ -192,17 +192,24 @@ def register(mcp):
     def run_report(
         ctx: Context,
         report: Literal["trial_balance", "profit_and_loss", "balance_sheet", "ar_aging", "ap_aging", "open_invoices",
-                        "bills_due", "low_stock", "inventory_valuation", "order_profitability", "cash_forecast"],
+                        "bills_due", "low_stock", "inventory_valuation", "order_profitability", "cash_forecast",
+                        "general_ledger", "bank_register", "stock_movements", "fifo_lots", "negative_stock",
+                        "customer_balances", "vendor_balances", "open_sales_orders", "open_purchase_orders",
+                        "undeposited_funds", "drop_ship_awaiting_bill", "unpaid_invoices", "1099_summary"],
         as_of: str = "", start: str = "", end: str = "", basis: Literal["accrual", "cash"] = "accrual",
         compare_years: int = Field(0, ge=0, le=3, description="Same dates in up to 3 earlier years."),
         view: Literal["daily", "weekly", "monthly"] = "weekly", overdue_only: bool = False,
+        account: str = Field("", description="Account number or name, for general_ledger and bank_register."),
+        sku: str = Field("", description="Item SKU, for fifo_lots and optionally stock_movements."),
     ) -> dict:
         """Run a report. as_of (YYYY-MM-DD) is for balance sheet, trial balance, agings, open invoices, valuation,
         and the due-through date of bills_due. start and end are for profit and loss and order profitability.
         basis and compare_years apply to profit and loss; compare_years also to balance sheet and trial balance.
-        view applies to cash_forecast. Dates default to today, and start to January 1."""
+        view applies to cash_forecast. general_ledger and bank_register need account and use start and end.
+        fifo_lots needs sku. 1099_summary uses the year of end. customer_balances, vendor_balances, and
+        unpaid_invoices use as_of. Dates default to today, and start to January 1."""
         return run(ctx, "run_report", read.run_report, report=report, as_of=as_of, start=start, end=end, basis=basis,
-                   compare_years=compare_years, view=view, overdue_only=overdue_only)
+                   compare_years=compare_years, view=view, overdue_only=overdue_only, account=account, sku=sku)
 
     # ---- write: preview ----
 

@@ -398,11 +398,16 @@ def _aging(rows, name_attr, totals, as_of) -> dict:
 
 
 def run_report(user, report: str, as_of: str = "", start: str = "", end: str = "", basis: str = "accrual",
-               compare_years: int = 0, view: str = "weekly", overdue_only: bool = False) -> dict:
+               compare_years: int = 0, view: str = "weekly", overdue_only: bool = False, account: str = "",
+               sku: str = "") -> dict:
+    from .read_reports import EXTRA, extra_report
+
     today = _today()
     report = (report or "").strip().lower().replace(" ", "_").replace("&", "and")
+    if report in EXTRA:
+        return extra_report(user, report, as_of=as_of, start=start, end=end, account=account, sku=sku)
     if report not in REPORTS:
-        raise Refused("Choose a report: " + ", ".join(REPORTS) + ".")
+        raise Refused("Choose a report: " + ", ".join([*REPORTS, *EXTRA]) + ".")
     if not 0 <= int(compare_years) <= 3:
         raise Refused("Compare up to 3 earlier years.")
     years = int(compare_years)
