@@ -39,7 +39,7 @@ def confirm(user, p, document=""):
 def test_void_invoice_previews_then_voids_with_a_reversing_entry(books, owner, invoice):
     entries = JournalEntry.objects.count()
     p = preview(owner, "void_invoice", {"number": invoice.number, "reason": "Entered twice"})
-    assert f"void customer invoice {invoice.number} for Acme Builders (200.00)" in p["preview"]["effect"]
+    assert f"void invoice {invoice.number} for Acme Builders (200.00)" in p["preview"]["effect"]
     assert invoice.journal_entry.display_number in p["preview"]["effect"]
     assert f"confirm_document set to {invoice.number}" in p["note"]
     assert Invoice.objects.get().status == DocStatus.OPEN and JournalEntry.objects.count() == entries
