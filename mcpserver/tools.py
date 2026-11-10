@@ -5,7 +5,7 @@ from mcp.server.mcpserver import Context
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
-from . import read, write
+from . import read, read_more, write
 from .runtime import run
 
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -124,6 +124,69 @@ def register(mcp):
         """Journal entries matching a memo, reference, document number, or JE number, with their lines."""
         return run(ctx, "search_journal_entries", read.search_journal_entries, query=query, start=start, end=end,
                    status=status)
+
+    @mcp.tool(annotations=READ)
+    def list_sales_orders(ctx: Context, customer: str = "", status: Literal["open", "closed", "all"] = "open") -> dict:
+        """Sales orders, newest first, filtered by customer name and status."""
+        return run(ctx, "list_sales_orders", read_more.list_sales_orders, customer=customer, status=status)
+
+    @mcp.tool(annotations=READ)
+    def get_sales_order(ctx: Context, number: str) -> dict:
+        """One sales order: lines with remaining quantities to invoice, and its invoices."""
+        return run(ctx, "get_sales_order", read_more.get_sales_order, number=number)
+
+    @mcp.tool(annotations=READ)
+    def list_customer_payments(ctx: Context, customer: str = "", start: str = "", end: str = "") -> dict:
+        """Customer payments received, newest first, with the amount not yet applied to invoices."""
+        return run(ctx, "list_customer_payments", read_more.list_customer_payments, customer=customer, start=start,
+                   end=end)
+
+    @mcp.tool(annotations=READ)
+    def get_customer_payment(ctx: Context, number: str) -> dict:
+        """One customer payment: method, where it was deposited, and the invoices it was applied to."""
+        return run(ctx, "get_customer_payment", read_more.get_customer_payment, number=number)
+
+    @mcp.tool(annotations=READ)
+    def list_vendor_payments(ctx: Context, vendor: str = "", start: str = "", end: str = "") -> dict:
+        """Payments made to vendors, newest first, with check numbers."""
+        return run(ctx, "list_vendor_payments", read_more.list_vendor_payments, vendor=vendor, start=start, end=end)
+
+    @mcp.tool(annotations=READ)
+    def get_vendor_payment(ctx: Context, number: str) -> dict:
+        """One vendor payment: method, paid from, and the bills it was applied to."""
+        return run(ctx, "get_vendor_payment", read_more.get_vendor_payment, number=number)
+
+    @mcp.tool(annotations=READ)
+    def list_credits(ctx: Context, kind: Literal["customer", "vendor"] = "customer",
+                     status: Literal["open", "void", "all"] = "open") -> dict:
+        """Customer credit notes or vendor credits. Open means some amount is still unapplied."""
+        return run(ctx, "list_credits", read_more.list_credits, kind=kind, status=status)
+
+    @mcp.tool(annotations=READ)
+    def list_bank_accounts(ctx: Context, include_inactive: bool = False) -> dict:
+        """Bank, card, and loan accounts with the balance in the books and the balance the bank last reported."""
+        return run(ctx, "list_bank_accounts", read_more.list_bank_accounts, include_inactive=include_inactive)
+
+    @mcp.tool(annotations=READ)
+    def get_bank_account(ctx: Context, account: str) -> dict:
+        """One bank account by number or name: balances and the last reconciled statement date."""
+        return run(ctx, "get_bank_account", read_more.get_bank_account, account=account)
+
+    @mcp.tool(annotations=READ)
+    def list_stock_movements(ctx: Context, sku: str = "", start: str = "", end: str = "") -> dict:
+        """Stock movements in a date range (default: this month), optionally for one SKU."""
+        return run(ctx, "list_stock_movements", read_more.list_stock_movements, sku=sku, start=start, end=end)
+
+    @mcp.tool(annotations=READ)
+    def get_account_ledger(ctx: Context, account: str, start: str = "", end: str = "") -> dict:
+        """The general ledger for one account (number or name): opening balance, lines, closing balance."""
+        return run(ctx, "get_account_ledger", read_more.get_account_ledger, account=account, start=start, end=end)
+
+    @mcp.tool(annotations=READ)
+    def close_checklist(ctx: Context, month: str = "") -> dict:
+        """What blocks closing a month (YYYY-MM, default last month), and whether it is closed. Read only:
+        closing and reopening are done in the app."""
+        return run(ctx, "close_checklist", read_more.close_checklist, month=month)
 
     @mcp.tool(annotations=READ)
     def run_report(

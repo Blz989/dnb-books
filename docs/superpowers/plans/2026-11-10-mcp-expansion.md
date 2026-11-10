@@ -27,10 +27,10 @@ Files: `mcpserver/read.py`, `mcpserver/tools.py`, `tests/test_mcp_reads.py`.
 
 Interfaces: `list_sales_orders(status)`, `get_sales_order(number)`, `list_customer_payments(customer, start, end)`, `get_customer_payment(number)`, `list_vendor_payments(vendor, start, end)`, `get_vendor_payment(number)`, `list_credits(kind, status)`, `list_bank_accounts()`, `get_bank_account(account)`, `list_stock_movements(sku, start, end)`, `get_account_ledger(account, start, end)`, `close_checklist(month)`.
 
-- [ ] Tests: each tool returns the same figures as the screen's query on shared data; unknown number gives "No sales order has the number SO-000999."; lists cap at 50 with the "more" note.
-- [ ] Implement, using the same balance helpers as the screens.
-- [ ] `close_checklist` calls `ledger.periods`, `items.reports.close_check`, `handling.checks.close_check` and returns their lines plus whether the month is closed. Read only.
-- [ ] Commit: `MCP: read tools for orders, payments, credits, bank accounts, ledger, close checklist`.
+- [x] Tests: each tool returns the same figures as the screen's query on shared data; unknown number gives "No sales order has the number SO-000999."; lists cap at 50 with the "more" note.
+- [x] Implement, using the same balance helpers as the screens.
+- [x] `close_checklist` calls `ledger.periods`, `items.reports.close_check`, `handling.checks.close_check` and returns their lines plus whether the month is closed. Read only.
+- [x] Commit: `MCP: read tools for orders, payments, credits, bank accounts, ledger, close checklist`.
 
 ### Task 2: More reports in `run_report`
 
