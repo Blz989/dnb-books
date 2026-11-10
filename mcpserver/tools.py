@@ -5,7 +5,7 @@ from mcp.server.mcpserver import Context
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
-from . import read, read_more, write
+from . import read, read_more, write, write_void
 from .runtime import run
 
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -42,6 +42,40 @@ class InvoicePayment(BaseModel):
 class BillPayment(BaseModel):
     bill: str = Field(description="Bill number.")
     amount: str | None = Field(None, description="Leave out to pay the full balance.")
+
+
+class CreditLine(BaseModel):
+    description: str = ""
+    amount: str
+    account: str = Field("", description="Account number or name. Leave out to use the default returns account.")
+
+
+class VendorCreditLine(BaseModel):
+    sku: str = Field("", description="For a return: the SKU going back to the vendor.")
+    quantity: int = Field(0, description="For a return: the quantity.")
+    amount: str | None = Field(None, description="Return: leave out for quantity times cost. Allowance: required.")
+    account: str = Field("", description="For an allowance: the account credited. Defaults to the vendor's.")
+    description: str = ""
+
+
+class StockAdjustLine(BaseModel):
+    sku: str
+    quantity: int = Field(description="Positive adds stock, negative removes it.")
+    reason: Literal["Damaged", "Lost", "Sample", "Correction", "Other"]
+    note: str = ""
+    account: str = Field("", description="Expense account number or name. Leave out for the default.")
+
+
+class EntryLine(BaseModel):
+    account: str = Field(description="Account number or name, like 6100 or Freight.")
+    debit: str = ""
+    credit: str = ""
+    description: str = ""
+
+
+class BillCredit(BaseModel):
+    bill: str
+    amount: str | None = Field(None, description="Leave out to apply up to the bill's balance.")
 
 
 def _dump(lines):
@@ -283,10 +317,148 @@ def register(mcp):
         inventory_account (account numbers), reorder_point, is_active. Nothing is saved until confirm_change."""
         return run(ctx, "save_item", write.preview, operation="save_item", payload={"sku": sku, "fields": fields or {}})
 
+    @mcp.tool(annotations=PREVIEW)
+    def create_sales_order(ctx: Context, customer: str, lines: list[SaleLine], date: str = "", ship_to: str = "",
+                           notes: str = "") -> dict:
+        """Preview a new sales order. Nothing posts to the ledger until it is invoiced. Nothing is saved until
+        confirm_change."""
+        payload = {"customer": customer, "lines": _dump(lines), "date": date, "ship_to": ship_to or None, "notes": notes}
+        return run(ctx, "create_sales_order", write.preview, operation="create_sales_order", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def create_credit_note(ctx: Context, customer: str, lines: list[CreditLine], reason: str = "", date: str = "",
+                           apply_to: list[InvoicePayment] | None = None) -> dict:
+        """Preview a customer credit note, optionally applied to invoices. Nothing is saved until confirm_change."""
+        payload = {"customer": customer, "lines": _dump(lines), "reason": reason, "date": date,
+                   "apply_to": _dump(apply_to)}
+        return run(ctx, "create_credit_note", write.preview, operation="create_credit_note", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def create_vendor_credit(ctx: Context, vendor: str, kind: Literal["return", "allowance"],
+                             lines: list[VendorCreditLine], reason: str = "", date: str = "",
+                             apply_to: list[BillCredit] | None = None) -> dict:
+        """Preview a vendor credit. A return sends stock back (SKU, quantity); an allowance is a price credit
+        (account, amount). It can be applied to bills. Nothing is saved until confirm_change."""
+        payload = {"vendor": vendor, "kind": kind, "lines": _dump(lines), "reason": reason, "date": date,
+                   "apply_to": _dump(apply_to)}
+        return run(ctx, "create_vendor_credit", write.preview, operation="create_vendor_credit", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def issue_refund(ctx: Context, source: str, amount: str, method: Literal["check", "ach"], bank_account: str,
+                     date: str = "", reference: str = "") -> dict:
+        """Preview refunding a customer from a payment or credit note (its number). Admin only, as in the app.
+        Nothing is saved until confirm_change."""
+        payload = {"source": source, "amount": amount, "method": method, "bank_account": bank_account, "date": date,
+                   "reference": reference}
+        return run(ctx, "issue_refund", write.preview, operation="issue_refund", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def make_deposit(ctx: Context, payments: list[str], bank_account: str, date: str = "") -> dict:
+        """Preview depositing customer payments from undeposited funds into a bank account. payments are payment
+        numbers. Nothing is saved until confirm_change."""
+        return run(ctx, "make_deposit", write.preview, operation="make_deposit",
+                   payload={"payments": payments, "bank_account": bank_account, "date": date})
+
+    @mcp.tool(annotations=PREVIEW)
+    def create_transfer(ctx: Context, from_account: str, to_account: str, amount: str,
+                        kind: Literal["transfer", "card payoff", "loan payment"] = "transfer", date: str = "",
+                        principal: str = "", interest: str = "", interest_account: str = "") -> dict:
+        """Preview a transfer between two bank accounts. A card payoff goes to a credit card account. A loan payment
+        goes to a loan account and needs principal and interest adding up to the amount, and the interest account.
+        Nothing is saved until confirm_change."""
+        payload = {"from_account": from_account, "to_account": to_account, "amount": amount, "kind": kind,
+                   "date": date, "principal": principal, "interest": interest, "interest_account": interest_account}
+        return run(ctx, "create_transfer", write.preview, operation="create_transfer", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def adjust_stock(ctx: Context, lines: list[StockAdjustLine], date: str = "") -> dict:
+        """Preview a stock quantity adjustment (damaged, lost, sample, correction). Going below zero shows as a
+        warning. Nothing is saved until confirm_change."""
+        return run(ctx, "adjust_stock", write.preview, operation="adjust_stock",
+                   payload={"lines": _dump(lines), "date": date})
+
+    @mcp.tool(annotations=PREVIEW)
+    def adjust_item_value(ctx: Context, sku: str, amount: str, reason: str, date: str = "", account: str = "") -> dict:
+        """Preview a value adjustment to an item's stock (a write-up or write-down, signed). Admin only, as in the
+        app. Nothing is saved until confirm_change."""
+        payload = {"sku": sku, "amount": amount, "reason": reason, "date": date, "account": account}
+        return run(ctx, "adjust_item_value", write.preview, operation="adjust_item_value", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def create_journal_entry(ctx: Context, lines: list[EntryLine], memo: str = "", reference: str = "",
+                             date: str = "") -> dict:
+        """Preview a manual journal entry. Debits must equal credits. Inventory accounts can't be used (use stock
+        adjustments). Once confirmed it posts at once; fix a mistake by voiding it in the app. Nothing is saved until
+        confirm_change."""
+        payload = {"lines": _dump(lines), "memo": memo, "reference": reference, "date": date}
+        return run(ctx, "create_journal_entry", write.preview, operation="create_journal_entry", payload=payload)
+
+    # ---- write: voids and edits (Admin only; confirming needs the document number) ----
+
+    def _register_void(tool: str, label: str, example: str):
+        def void(ctx: Context, number: str, reason: str, date: str = "") -> dict:
+            payload = {"number": number, "reason": reason, "date": date}
+            return run(ctx, tool, write.preview, operation=tool, payload=payload)
+
+        mcp.tool(name=tool, annotations=PREVIEW, description=(
+            f"Preview voiding a {label}{example}. Admin only. A void posts a reversing entry and "
+            f"never deletes. A reason is required. date is the void date (default: the document's date). Nothing "
+            f"changes until confirm_change with the confirmation_id and confirm_document set to the number."))(void)
+
+    for _tool, _label, _example in (
+        ("void_invoice", "customer invoice", " (like INV-000123)"), ("void_customer_payment", "customer payment", ""),
+        ("void_bill", "vendor bill", " (like BILL-00045)"), ("void_vendor_payment", "vendor payment", ""),
+        ("void_credit_note", "customer credit note", ""), ("void_vendor_credit", "vendor credit", ""),
+        ("void_refund", "customer refund", ""), ("void_deposit", "bank deposit", ""),
+        ("void_transfer", "bank transfer (like TR-12)", ""), ("void_journal_entry", "journal entry (like JE-000456)", ""),
+        ("void_stock_movement", "stock movement (SM- id from list_stock_movements)", ""),
+    ):
+        _register_void(_tool, _label, _example)
+
+    @mcp.tool(annotations=PREVIEW)
+    def edit_invoice(ctx: Context, number: str, lines: list[SaleLine], date: str = "", terms: str = "",
+                     ship_to: str | None = None, notes: str | None = None, reason: str = "") -> dict:
+        """Preview editing an invoice. Admin only. lines replace all current lines (a line with the same SKU keeps
+        its link to the sales order and its old price unless you give one). The old posting is voided and a new one
+        posted. Shows before and after. Nothing changes until confirm_change with confirm_document set to the number."""
+        payload = {"number": number, "lines": _dump(lines), "date": date, "terms": terms, "ship_to": ship_to,
+                   "notes": notes, "reason": reason}
+        return run(ctx, "edit_invoice", write.preview, operation="edit_invoice", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def edit_bill(ctx: Context, number: str, item_lines: list[PurchaseLine] | None = None,
+                  expense_lines: list[ExpenseLine] | None = None, vendor_invoice_number: str | None = None,
+                  date: str = "", terms: str = "", notes: str | None = None, reason: str = "") -> dict:
+        """Preview editing a bill. Admin only. item_lines and expense_lines replace all current lines (an item line
+        with the same SKU keeps its PO link and old price unless you give one). Shows before and after. Nothing
+        changes until confirm_change with confirm_document set to the number."""
+        payload = {"number": number, "item_lines": _dump(item_lines), "expense_lines": _dump(expense_lines),
+                   "vendor_invoice_number": vendor_invoice_number, "date": date, "terms": terms, "notes": notes,
+                   "reason": reason}
+        return run(ctx, "edit_bill", write.preview, operation="edit_bill", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def edit_sales_order(ctx: Context, number: str, lines: list[SaleLine], date: str = "", ship_to: str | None = None,
+                         notes: str | None = None) -> dict:
+        """Preview editing a sales order. Admin only. lines replace all current lines; lines already invoiced can't
+        be removed. Nothing changes until confirm_change with confirm_document set to the number."""
+        payload = {"number": number, "lines": _dump(lines), "date": date, "ship_to": ship_to, "notes": notes}
+        return run(ctx, "edit_sales_order", write.preview, operation="edit_sales_order", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
+    def edit_purchase_order(ctx: Context, number: str, lines: list[PurchaseLine], date: str = "",
+                            expected_date: str = "", notes: str | None = None) -> dict:
+        """Preview editing a purchase order. Admin only. lines replace all current lines. Drop-ship orders are edited
+        in the app. Nothing changes until confirm_change with confirm_document set to the number."""
+        payload = {"number": number, "lines": _dump(lines), "date": date, "expected_date": expected_date, "notes": notes}
+        return run(ctx, "edit_purchase_order", write.preview, operation="edit_purchase_order", payload=payload)
+
     # ---- write: confirm ----
 
     @mcp.tool(annotations=CONFIRM)
-    def confirm_change(ctx: Context, confirmation_id: str) -> dict:
+    def confirm_change(ctx: Context, confirmation_id: str, confirm_document: str = "") -> dict:
         """Make a previewed change. Call only after the person has seen the preview and agreed. Each
-        confirmation_id works once, within 15 minutes, for the person who asked for the preview."""
-        return run(ctx, "confirm_change", write.confirm, confirmation_id=confirmation_id)
+        confirmation_id works once, within 15 minutes, for the person who asked for the preview. For a void or an
+        edit, confirm_document must be the document number from the preview."""
+        return run(ctx, "confirm_change", write.confirm, confirmation_id=confirmation_id,
+                   confirm_document=confirm_document)

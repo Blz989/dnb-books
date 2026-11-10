@@ -192,7 +192,7 @@ def list_stock_movements(user, sku: str = "", start: str = "", end: str = "") ->
         raise Refused("The start date is after the end date.")
     item = lookup.item(sku) if sku.strip() else None
     rows = stock_movement_rows(start_d, end_d, item)
-    return _limited([{"date": r.movement.date.isoformat(), "sku": r.movement.item.sku,
+    return _limited([{"id": f"SM-{r.movement.pk}", "date": r.movement.date.isoformat(), "sku": r.movement.item.sku,
                       "kind": r.movement.get_kind_display(), "quantity": r.movement.quantity,
                       "value": fmt(r.effective_value), "running_quantity": r.running_quantity,
                       "reason": r.movement.reason, "void": r.movement.voided} for r in rows],

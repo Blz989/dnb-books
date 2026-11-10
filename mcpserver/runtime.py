@@ -8,6 +8,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import close_old_connections, connection
 from mcp.server.mcpserver.exceptions import ToolError
 
+from banking.transfers import TransferError
 from core.roles import is_admin
 from items.errors import StockError
 from ledger.errors import PostingError
@@ -19,7 +20,7 @@ from .models import McpCall
 
 log = logging.getLogger(__name__)
 
-USER_ERRORS = (SalesError, PurchasingError, PostingError, StockError)
+USER_ERRORS = (SalesError, PurchasingError, PostingError, StockError, TransferError)
 HIDDEN_ARGUMENTS = {"tax_id"}
 
 
