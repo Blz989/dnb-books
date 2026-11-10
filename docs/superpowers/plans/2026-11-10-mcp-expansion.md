@@ -49,9 +49,9 @@ Files: `mcpserver/write.py`, `mcpserver/tools.py`, `tests/test_mcp_writes.py`.
 
 Tools and services: `create_sales_order` (`sales.posting.orders.create_order`), `create_credit_note` (`create_credit_note`, optional `apply_credit`), `create_vendor_credit` (`create_return_credit` or `create_allowance_credit`), `issue_refund` (`issue_refund`), `make_deposit` (`make_deposit`), `create_transfer` (`banking.transfers.create_transfer`), `adjust_stock` (`items.stock.record_movements`), `adjust_item_value` (`record_value_adjustment`).
 
-- [ ] Tests per tool: preview posts nothing; confirm posts exactly the preview; Standard user gets the app's permission result; closed month blocks; negative-stock warning flows through the existing flag for `adjust_stock`.
-- [ ] Implement each `_operation` and register it.
-- [ ] Commit per tool group: orders and credits, refund and deposit and transfer, stock and value adjustments.
+- [x] Tests per tool: preview posts nothing; confirm posts exactly the preview; Standard user gets the app's permission result; closed month blocks; negative-stock warning flows through the existing flag for `adjust_stock`.
+- [x] Implement each `_operation` and register it.
+- [x] Commit per tool group: orders and credits, refund and deposit and transfer, stock and value adjustments.
 
 ### Task 4: Journal entry
 
@@ -59,8 +59,8 @@ Files: `mcpserver/write.py`, `mcpserver/tools.py`, `tests/test_mcp_writes.py`.
 
 Tool `create_journal_entry(date, lines[{account, debit, credit, description}], memo, reference)`. Calls `ledger.posting.post_entry` (the same call as `journal_new`). Permission `ledger.add_journalentry` or Admin. Accounts by number or name.
 
-- [ ] Tests: unbalanced, inventory account ("Line 1: inventory accounts can only change through stock movements."), closed month, unknown account, and a good entry that previews the lines and posts on confirm. Standard user without the permission gets the role message.
-- [ ] Commit: `MCP: create journal entries`.
+- [x] Tests: unbalanced, inventory account ("Line 1: inventory accounts can only change through stock movements."), closed month, unknown account, and a good entry that previews the lines and posts on confirm. Standard user without the permission gets the role message.
+- [x] Commit: `MCP: create journal entries`.
 
 ### Task 5: Voids and edits
 
@@ -68,22 +68,22 @@ Files: `mcpserver/write.py`, `mcpserver/tools.py`, `mcpserver/models.py` (migrat
 
 Void tools: `void_invoice`, `void_customer_payment`, `void_bill`, `void_vendor_payment`, `void_credit_note`, `void_vendor_credit`, `void_refund`, `void_deposit`, `void_transfer`, `void_journal_entry`, `void_stock_movement`. Input: `number`, `reason`, optional `date`. Edit tools: `edit_invoice`, `edit_bill`, `edit_sales_order`, `edit_purchase_order`, taking the same line shapes as the create tools.
 
-- [ ] Admin check first. Standard user gets "Your role (Standard) can't do this. Ask an admin."
-- [ ] A void preview includes a plain-language `effect` line naming the document, its total, the entries it reverses, and applications that will be unapplied.
-- [ ] `confirm_change` takes optional `confirm_document`. For any void or edit it is required and must equal the previewed document number, else "Type the document number (INV-000123) to confirm this void."
-- [ ] Edit preview shows before and after.
-- [ ] Tests: non-admin refused at preview and at confirm; wrong or missing `confirm_document`; closed month; already void; applied payment shows in the effect; reversing entry posted through `ledger/posting.py`; audit log names the admin.
-- [ ] Commit per group: voids for sales documents, voids for purchasing documents, other voids, edits.
+- [x] Admin check first. Standard user gets "Your role (Standard) can't do this. Ask an admin."
+- [x] A void preview includes a plain-language `effect` line naming the document, its total, the entries it reverses, and applications that will be unapplied.
+- [x] `confirm_change` takes optional `confirm_document`. For any void or edit it is required and must equal the previewed document number, else "Type the document number (INV-000123) to confirm this void."
+- [x] Edit preview shows before and after.
+- [x] Tests: non-admin refused at preview and at confirm; wrong or missing `confirm_document`; closed month; already void; applied payment shows in the effect; reversing entry posted through `ledger/posting.py`; audit log names the admin.
+- [x] Commit per group: voids for sales documents, voids for purchasing documents, other voids, edits.
 
 ### Task 6: Settings filter, README, end to end
 
 Files: `mcpserver/views.py`, the Claude connections template, `README.md`, `tests/test_mcp.py` (end to end).
 
-- [ ] The call log page gets a filter "Voids and edits".
-- [ ] README: update the MCP section's tool list and the "not available" line; keep the Status line current.
-- [ ] End-to-end test with the SDK client: list tools, run a new report, preview and confirm a credit note, preview and confirm a void with `confirm_document`.
+- [x] The call log page gets a filter "Voids and edits".
+- [x] README: update the MCP section's tool list and the "not available" line; keep the Status line current.
+- [x] End-to-end test with the SDK client: list tools, run a new report, preview and confirm a credit note, preview and confirm a void with `confirm_document`.
 - [ ] Screenshots of the call log page with the filter, sent with `SendUserFile` (throwaway demo database).
-- [ ] Commit: `MCP: call log filter, README, end to end test`.
+- [x] Commit: `MCP: call log filter, README, end to end test`.
 
 ## Out of scope
 

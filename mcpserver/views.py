@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
@@ -38,10 +39,17 @@ def connections(request):
     access = dict(McpAccess.objects.values_list("user_id", "enabled"))
     people = [{"user": u, "role": "Admin" if is_admin(u) else "Standard", "on": access.get(u.pk, False)}
               for u in get_user_model().objects.filter(is_active=True).order_by("username").prefetch_related("groups")]
-    calls = Paginator(McpCall.objects.select_related("user"), 50).get_page(request.GET.get("page"))
+    only_voids = request.GET.get("show") == "voids"
+    log = McpCall.objects.select_related("user")
+    if only_voids:
+        # Voids and edits: their previews, and the confirmations that carried a typed document number.
+        log = log.filter(Q(tool__startswith="void_") | Q(tool__startswith="edit_")
+                         | (Q(tool="confirm_change") & Q(arguments__has_key="confirm_document")
+                            & ~Q(arguments__confirm_document="")))
+    calls = Paginator(log, 50).get_page(request.GET.get("page"))
     hosts = settings.DNB_MCP_ALLOWED_HOSTS
     return render(request, "mcpserver/connections.html", {
-        "service": service, "people": people, "calls": calls,
+        "service": service, "people": people, "calls": calls, "only_voids": only_voids,
         "connector_url": f"https://{hosts[0]}/mcp" if hosts else "",
         "aud_set": bool(settings.DNB_CF_ACCESS_AUD), "team_domain": settings.DNB_CF_ACCESS_TEAM_DOMAIN,
         "nav_active": "settings", "settings_section": "claude",

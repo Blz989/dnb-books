@@ -192,3 +192,4 @@ def test_edit_sales_order_and_purchase_order(books, owner):
     p2 = preview(owner, "edit_purchase_order", {"number": po, "lines": [{"sku": "WID-1", "quantity": 8}]})
     confirm(owner, p2, po)
     assert PurchaseOrder.objects.get().lines.get().quantity == 8
+
