@@ -43,10 +43,13 @@
   {% endfor %}
   </tbody>
 </table>
-<div class="body small dash">Each person works with their own role. Claude can look things up and run reports, and can create invoices, payments, bills, vendor payments, purchase orders, customers, vendors, and items. Every change is shown as a preview and saved only when the person confirms it. Voids, refunds, credit notes, deposits, journal entries, and month close stay in the app.</div>
+<div class="body small dash">Each person works with their own role. Claude can look things up, run reports, and create documents, journal entries, and records. Admins can also void documents and edit invoices, bills, and orders, and must type the document number to confirm. Every change is shown as a preview and saved only when the person confirms it. Closing a month, the bank inbox, reconciliation, and settings stay in the app.</div>
 </div>
 
-<div class="card"><div class="card-h">Recent calls</div>
+<div class="card"><div class="card-h">Recent calls
+  <span class="small" style="float:right">
+    {% if only_voids %}<a href="?">All calls</a> · <strong>Voids and edits</strong>{% else %}<strong>All calls</strong> · <a href="?show=voids">Voids and edits</a>{% endif %}
+  </span></div>
 {% if calls %}
 <table class="data">
   <thead><tr><th>When</th><th>Person</th><th>Tool</th><th>Result</th><th>Document</th></tr></thead>
@@ -63,12 +66,12 @@
   </tbody>
 </table>
 {% if calls.has_other_pages %}<div class="pager">
-  {% if calls.has_previous %}<a href="?page={{ calls.previous_page_number }}">Newer</a>{% endif %}
+  {% if calls.has_previous %}<a href="?{% if only_voids %}show=voids&amp;{% endif %}page={{ calls.previous_page_number }}">Newer</a>{% endif %}
   <span>Page {{ calls.number }} of {{ calls.paginator.num_pages }}</span>
-  {% if calls.has_next %}<a href="?page={{ calls.next_page_number }}">Older</a>{% endif %}
+  {% if calls.has_next %}<a href="?{% if only_voids %}show=voids&amp;{% endif %}page={{ calls.next_page_number }}">Older</a>{% endif %}
 </div>{% endif %}
 {% else %}
-<div class="empty small">No calls yet.</div>
+<div class="empty small">{% if only_voids %}No voids or edits yet.{% else %}No calls yet.{% endif %}</div>
 {% endif %}
 </div>
 

@@ -329,6 +329,14 @@ OPERATIONS = {
     "save_item": _item,
 }
 
+# The orders, credits, refunds, deposits, transfers, stock and journal operations live in write_more.py.
+# Imported here, after everything above is defined, because write_more borrows nothing from this module.
+from .write_more import OPERATIONS as _MORE  # noqa: E402
+from .write_void import GUARDED, OPERATIONS as _VOIDS, require_admin  # noqa: E402
+
+OPERATIONS.update(_MORE)
+OPERATIONS.update(_VOIDS)
+
 
 # ---- preview and confirm ----
 
@@ -362,7 +370,11 @@ def preview(user, operation: str, payload: dict) -> dict:
     change = PendingChange.objects.create(
         id=secrets.token_urlsafe(16), user=user, tool=tool, payload={"input": payload, "flags": flags},
         summary="", expires_at=timezone.now() + EXPIRES)
-    if tool.startswith("save_"):
+    if tool in GUARDED:
+        number = payload.get("number", "")
+        note = (f"Nothing is changed yet. To make this change, call confirm_change with this confirmation_id and "
+                f"confirm_document set to {number}.")
+    elif tool.startswith("save_"):
         note = "Nothing is saved yet."
     else:
         note = f"Nothing is saved yet. The number {number} is the next free one and may change if someone saves first."
@@ -372,7 +384,7 @@ def preview(user, operation: str, payload: dict) -> dict:
             "note": note}
 
 
-def confirm(user, confirmation_id: str) -> dict:
+def confirm(user, confirmation_id: str, confirm_document: str = "") -> dict:
     with transaction.atomic():
         change = PendingChange.objects.filter(pk=(confirmation_id or "").strip()).first()
         if change is None or change.user_id != user.pk:
@@ -381,6 +393,14 @@ def confirm(user, confirmation_id: str) -> dict:
             raise Refused(USED)
         if timezone.now() >= change.expires_at:
             raise Refused(EXPIRED)
+        if change.tool in GUARDED:
+            # A void or edit also needs an admin and the document number typed back, so a stale or mixed-up
+            # preview can't be confirmed by accident. A wrong number does not use up the confirmation.
+            require_admin(user)
+            wanted = str(change.payload["input"].get("number", "")).strip().upper()
+            if (confirm_document or "").strip().upper() != wanted:
+                what = "void" if change.tool.startswith("void_") else "edit"
+                raise Refused(f"Type the document number ({wanted}) to confirm this {what}.")
         # Claim it first: the conditional update makes a second confirm of the same id fail.
         if not PendingChange.objects.filter(pk=change.pk, used_at__isnull=True).update(used_at=timezone.now()):
             raise Refused(USED)

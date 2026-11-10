@@ -534,3 +534,53 @@ def test_call_log_shows_on_the_page(client, owner):
     client.force_login(owner)
     page = client.get("/settings/claude/").content.decode()
     assert "create_invoice" in page and "September 2026 is closed." in page
+
+
+def test_call_log_filter_shows_voids_and_edits_only(client, owner):
+    McpCall.objects.create(user=owner, email=owner.email, tool="create_invoice", document="INV-000001")
+    McpCall.objects.create(user=owner, email=owner.email, tool="confirm_change", document="INV-000001",
+                           arguments={"confirmation_id": "a", "confirm_document": ""})
+    McpCall.objects.create(user=owner, email=owner.email, tool="void_invoice", ok=False, error="Enter a reason for the void.")
+    McpCall.objects.create(user=owner, email=owner.email, tool="confirm_change", document="INV-000002",
+                           arguments={"confirmation_id": "b", "confirm_document": "INV-000002"})
+    client.force_login(owner)
+    everything = client.get("/settings/claude/").content.decode()
+    assert "create_invoice" in everything and "Voids and edits" in everything
+    only = client.get("/settings/claude/?show=voids").content.decode()
+    assert "void_invoice" in only and "INV-000002" in only
+    assert "create_invoice" not in only and "INV-000001" not in only
+
+
+@pytest.mark.django_db(transaction=True)
+def test_end_to_end_void_over_the_wire(live_mcp, cf, books, owner, purge_all):
+    """The SDK client against the ASGI app: list tools, preview a void, a wrong number is refused, the right one voids."""
+    import json
+
+    from sales.models import DocStatus
+
+    inv = create_invoice(customer=books.customer, date=date(2026, 10, 15), user=owner,
+                         lines=[InvoiceLineSpec(books.service, 1, D("100.00"))])
+    tok = token(cf)
+
+    async def tools(c):
+        return [t.name for t in (await c.list_tools()).tools]
+
+    async def prev(c):
+        return await c.call_tool("void_invoice", {"number": inv.number, "reason": "Duplicate"})
+
+    names, p = _call(live_mcp, tok, [tools, prev])
+    assert {"void_invoice", "edit_bill", "create_journal_entry", "close_checklist"} <= set(names)
+    assert not p.is_error
+    cid = (p.structured_content or json.loads(p.content[0].text))["confirmation_id"]
+
+    async def wrong(c):
+        return await c.call_tool("confirm_change", {"confirmation_id": cid, "confirm_document": "INV-999999"})
+
+    async def right(c):
+        return await c.call_tool("confirm_change", {"confirmation_id": cid, "confirm_document": inv.number})
+
+    (bad,) = _call(live_mcp, tok, [wrong])
+    assert bad.is_error and "Type the document number" in bad.content[0].text
+    assert Invoice.objects.get().status == DocStatus.OPEN
+    (good,) = _call(live_mcp, tok, [right])
+    assert not good.is_error and Invoice.objects.get().status == DocStatus.VOID
