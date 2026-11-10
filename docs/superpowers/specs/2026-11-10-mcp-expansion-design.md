@@ -1,6 +1,6 @@
 # DNB Books MCP expansion: design
 
-Status: draft for owner review. Date: 2026-11-10. Extends `2026-11-04-mcp-server-design.md` (built, revision 4). That spec's section 5 listed voids, edits, refunds, credit notes, deposits, transfers, journal entries, and month close as "not available through the MCP". This spec changes that list. It does not change sign-in, the preview and confirm mechanism, or the security controls in sections 4 and 7 of the original, except where stated below.
+Status: draft for owner review. Decisions A and Admin-only voids settled 2026-11-10. Date: 2026-11-10. Extends `2026-11-04-mcp-server-design.md` (built, revision 4). That spec's section 5 listed voids, edits, refunds, credit notes, deposits, transfers, journal entries, and month close as "not available through the MCP". This spec changes that list. It does not change sign-in, the preview and confirm mechanism, or the security controls in sections 4 and 7 of the original, except where stated below.
 
 ## 1. Goal
 
@@ -59,7 +59,7 @@ The original spec removed voids from the MCP to guard against a wrong posting fr
 
 Not added: deleting records, hard deletes of drafts, changes to settings, users, or chart of accounts, bank inbox actions, reconciliation, check printing, and the CSV imports.
 
-## 6. Decision A: journal entries (owner to choose)
+## 6. Decision A: journal entries (owner chose A1)
 
 You asked for draft journal entries. A finding changes the options. The app's Journal entries screen does not create drafts. `ledger/books_views.py:journal_new` calls `post_entry`, which posts at once. Drafts exist in the model and `post_draft`, but nothing creates one today.
 
@@ -102,8 +102,8 @@ Month close and reopen writes, bank inbox and reconciliation, check printing, im
 4. Voids and edits with their guardrails.
 5. Settings filter, README, tests, screenshots.
 
-## 12. Open questions
+## 12. Decisions and open questions
 
-1. Decision A: A1 or A2.
-2. Should edits be limited to documents with no payments applied, or follow the app's rules exactly?
-3. Is Admin-only right for voids, or should Standard users void their own documents?
+1. Decision A: **A1, post on confirm.** Settled.
+2. Voids and edits: **Admin only.** Settled.
+3. Open: should edits be limited to documents with no payments applied, or follow the app's rules exactly? Default if not answered: follow the app's rules exactly.
