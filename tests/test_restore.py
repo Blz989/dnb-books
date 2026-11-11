@@ -8,7 +8,7 @@ from django.core.management.base import CommandError
 from django.utils import timezone
 
 from backup.models import BackupRun
-from backup.service import decrypt_file, encrypt_file, ledger_fingerprint, restore_drill, run_backup
+from backup.service import encrypt_file, restore_archive, ledger_fingerprint, restore_drill, run_backup
 
 
 def test_drill_passes_on_fresh_backup(file_db_with_entries, tmp_path, settings):
@@ -25,13 +25,17 @@ def test_drill_detects_tampered_backup(file_db_with_entries, tmp_path, settings)
     run = run_backup()
     target = tmp_path / run.filename
     plain = tmp_path / "plain.sqlite3"
-    decrypt_file(target, plain, settings.DNB_BACKUP_KEY)
+    restore_archive(target, plain, None, settings.DNB_BACKUP_KEY)
     conn = sqlite3.connect(plain)
     conn.execute("DROP TRIGGER ledger_line_no_update")  # tamper the copy, not production
     conn.execute("UPDATE ledger_journalline SET debit = 999 WHERE id = (SELECT MIN(id) FROM ledger_journalline)")
     conn.commit()
     conn.close()
+    target.unlink()
+    target = tmp_path / "dnb-20200101-010000.sqlite3.enc"  # tampered copy as an old-format backup
     encrypt_file(plain, target, settings.DNB_BACKUP_KEY)
+    run.filename = target.name
+    run.save()
     result = restore_drill()
     assert not result.ok and result.expected != result.actual
     assert "does not match" in result.message
@@ -112,3 +116,57 @@ def test_restore_backup_wrong_key(tmp_path, settings):
     with pytest.raises(CommandError, match="key"):
         call_command("restore_backup", str(enc), "--to", str(tmp_path / "out.sqlite3"))
     assert not (tmp_path / "out.sqlite3").exists()
+
+
+def test_restore_backup_command_restores_media_too(file_db_with_entries, tmp_path, settings):
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    settings.DNB_BACKUP_DIR = backups
+    media = tmp_path / "media"
+    media.mkdir()
+    (media / "logo.png").write_bytes(b"logo")
+    settings.MEDIA_ROOT = media
+    run = run_backup()
+    out = io.StringIO()
+    call_command("restore_backup", run.filename, "--to", str(tmp_path / "r.sqlite3"),
+                 "--media-to", str(tmp_path / "r-media"), stdout=out)
+    assert (tmp_path / "r-media" / "logo.png").read_bytes() == b"logo"
+    assert "Restored uploaded files" in out.getvalue() and "5. Move" in out.getvalue()
+    with pytest.raises(CommandError, match="already exists"):
+        call_command("restore_backup", run.filename, "--to", str(tmp_path / "r2.sqlite3"),
+                     "--media-to", str(tmp_path / "r-media"))
+    assert not (tmp_path / "r2.sqlite3").exists()
+
+
+def test_restore_backup_without_media_to_says_files_are_in_the_backup(file_db_with_entries, tmp_path, settings):
+    settings.DNB_BACKUP_DIR = tmp_path
+    run = run_backup()
+    out = io.StringIO()
+    call_command("restore_backup", run.filename, "--to", str(tmp_path / "r.sqlite3"), stdout=out)
+    assert "--media-to" in out.getvalue()
+
+
+def test_restore_backup_old_format_still_restores(file_db_with_entries, tmp_path, settings):
+    from backup.service import snapshot
+
+    old = tmp_path / "dnb-20200101-010000.sqlite3.enc"
+    encrypt_file(snapshot(tmp_path / "plain.sqlite3"), old, settings.DNB_BACKUP_KEY)
+    call_command("restore_backup", str(old), "--to", str(tmp_path / "r.sqlite3"),
+                 "--media-to", str(tmp_path / "r-media"))
+    assert sqlite3.connect(tmp_path / "r.sqlite3").execute("SELECT COUNT(*) FROM ledger_journalentry").fetchone()[0] == 3
+    assert not (tmp_path / "r-media").exists()
+
+
+def test_restore_backup_rejects_unsafe_archive(file_db_with_entries, tmp_path, settings):
+    import tarfile
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        info = tarfile.TarInfo("../evil")
+        info.size = 1
+        tar.addfile(info, io.BytesIO(b"x"))
+    plain, enc = tmp_path / "p.tar", tmp_path / "dnb-20200101-010000.tar.enc"
+    plain.write_bytes(buf.getvalue())
+    encrypt_file(plain, enc, settings.DNB_BACKUP_KEY)
+    with pytest.raises(CommandError, match="unsafe"):
+        call_command("restore_backup", str(enc), "--to", str(tmp_path / "r.sqlite3"))
+    assert not (tmp_path / "r.sqlite3").exists()

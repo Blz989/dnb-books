@@ -124,12 +124,12 @@ Files: `backup/service.py`, `backup/remote.py` (file name pattern only), the res
 
 Interfaces: a backup is `dnb-YYYYMMDD-HHMMSS.tar.enc`, a Fernet-encrypted tar with `snapshot.sqlite3` and `media/…`. `FILENAME_RE` accepts both the old and new names so retention and the drill keep working across the change.
 
-- [ ] Tests first: a backup made with a logo and a reconciliation PDF in `media` restores both files byte for byte; an empty or missing `media` folder still backs up; retention treats old and new names alike; the restore drill passes on a new archive and on an old `.sqlite3.enc` file; a drill on an archive with a missing `snapshot.sqlite3` fails with `Restore drill failed: the backup has no database in it.`
-- [ ] Build the archive in the temp folder, encrypt, write as today. The drill extracts the snapshot (plain `tarfile` with member-name checks, no extraction outside the temp folder) and compares the ledger fingerprint as today.
-- [ ] README: restore steps for the new archive (decrypt, untar, put `snapshot.sqlite3` and `media/` back), and a note that old backups are a bare database.
-- [ ] Finance check with `finance:reconciliation`: after a restore into a scratch folder, the reconciliation report PDF opens and its totals match the reconciliation on screen. Record the result in the commit body.
+- [x] Tests first: a backup made with a logo and a reconciliation PDF in `media` restores both files byte for byte; an empty or missing `media` folder still backs up; retention treats old and new names alike; the restore drill passes on a new archive and on an old `.sqlite3.enc` file; a drill on an archive with a missing `snapshot.sqlite3` fails with `Restore drill failed: the backup has no database in it.`
+- [x] Build the archive in the temp folder, encrypt, write as today. The drill extracts the snapshot (plain `tarfile` with member-name checks, no extraction outside the temp folder) and compares the ledger fingerprint as today.
+- [x] README: restore steps for the new archive (decrypt, untar, put `snapshot.sqlite3` and `media/` back), and a note that old backups are a bare database.
+- [x] Finance check with `finance:reconciliation`: after a restore into a scratch folder, the reconciliation report PDF opens and its totals match the reconciliation on screen. Record the result in the commit body.
 - [ ] Manual check for the owner on the server, listed in the PR: run `backup_now`, then `restore_drill`, and confirm the home screen shows the drill passed.
-- [ ] Commit: `Backups include uploaded files`.
+- [x] Commit: `Backups include uploaded files`.
 
 ### Task 7: Bank file imports (only the parts the owner approves)
 

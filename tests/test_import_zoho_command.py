@@ -171,7 +171,7 @@ def test_real_run_swaps_in_copy_after_backup(empty_file_db, tmp_path, settings, 
     assert code == 0, out + err
     assert out.strip().endswith("Imported. Restart the app.")
     assert Invoice.objects.exists() and Bill.objects.exists() and Payment.objects.exists()
-    assert list(Path(settings.DNB_BACKUP_DIR).glob("dnb-*.sqlite3.enc"))
+    assert list(Path(settings.DNB_BACKUP_DIR).glob("dnb-*.tar.enc"))
     run = ImportRun.objects.get()
     assert run.succeeded and not run.dry_run and run.user.username == "admin"
     assert run.report_pdf and run.summary["tieout_passed"] is True
