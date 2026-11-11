@@ -9,6 +9,7 @@ from django.db.models import Max, Sum
 
 from core.roles import require_admin
 from ledger.balances import account_totals, money
+from ledger.locks import document_label, document_noun
 from ledger.models import Account, AccountSubtype, JournalEntry
 from ledger.periods import assert_open, is_closed
 from ledger.posting import LineSpec, post_entry
@@ -274,11 +275,13 @@ def record_value_adjustment(
 
 def void_movement(
     movement: StockMovement, *, user, reason: str, date: date_type | None = None, allow_negative: bool = False,
-    system: bool = False,
+    system: bool = False, from_document: bool = False,
 ) -> StockMovement:
     """Reverse a movement's full effective value, mark it voided, and recost the item's later outflows.
 
     system=True is for services that void on a user's behalf (editing an invoice). No view passes it.
+    from_document=True is for the document's own void or edit service. A movement owned by an invoice, bill, or
+    vendor credit is refused without it. No view or tool passes it.
     """
     if not system:
         require_admin(user)
@@ -289,6 +292,10 @@ def void_movement(
         current = StockMovement.objects.select_related("item", "offset_account").get(pk=movement.pk)
         if current.voided:
             raise ItemStateError("This movement is already voided.")
+        owner = document_label(current.source_type, current.source_id)
+        if owner and not from_document:
+            noun = document_noun(current.source_type)
+            raise ItemStateError(f"This movement belongs to {owner}. Void or edit the {noun} instead.")
         when = date or current.date
         if when < current.date:
             raise ItemStateError("The void date can't be before the movement date.")

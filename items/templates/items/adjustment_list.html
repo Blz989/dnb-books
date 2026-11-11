@@ -18,7 +18,7 @@
       <td>{{ m.reason }}</td>
       <td>{% if m.journal_entry %}<a href="{% url 'books:journal-detail' m.journal_entry.pk %}">{{ m.journal_entry.display_number }}</a>{% else %}<span class="dash">—</span>{% endif %}</td>
       <td>{{ m.created_by.get_username }}</td>
-      {% if is_admin %}<td>{% if not m.voided %}<a href="{% url 'items:void-movement' m.pk %}">Void</a>{% endif %}</td>{% endif %}
+      {% if is_admin %}<td>{% if not m.voided %}{% if m.owner_label %}<span class="dash" title="Void or edit the document instead">via {{ m.owner_label }}</span>{% else %}<a href="{% url 'items:void-movement' m.pk %}">Void</a>{% endif %}{% endif %}</td>{% endif %}
     </tr>
   {% empty %}<tr><td colspan="9" class="empty">No adjustments yet.</td></tr>
   {% endfor %}

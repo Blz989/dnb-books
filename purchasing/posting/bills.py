@@ -304,9 +304,10 @@ def _reverse_posting(entry, movements, *, user, when: date_type, reason: str, al
     """Reverse a bill's entry and stock receipts as of `when`. These are system voids: a Standard user's edit
     does them on their behalf, and no view can ask for system=True."""
     if entry is not None:
-        void_entry(entry, user=user, reason=reason, date=when, system=True)
+        void_entry(entry, user=user, reason=reason, date=when, system=True, from_document=True)
     for movement in movements:
-        void_movement(movement, user=user, reason=reason, date=when, system=True, allow_negative=allow_negative)
+        void_movement(movement, user=user, reason=reason, date=when, system=True, from_document=True,
+                      allow_negative=allow_negative)
 
 
 def edit_bill(

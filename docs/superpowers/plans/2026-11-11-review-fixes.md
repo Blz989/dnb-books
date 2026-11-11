@@ -66,13 +66,13 @@ Messages:
 
 Steps:
 
-- [ ] Tests first, failing: for each of the nine sources, `void_entry` on the document's entry raises `EntryStateError` with the message, and the document's own void still works. `void_movement` on an invoice's, a bill's, and a vendor return's movement raises `ItemStateError` with the message. `edit_invoice` and `edit_bill` by a Standard user still work. A handling run's bill still gives the handling message.
-- [ ] Add the registry, the `from_document` argument, and the checks. Pass `from_document=True` from every document service.
-- [ ] Journal detail already shows `void_blocked` in place of the button; make it use the new message. Item detail and the adjustment list show no Void link for a document's movement.
-- [ ] Fix any existing test that voided a document's entry or movement directly; list them.
-- [ ] `uv run pytest -q` green.
+- [x] Tests first, failing: for each of the nine sources, `void_entry` on the document's entry raises `EntryStateError` with the message, and the document's own void still works. `void_movement` on an invoice's, a bill's, and a vendor return's movement raises `ItemStateError` with the message. `edit_invoice` and `edit_bill` by a Standard user still work. A handling run's bill still gives the handling message.
+- [x] Add the registry, the `from_document` argument, and the checks. Pass `from_document=True` from every document service.
+- [x] Journal detail already shows `void_blocked` in place of the button; make it use the new message. Item detail and the adjustment list show no Void link for a document's movement.
+- [x] Fix any existing test that voided a document's entry or movement directly; list them.
+- [x] `uv run pytest -q` green.
 - [ ] Screenshots: journal entry of an invoice (banner, no button), item page with an invoice movement (no Void link), a manual entry (button still there).
-- [ ] Commit: `Lock document entries and movements to their documents`.
+- [x] Commit: `Lock document entries and movements to their documents`.
 
 ### Task 2: Detect a document out of step with its entry
 
