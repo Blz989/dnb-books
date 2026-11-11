@@ -306,6 +306,13 @@ def test_calibration_pdf_is_served_to_admins_only(adm, std, checking):
     assert std.get(f"/banking/layout/{checking.pk}/calibrate.pdf").status_code == 403
 
 
+def test_layout_pdfs_are_never_cached(adm, to_print, checking):
+    """The tunnel's CDN keeps .pdf URLs, so a layout edit would not show on the calibration page."""
+    for url in (f"/banking/layout/{checking.pk}/calibrate.pdf", f"/banking/checks/{to_print.number}/pdf/?number=2051"):
+        r = adm.get(url)
+        assert r.status_code == 200 and "no-store" in r["Cache-Control"]
+
+
 def test_two_tabs_confirming_at_once_print_one_check(adm, to_print, checking, monkeypatch):
     """Another tab records check 2051 between this request's first look and its write."""
     from banking.views import common

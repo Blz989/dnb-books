@@ -185,7 +185,7 @@ Sales registers two checks with `ledger.periods.register_close_check`: the AR an
 - **Rendering:** a Django template (`sales/templates/sales/invoice_pdf.html`) rendered to PDF by WeasyPrint at `/sales/invoices/<number>/pdf/`. The filename is `<number>.pdf`.
 - **Look:** must match `docs/design/invoice-mockup.html`. It uses the app's bundled fonts (no internet). The logo comes from Sales settings; with no logo, the company name is shown in Source Serif.
 - **Notes:** the invoice's notes field is pre-filled from `default_invoice_notes` and editable per invoice.
-- **Drop-ship lines** print the note "Shipped directly from the manufacturer".
+- **Drop-ship lines** print like any other line, with no shipping note (the owner asked for it to come off).
 - **Totals:** subtotal, then "Payments and credits" as of today, then balance due.
 - **Void invoices** print with a large "VOID" watermark.
 - **Dependencies:** WeasyPrint (from PyPI through uv, pinned in `uv.lock`). The Dockerfile already installs `libpango-1.0-0` and `libpangoft2-1.0-0`; Phase 3 adds `libharfbuzz-subset0`, which WeasyPrint uses for font subsetting. A test renders a PDF inside the test suite, so a missing library fails the build instead of the first real invoice.

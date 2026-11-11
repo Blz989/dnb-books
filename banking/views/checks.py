@@ -6,6 +6,7 @@ from django.db import transaction
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from core.roles import require_admin
@@ -126,6 +127,7 @@ def check_print(request, number):
 
 
 @login_required
+@never_cache
 def check_pdf_view(request, number):
     doc = _find(number)
     shown = request.GET.get("number", "").strip() or _number_of(doc)
@@ -248,6 +250,7 @@ def layout_page(request, account_id):
 
 
 @login_required
+@never_cache
 def calibrate_pdf(request, account_id):
     require_admin(request.user)
     bank = get_object_or_404(BankAccount, pk=account_id)
