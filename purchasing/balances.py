@@ -1,6 +1,6 @@
 """Vendor-side balances, from documents plus dated application rows, so any past date can be rebuilt."""
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.db.models import F
 
@@ -89,3 +89,16 @@ def vendor_balance(vendor, as_of: date | None = None) -> Decimal:
     paid = _total(vendor_payment_unapplied(p, as_of) for p in vendor_payments_with_unapplied(as_of).filter(vendor=vendor))
     credits = _total(vendor_credit_unapplied(c, as_of) for c in vendor_credits_with_unapplied(as_of).filter(vendor=vendor))
     return money(owed - paid - credits)
+
+
+CENT = Decimal("0.01")
+
+
+def po_line_amount(line) -> Decimal:
+    """Quantity times price, rounded to the cent half up, the same rule a bill line uses."""
+    return (line.quantity * line.price).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def po_total(lines) -> Decimal:
+    """Sum of the rounded line amounts, so the total always equals the amounts shown above it."""
+    return sum((po_line_amount(l) for l in lines), ZERO)

@@ -269,3 +269,48 @@ def test_editing_a_drop_ship_po_keeps_its_allocations(two_orders, two_vendors, a
     update_po(acme_po, user=admin_user, lines=[POLineSpec(widget, 3, D("0.50"), line_id=single.pk)])
     assert sorted((l.order.number, l.quantity) for lines in drop_ship_candidates([older, newer]).values()
                   for l in lines) == sorted([(older.number, 6), (newer.number, 4)])
+
+
+# ---- totals on screen ----
+
+@pytest.fixture
+def adm(client, admin_user):
+    client.force_login(admin_user)
+    return client
+
+
+def test_detail_shows_line_amounts_and_total_for_a_drop_ship_po(adm, customer, admin_user, make_item, db):
+    Vendor.objects.create(name="Acme Mfg")
+    a, b, c = make_item("DS-A", purchase_cost="108.00"), make_item("DS-B", purchase_cost="32.00"), make_item("DS-C", purchase_cost="120.00")
+    so = create_order(customer=customer, date=d(10, 1), user=admin_user, lines=[
+        OrderLineSpec(a, 2, D("150.00"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="Acme Mfg"),
+        OrderLineSpec(b, 1, D("50.00"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="Acme Mfg"),
+        OrderLineSpec(c, 1, D("160.00"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="Acme Mfg"),
+    ])
+    (po,) = create_drop_ship_pos(so, user=admin_user, date=d(10, 2))
+    r = adm.get(f"/purchasing/orders/{po.number}/")
+    assert r.context["total"] == D("368.00")
+    assert [l["amount"] for l in r.context["lines"]] == [D("216.00"), D("32.00"), D("120.00")]
+    html = r.content.decode()
+    assert "<th class=\"num\">Amount</th>" in html and "216.00" in html and "368.00" in html
+    assert f"368.00" in adm.get("/purchasing/orders/").content.decode()
+
+
+def test_amounts_round_half_up_per_line_and_match_the_pdf(adm, vendor, admin_user, widget, make_item, sales_settings, purchasing_settings):
+    from purchasing.pdf import render_po_html
+
+    other = make_item("W2")
+    # 3 x 1.2345 = 3.7035 -> 3.70; 1 x 0.0050 -> 0.01; 2 x 0.0050 -> 0.01. Total is the sum of rounded lines.
+    po = create_po(vendor=vendor, date=d(10, 1), user=admin_user, lines=[
+        POLineSpec(widget, 3, D("1.2345")), POLineSpec(other, 1, D("0.0050")), POLineSpec(make_item("W3"), 2, D("0.0050"))])
+    r = adm.get(f"/purchasing/orders/{po.number}/")
+    assert [l["amount"] for l in r.context["lines"]] == [D("3.70"), D("0.01"), D("0.01")]
+    assert r.context["total"] == D("3.72")
+    assert "3.72" in render_po_html(po)
+    assert "3.72" in adm.get("/purchasing/orders/").content.decode()
+
+
+def test_list_total_is_per_order(adm, po, vendor, admin_user, widget):
+    other = create_po(vendor=vendor, date=d(10, 5), user=admin_user, lines=[POLineSpec(widget, 4, D("2.50"))])
+    rows = {r["order"].number: r["total"] for r in adm.get("/purchasing/orders/").context["rows"]}
+    assert rows[other.number] == D("10.00") and rows[po.number] == sum(l.quantity * l.price for l in po.lines.all())
