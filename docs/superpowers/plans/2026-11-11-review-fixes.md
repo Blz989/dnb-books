@@ -71,7 +71,7 @@ Steps:
 - [x] Journal detail already shows `void_blocked` in place of the button; make it use the new message. Item detail and the adjustment list show no Void link for a document's movement.
 - [x] Fix any existing test that voided a document's entry or movement directly; list them.
 - [x] `uv run pytest -q` green.
-- [ ] Screenshots: journal entry of an invoice (banner, no button), item page with an invoice movement (no Void link), a manual entry (button still there).
+- [x] Screenshots: journal entry of an invoice (banner, no button), item page with an invoice movement (no Void link), a manual entry (button still there).
 - [x] Commit: `Lock document entries and movements to their documents`.
 
 ### Task 2: Detect a document out of step with its entry
