@@ -8,6 +8,7 @@ from core.company import logo_uri
 from sales.models import SalesSettings
 from sales.pdf import FONT_DIR, INVOICE_CSS, _address
 
+from .balances import po_line_amount, po_total
 from .models import PurchaseOrder, PurchaseOrderAllocation
 
 
@@ -22,7 +23,7 @@ def _ship_to(so) -> tuple[str, list[str]]:
 def render_po_html(order: PurchaseOrder) -> str:
     company = SalesSettings.load()
     lines = list(order.lines.select_related("item").order_by("position", "id"))
-    rows = [{"n": n, "line": line, "amount": line.quantity * line.price} for n, line in enumerate(lines, 1)]
+    rows = [{"n": n, "line": line, "amount": po_line_amount(line)} for n, line in enumerate(lines, 1)]
     vendor = order.vendor
     sales_orders = order.sales_orders()
     shipments = []
@@ -55,7 +56,7 @@ def render_po_html(order: PurchaseOrder) -> str:
         "shipments": shipments,
         "rows": rows,
         "items_total": sum(line.quantity for line in lines),
-        "total": sum((r["amount"] for r in rows), 0),
+        "total": po_total(lines),
     })
 
 

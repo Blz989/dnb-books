@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -14,7 +16,7 @@ from items.errors import StockError
 from ledger.errors import PostingError
 from sales.models import DocStatus, OrderStatus, SalesOrder
 
-from ..balances import bill_total
+from ..balances import bill_total, po_line_amount, po_total
 from ..errors import PurchasingError, UnresolvedVendors
 from ..forms import PurchaseOrderHeaderForm
 from ..models import PurchaseOrder, PurchaseOrderAllocation, PurchaseOrderLine
@@ -37,7 +39,7 @@ def po_or_404(number: str) -> PurchaseOrder:
 
 @login_required
 def po_list(request):
-    orders = PurchaseOrder.objects.select_related("vendor").annotate(
+    orders = PurchaseOrder.objects.select_related("vendor").prefetch_related("lines").annotate(
         drop_ship=Exists(PurchaseOrderAllocation.objects.filter(po_line__order=OuterRef("pk"))))
     status = request.GET.get("status", "")
     if status in OrderStatus.values:
@@ -52,7 +54,7 @@ def po_list(request):
     rows = []
     for order in page:
         left = sum(max(po_remaining(l), 0) for l in order.lines.all()) if order.status == OrderStatus.OPEN else 0
-        rows.append({"order": order, "left": left})
+        rows.append({"order": order, "left": left, "total": po_total(order.lines.all())})
     qs = "&".join(f"{k}={v}" for k, v in (("status", status), ("vendor", vendor), ("q", q)) if v)
     return render(request, "purchasing/po_list.html", {
         "rows": rows, "page": page, "status": status, "vendor": vendor, "q": q, "querystring": qs,
@@ -141,11 +143,11 @@ def po_detail(request, number):
     allocations = Prefetch("allocations", queryset=PurchaseOrderAllocation.objects.select_related(
         "so_line__order__customer"))
     for line in po.lines.select_related("item").prefetch_related(allocations):
-        lines.append({"line": line, "billed": billed_quantity(line), "left": po_remaining(line),
+        lines.append({"line": line, "amount": po_line_amount(line), "billed": billed_quantity(line), "left": po_remaining(line),
                       "allocations": list(line.allocations.all())})
     bills = [{"bill": b, "total": bill_total(b)} for b in po.bills.prefetch_related("item_lines", "expense_lines")]
     return render(request, "purchasing/po_detail.html", {
-        "order": po, "lines": lines, "bills": bills, "sales_orders": po.sales_orders(),
+        "order": po, "lines": lines, "total": sum((l["amount"] for l in lines), Decimal("0.00")), "bills": bills, "sales_orders": po.sales_orders(),
         "drop_ship": any(l["allocations"] for l in lines),
         "can_bill": po.status == OrderStatus.OPEN and any(l["left"] > 0 for l in lines),
         "nav_active": "purchase-orders",

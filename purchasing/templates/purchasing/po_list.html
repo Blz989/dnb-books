@@ -12,14 +12,15 @@
     <button type="submit" class="btn primary">Search</button>
   </form>
   <table class="data">
-    <thead><tr><th>Order</th><th>Vendor</th><th>Date</th><th>Expected</th><th>Status</th><th class="num">Units left to bill</th></tr></thead>
+    <thead><tr><th>Order</th><th>Vendor</th><th>Date</th><th>Expected</th><th>Status</th><th class="num">Total</th><th class="num">Units left to bill</th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr><td><a class="sku" href="{% url 'purchasing:po-detail' r.order.number %}">{{ r.order.number }}</a>{% if r.order.drop_ship %} <span class="tag">Drop ship</span>{% endif %}</td>
         <td>{{ r.order.vendor.name }}</td><td>{{ r.order.date|date:"Y-m-d" }}</td><td>{{ r.order.expected_date|date:"Y-m-d"|default:"—" }}</td>
         <td><span class="tag{% if r.order.status == 'CLOSED' %} ns{% endif %}">{{ r.order.get_status_display }}</span></td>
+        <td class="num">{{ r.total|floatformat:"2g" }}</td>
         <td class="num">{% if r.order.status == "OPEN" %}{{ r.left }}{% else %}<span class="dash">—</span>{% endif %}</td></tr>
-    {% empty %}<tr><td colspan="6" class="empty">No purchase orders yet.</td></tr>
+    {% empty %}<tr><td colspan="7" class="empty">No purchase orders yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
