@@ -145,6 +145,13 @@ class StockMovement(models.Model):
         "source_type", "source_id", "journal_entry_id", "count_line_id", "created_by_id",
     )
 
+    @property
+    def owner_label(self) -> str | None:
+        """"invoice INV-000123" when an invoice, bill, or vendor credit owns this movement, else None."""
+        from ledger.locks import document_label
+
+        return document_label(self.source_type, self.source_id)
+
     def save(self, *args, **kwargs):
         if self.pk:
             stored = StockMovement.objects.filter(pk=self.pk).first()

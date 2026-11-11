@@ -3,13 +3,16 @@ import calendar
 from datetime import date
 from decimal import Decimal
 
+from django.db.models import Q
+
 from ledger.balances import account_totals, money
+from ledger.models import EntryStatus
 
 from .balances import (
     bill_balance, bills_with_open_balance, vendor_credit_unapplied, vendor_credits_with_unapplied,
     vendor_payment_unapplied, vendor_payments_with_unapplied,
 )
-from .models import PurchasingSettings
+from .models import Bill, DocStatus, PurchasingSettings, VendorCredit, VendorPayment
 
 ZERO = Decimal("0.00")
 
@@ -40,9 +43,24 @@ def ap_check(as_of: date | None = None) -> list[str]:
     return [f"Vendor balances say {documents:,.2f}, the A/P account says {ledger:,.2f}."]
 
 
+def document_check() -> list[str]:
+    """Open documents whose journal entry (or a bill's or vendor credit's stock movement) was voided without
+    voiding the document. ledger.posting blocks this now; the check catches data that got there before."""
+    voided_entry = Q(journal_entry__status=EntryStatus.VOID)
+    numbers = []
+    for model, extra in (
+        (Bill, Q(item_lines__stock_movement__voided=True)), (VendorPayment, Q()),
+        (VendorCredit, Q(lines__stock_movement__voided=True)),
+    ):
+        numbers += list(
+            model.objects.filter(status=DocStatus.OPEN).filter(voided_entry | extra).distinct()
+            .order_by("number").values_list("number", flat=True))
+    return [f"{number} is open but its journal entry was voided. Ask for a repair." for number in numbers]
+
+
 def close_check(year: int, month: int) -> list[str]:
     """Registered with ledger.periods. Open bills don't block a close; a mismatch between the documents and the
     ledger does."""
     month_end = date(year, month, calendar.monthrange(year, month)[1])
     prefix = f"{calendar.month_name[month]} {year}: "
-    return [prefix + problem for problem in ap_check(month_end)]
+    return [prefix + problem for problem in ap_check(month_end)] + document_check()

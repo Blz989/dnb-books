@@ -19,7 +19,7 @@ from core.roles import is_admin, require_admin
 from . import sources
 from .errors import PeriodCloseBlockedError, PostingError
 from .forms import AccountForm, CloseAnywayForm, EntryHeaderForm, ReopenForm, VoidForm
-from .locks import lock_message
+from .locks import void_block_message
 from .models import Account, AccountingPeriod, AccountType, EntryStatus, JournalEntry, JournalLine
 from .periods import close_period, close_problems, reopen_period
 from .posting import LineSpec, post_draft, post_entry
@@ -85,7 +85,7 @@ def journal_detail(request, pk):
     return render(request, "books/journal_detail.html", _ctx(
         "journal", entry=entry, lines=lines, total_debit=debit, total_credit=credit,
         source=sources.describe(entry), reversals=list(entry.reversals.all()),
-        can_void=can_void, void_blocked=lock_message(entry) if can_void else None,
+        can_void=can_void, void_blocked=void_block_message(entry) if can_void else None,
         is_draft=entry.status == EntryStatus.DRAFT,
     ))
 

@@ -3,6 +3,8 @@ import calendar
 from datetime import date
 from decimal import Decimal
 
+from django.db.models import Q
+
 from ledger.balances import account_totals, money
 from ledger.models import Account, EntryStatus
 
@@ -10,7 +12,9 @@ from .balances import (
     _counts, credit_notes_with_unapplied, credit_unapplied, invoice_balance, invoices_with_open_balance,
     payment_unapplied, payments_with_unapplied,
 )
-from .models import Payment, PaymentMethod, SalesSettings
+from .models import (
+    CreditNote, Deposit, DocStatus, Invoice, Payment, PaymentMethod, Refund, SalesSettings,
+)
 
 ZERO = Decimal("0.00")
 
@@ -88,9 +92,24 @@ def undeposited_check(as_of: date | None = None) -> list[str]:
     return [f"Undeposited payments say {documents:,.2f}, the Undeposited Funds account says {ledger:,.2f}."]
 
 
+def document_check() -> list[str]:
+    """Open documents whose journal entry (or an invoice's stock movement) was voided without voiding the document.
+    ledger.posting blocks this now; the check catches data that got there before."""
+    voided_entry = Q(journal_entry__status=EntryStatus.VOID)
+    numbers = []
+    for model, extra in (
+        (Invoice, Q(lines__stock_movement__voided=True)), (Payment, Q()), (CreditNote, Q()), (Refund, Q()),
+        (Deposit, Q()),
+    ):
+        numbers += list(
+            model.objects.filter(status=DocStatus.OPEN).filter(voided_entry | extra).distinct()
+            .order_by("number").values_list("number", flat=True))
+    return [f"{number} is open but its journal entry was voided. Ask for a repair." for number in numbers]
+
+
 def close_check(year: int, month: int) -> list[str]:
     """Registered with ledger.periods. Unpaid invoices and undeposited checks don't block a close; a mismatch
     between the documents and the ledger does."""
     month_end = date(year, month, calendar.monthrange(year, month)[1])
     prefix = f"{calendar.month_name[month]} {year}: "
-    return [prefix + problem for problem in ar_check(month_end) + undeposited_check(month_end)]
+    return [prefix + problem for problem in ar_check(month_end) + undeposited_check(month_end)] + document_check()

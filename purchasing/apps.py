@@ -26,3 +26,11 @@ class PurchasingConfig(AppConfig):
         from .checks import close_check
 
         register_close_check(close_check)
+
+        from ledger.locks import register_document_source
+
+        for source_type, noun in (
+            ("purchasing.bill", "bill"), ("purchasing.payment", "vendor payment"),
+            ("purchasing.vendor_credit", "vendor credit"),
+        ):
+            register_document_source(source_type, noun)

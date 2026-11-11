@@ -121,13 +121,17 @@ class ItemForm(forms.ModelForm):
         if data.get("item_type") != ItemType.STOCK:
             data["reorder_point"] = None
         if self.locked:
-            # A disabled field ignores what the browser sends; this catches a hand-made request.
-            if self.data.get("costing_method") not in (None, "", self.instance.costing_method):
-                self.add_error(None, "The costing method can't change after an item has stock history.")
-            if self.data.get("item_type") not in (None, "", self.instance.item_type):
-                self.add_error(None, "The item type can't change after an item has stock history.")
-            if self.data.get("inventory_account") not in (None, "", str(self.instance.inventory_account_id)):
-                self.add_error(None, "The inventory account can't change after an item has stock history.")
+            # A disabled field ignores what the caller sends; this catches a hand-made request. Values are compared
+            # as text because a browser posts "5" while the Claude tools pass the account's number 5.
+            current = {"costing_method": self.instance.costing_method, "item_type": self.instance.item_type,
+                       "inventory_account": self.instance.inventory_account_id}
+            messages = {"costing_method": "The costing method can't change after an item has stock history.",
+                        "item_type": "The item type can't change after an item has stock history.",
+                        "inventory_account": "The inventory account can't change after an item has stock history."}
+            for name, message in messages.items():
+                sent = self.data.get(name)
+                if sent not in (None, "") and str(sent) != str(current[name]):
+                    self.add_error(None, message)
         if self.instance.pk and "is_active" in data and not data["is_active"] and self.instance.is_active:
             held = on_hand(self.instance)
             if held != 0:

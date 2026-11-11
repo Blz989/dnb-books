@@ -208,10 +208,11 @@ def _reverse_posting(invoice: Invoice, *, user, when: date_type, reason: str) ->
     """Reverse the invoice's revenue entry and stock movements as of `when`. These are system voids: a Standard
     user's edit does them on their behalf, and no view can ask for system=True."""
     if invoice.journal_entry_id:
-        void_entry(invoice.journal_entry, user=user, reason=reason, date=when, system=True)
+        void_entry(invoice.journal_entry, user=user, reason=reason, date=when, system=True, from_document=True)
     for line in invoice.lines.select_related("stock_movement"):
         if line.stock_movement_id:
-            void_movement(line.stock_movement, user=user, reason=reason, date=when, system=True)
+            void_movement(line.stock_movement, user=user, reason=reason, date=when, system=True,
+                          from_document=True)
 
 
 def edit_invoice(

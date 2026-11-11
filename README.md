@@ -2,7 +2,7 @@
 
 Accounting and inventory system for DNB, built to replace Zoho Books and Zoho Inventory. It runs in Docker on one Linux server, and everyone uses it from a web browser on the office network.
 
-> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are built and tested. A page for each bank account (dashboard, its inbox, and a register with a running balance), FIFO cost lot tracking, unpaid invoices by customer, tighter print margins, and a phone menu are ready for review. Faster pages through the Cloudflare tunnel (CSS, scripts, and fonts kept by the browser, the next page loaded while its link is hovered in Chrome and Edge, and fewer database queries on the bank inbox and item list) is ready for review. The Claude service now also covers more reads and reports, credit notes, refunds, deposits, transfers, stock adjustments, journal entries, and Admin-only voids and edits (ready for review). Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
+> **Status:** Order profitability and handling is built and tested, on top of Phase 5a (banking), Phase 4 (purchasing), Phase 3 (sales), Phase 2 (items and inventory), and Phase 1 (ledger core). The Zoho import and catch-up tools (Phase 5b) are built and tested. The UI cleanup (one Settings area, a company logo used everywhere, in-app journal entries, chart of accounts, and month close, and a Zoho-style reports layout) is ready for review, followed by year-over-year report comparisons, report PDFs, home charts, and a cash forecast, then a cash-basis P&L, SKU series, reorder points, purchase order PDFs, and an audit log screen, then use from Claude (an MCP service behind Cloudflare Access). Shared drop-ship purchase orders (several sales orders on one PO, costed oldest order first) are built and tested. A page for each bank account (dashboard, its inbox, and a register with a running balance), FIFO cost lot tracking, unpaid invoices by customer, tighter print margins, and a phone menu are ready for review. Faster pages through the Cloudflare tunnel (CSS, scripts, and fonts kept by the browser, the next page loaded while its link is hovered in Chrome and Edge, and fewer database queries on the bank inbox and item list) is ready for review. The Claude service now also covers more reads and reports, credit notes, refunds, deposits, transfers, stock adjustments, journal entries, and Admin-only voids and edits (ready for review). The review fixes (locked documents, bank inbox errors, Claude item saves, read-only admin screens, and backups that now include uploaded files such as the logo and report PDFs) are ready for review. Not yet in use. Zoho remains the system of record until the cutover checks in [Roadmap](#roadmap) pass.
 
 ## What it does
 
@@ -204,7 +204,7 @@ Do these once after `./update.sh`.
 
 ### Use DNB Books from Claude
 
-The `mcp` service lets people use DNB Books from Claude on the web, desktop, or phone. Claude can look things up and run 24 reports, and can create invoices, sales orders, customer payments, credit notes, refunds, deposits, bills, vendor payments, vendor credits, purchase orders, bank transfers, stock and value adjustments, drop-ship purchase orders, journal entries, customers, vendors, and items. Every change comes back as a preview first; nothing is saved until the person confirms it, once, within 15 minutes. Admins can also void documents and edit invoices, bills, and orders. For those, the person must type the document number back to confirm, a reason is required, and voids post a reversing entry. Closing and reopening a month, the bank inbox, reconciliation, check printing, imports, and settings stay in the app. Claude can read what blocks a month close. Each person works with their own role, and every change shows in the audit log under their name.
+The `mcp` service lets people use DNB Books from Claude on the web, desktop, or phone. Claude can look things up and run 24 reports, and can create invoices, sales orders, customer payments, credit notes, refunds, deposits, bills, vendor payments, vendor credits, purchase orders, bank transfers, stock and value adjustments, drop-ship purchase orders, journal entries, customers, vendors, and items. Every change comes back as a preview first; nothing is saved until the person confirms it, once, within 15 minutes. Admins can also void documents and edit invoices, bills, and orders. For those, the person must type the document number back to confirm, a reason is required, and voids post a reversing entry. Closing and reopening a month, the bank inbox, reconciliation, check printing, imports, and settings stay in the app. Claude can read what blocks a month close. Each person works with their own role, and every change shows in the audit log under their name. A document is voided with its own void tool, not through its journal entry or stock movement.
 
 Sign-in is done by Cloudflare Access, not by DNB Books. The service refuses any request without a valid Access token for its application, and the token's email must match a DNB Books user with Claude access turned on.
 
@@ -283,7 +283,7 @@ The Zoho export ends before the cutover, so bring the books up to today in this 
 
 ### Backups
 
-The `scheduler` service runs `backup_now` every day at 1:15 AM, `restore_drill` on the 1st of each month at 2:15 AM, and `sync_banks` at the times in `DNB_BANK_SYNC_TIMES` (server time zone; change with `DNB_BACKUP_TIME` and `DNB_DRILL_TIME`). Each backup is encrypted, written to `./data/backups`, and copied to Google Drive. The app keeps the last 30 days plus the newest backup of every month, in both places. The restore drill downloads the backup from Google Drive, so it proves the off-site copy works.
+The `scheduler` service runs `backup_now` every day at 1:15 AM, `restore_drill` on the 1st of each month at 2:15 AM, and `sync_banks` at the times in `DNB_BANK_SYNC_TIMES` (server time zone; change with `DNB_BACKUP_TIME` and `DNB_DRILL_TIME`). Each backup is one encrypted file, `dnb-YYYYMMDD-HHMMSS.tar.enc`, holding the database and the uploaded files (the company logo and the reconciliation, handling, and migration report PDFs). It is written to `./data/backups` and copied to Google Drive. The app keeps the last 30 days plus the newest backup of every month, in both places. The restore drill downloads the backup from Google Drive, so it proves the off-site copy works; it checks the database in the backup. Backups made before this change are named `.sqlite3.enc` and hold the database only; they restore the same way, but have no uploaded files. Retention treats both names alike.
 
 If a backup or upload fails, the home screen shows a red warning, for example "Backup saved locally but not uploaded: …".
 
@@ -292,14 +292,18 @@ If a backup or upload fails, the home screen shows a red warning, for example "B
 ```bash
 # 1. Copy the backup down from Google Drive (skip if it is still in ./data/backups)
 docker compose run --rm app rclone copy gdrive:dnb-backups/<backup file> /data/backups/
-# 2. Decrypt it to a new file (never overwrites)
-docker compose run --rm app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3
-# 3. Swap it in
+# 2. Decrypt it to a new database file and a new folder of uploaded files (never overwrites)
+docker compose run --rm app python manage.py restore_backup /data/backups/<backup file> --to /data/restored.sqlite3 --media-to /data/restored-media
+# 3. Swap them in
 docker compose down
 mv data/dnb.sqlite3 data/dnb-before-restore.sqlite3 && rm -f data/dnb.sqlite3-wal data/dnb.sqlite3-shm
 mv data/restored.sqlite3 data/dnb.sqlite3
+mv data/media data/media-before-restore
+mv data/restored-media data/media
 docker compose up -d
 ```
+
+For an old `.sqlite3.enc` backup, use the same commands. It has no uploaded files, so the `--media-to` folder is not created: skip the two `media` lines in step 3 and keep the current `data/media` folder. (If `data/media` does not exist yet, skip the first of those two lines for a new backup too.) The command prints a reminder of these steps when it finishes. The restore refuses unsafe archives (names that point outside the restore folder, links) and stops without writing anything.
 
 **Important:** backups are encrypted. Keep a copy of the backup key (`DNB_BACKUP_KEY` in `.env`) in a password manager. Without it, backups cannot be restored. The rclone sign-in lives in `./data/rclone/rclone.conf`; treat it like a password.
 

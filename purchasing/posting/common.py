@@ -51,7 +51,7 @@ def begin_void(model, doc, user, reason: str):
 def finish_void(current, *, user, reason: str, when: date_type) -> None:
     assert_open(when)
     if current.journal_entry_id:
-        void_entry(current.journal_entry, user=user, reason=reason, date=when)
+        void_entry(current.journal_entry, user=user, reason=reason, date=when, from_document=True)
     current.status = DocStatus.VOID
     current.voided_on = when
     current.void_reason = reason

@@ -11,8 +11,9 @@ from mcpserver import write
 from mcpserver.models import McpCall, PendingChange
 from mcpserver.runtime import run
 from purchasing.models import Bill, DocStatus as BillStatus
-from purchasing.posting.bills import BillExpenseSpec, create_bill
-from sales.models import DocStatus, Invoice, Payment
+from items.models import StockMovement
+from purchasing.posting.bills import BillExpenseSpec, BillItemSpec, create_bill
+from sales.models import DocStatus, Fulfillment, Invoice, Payment
 from sales.posting.invoices import InvoiceLineSpec, create_invoice
 from sales.posting.receipts import receive_payment
 from tests.test_mcp import books, clerk, ctx_for, owner  # noqa: F401  (shared fixtures)
@@ -193,3 +194,95 @@ def test_edit_sales_order_and_purchase_order(books, owner):
     confirm(owner, p2, po)
     assert PurchaseOrder.objects.get().lines.get().quantity == 8
 
+
+
+# ---- edits keep drop-ship lines ----
+
+def _drop_ship_invoice(books, owner):
+    return create_invoice(customer=books.customer, date=DAY, user=owner, lines=[
+        InvoiceLineSpec(books.widget, 2, D("25.00"), fulfillment=Fulfillment.DROP_SHIP, drop_ship_vendor="Acme Supply"),
+        InvoiceLineSpec(books.service, 1, D("100.00"))])
+
+
+def test_edit_invoice_keeps_a_drop_ship_line_when_no_vendor_is_given(books, owner):
+    inv = _drop_ship_invoice(books, owner)
+    p = preview(owner, "edit_invoice", {"number": inv.number, "lines": [
+        {"sku": "WID-1", "quantity": 3, "drop_ship_vendor": None}, {"sku": "SVC", "quantity": 1}]})
+    confirm(owner, p, inv.number)
+    line = inv.lines.get(item=books.widget)
+    assert (line.quantity, line.fulfillment, line.drop_ship_vendor) == (3, Fulfillment.DROP_SHIP, "Acme Supply")
+    assert inv.lines.get(item=books.service).fulfillment == Fulfillment.STOCK
+
+
+def test_edit_invoice_can_change_or_clear_the_drop_ship_vendor(books, owner):
+    inv = _drop_ship_invoice(books, owner)
+    p = preview(owner, "edit_invoice", {"number": inv.number, "lines": [
+        {"sku": "WID-1", "quantity": 2, "drop_ship_vendor": "Birch Wholesale"}, {"sku": "SVC", "quantity": 1}]})
+    confirm(owner, p, inv.number)
+    assert inv.lines.get(item=books.widget).drop_ship_vendor == "Birch Wholesale"
+    p = preview(owner, "edit_invoice", {"number": inv.number, "lines": [
+        {"sku": "WID-1", "quantity": 2, "drop_ship_vendor": ""}, {"sku": "SVC", "quantity": 1}]})
+    confirm(owner, p, inv.number)
+    line = inv.lines.get(item=books.widget)
+    assert (line.fulfillment, line.drop_ship_vendor) == (Fulfillment.STOCK, "")
+
+
+def test_edit_invoice_new_line_is_stock_unless_a_vendor_is_given(books, owner):
+    inv = _drop_ship_invoice(books, owner)
+    lines = [{"sku": "WID-1", "quantity": 2}, {"sku": "SVC", "quantity": 1},
+             {"sku": "WID-1", "quantity": 1, "drop_ship_vendor": ""}]
+    confirm(owner, preview(owner, "edit_invoice", {"number": inv.number, "lines": lines}), inv.number)
+    widgets = list(inv.lines.filter(item=books.widget).order_by("pk"))
+    assert [w.fulfillment for w in widgets] == [Fulfillment.DROP_SHIP, Fulfillment.STOCK]
+
+
+def test_edit_sales_order_keeps_a_drop_ship_line_when_no_vendor_is_given(books, owner):
+    from sales.models import SalesOrder
+
+    so = write.confirm(owner, write.preview(owner, "create_sales_order", {
+        "customer": "Acme Builders", "date": "2026-10-05",
+        "lines": [{"sku": "WID-1", "quantity": 4, "drop_ship_vendor": "Acme Supply"}]})["confirmation_id"])["document"]
+    p = preview(owner, "edit_sales_order", {"number": so, "lines": [{"sku": "WID-1", "quantity": 6}]})
+    confirm(owner, p, so)
+    line = SalesOrder.objects.get().lines.get()
+    assert (line.quantity, line.fulfillment, line.drop_ship_vendor) == (6, Fulfillment.DROP_SHIP, "Acme Supply")
+    p = preview(owner, "edit_sales_order", {"number": so, "lines": [{"sku": "WID-1", "quantity": 6,
+                                                                      "drop_ship_vendor": ""}]})
+    confirm(owner, p, so)
+    assert SalesOrder.objects.get().lines.get().fulfillment == Fulfillment.STOCK
+
+
+def test_edit_of_a_document_with_no_journal_entry_previews(books, owner):
+    inv = create_invoice(customer=books.customer, date=DAY, user=owner,
+                         lines=[InvoiceLineSpec(books.service, 1, D("0.00"))])
+    assert inv.journal_entry is None
+    p = preview(owner, "edit_invoice", {"number": inv.number, "lines": [{"sku": "SVC", "quantity": 2, "price": "0.00"}]})
+    assert p["preview"]["effect"] == "The invoice totals zero, so nothing posts to the ledger."
+    confirm(owner, p, inv.number)
+    assert inv.lines.get().quantity == 2
+
+
+def test_edit_bill_with_no_journal_entry_previews(books, owner):
+    bill = create_bill(vendor=books.vendor, date=DAY, user=owner, vendor_invoice_number="V-0", item_lines=[
+        BillItemSpec(books.widget, 1, D("0.00"))], expense_lines=[])
+    assert bill.journal_entry is None
+    p = preview(owner, "edit_bill", {"number": bill.number, "item_lines": [{"sku": "WID-1", "quantity": 2, "price": "0.00"}]})
+    confirm(owner, p, bill.number)
+    assert Bill.objects.get().item_lines.get().quantity == 2
+
+
+# ---- a document's own entry and movement can't be voided directly ----
+
+def test_void_journal_entry_of_a_document_is_refused_with_the_lock_message(books, owner, invoice):
+    number = invoice.journal_entry.display_number
+    with pytest.raises(ToolError, match=f"^This entry belongs to invoice {invoice.number}. Void the invoice instead.$"):
+        preview(owner, "void_journal_entry", {"number": number, "reason": "x"})
+
+
+def test_void_stock_movement_of_a_document_is_refused_with_the_lock_message(books, owner):
+    inv = create_invoice(customer=books.customer, date=DAY, user=owner,
+                         lines=[InvoiceLineSpec(books.widget, 1, D("25.00"))],
+                         allow_negative=True)
+    movement = StockMovement.objects.get(item=books.widget)
+    with pytest.raises(ToolError, match=f"^This movement belongs to invoice {inv.number}. Void or edit the invoice instead.$"):
+        preview(owner, "void_stock_movement", {"number": f"SM-{movement.pk}", "reason": "x"})

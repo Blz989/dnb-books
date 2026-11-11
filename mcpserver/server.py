@@ -14,7 +14,8 @@ Records are named by their visible numbers and names: invoice INV-000123, bill B
 Amounts are strings like "125.00". Dates are YYYY-MM-DD.
 Changes are two steps. A create or save tool only returns a preview and a confirmation_id; nothing is saved.
 Show the preview to the person, and call confirm_change with the confirmation_id only after they say yes.
-A preview expires after 15 minutes. Voids, refunds, credit notes, deposits, journal entries, and month close are done in the app."""
+A preview expires after 15 minutes.
+Voids and edits need an admin and the document number typed back in confirm_change. Void a document with its own void tool, never through its journal entry or stock movement. Month close is done in the app."""
 
 
 def build_mcp() -> MCPServer:

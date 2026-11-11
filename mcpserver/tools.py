@@ -18,7 +18,9 @@ class SaleLine(BaseModel):
     quantity: int
     price: str | None = Field(None, description="Unit price like 12.50. Leave out to use the item's sale price.")
     description: str = ""
-    drop_ship_vendor: str = Field("", description="Vendor name when the line ships direct from the vendor.")
+    drop_ship_vendor: str | None = Field(
+        None, description="Vendor name when the line ships direct from the vendor. On an edit, leave it out to keep "
+                          "the existing line's fulfillment and vendor, or give \"\" to make it a stock line.")
 
 
 class PurchaseLine(BaseModel):
@@ -398,7 +400,7 @@ def register(mcp):
     def create_journal_entry(ctx: Context, lines: list[EntryLine], memo: str = "", reference: str = "",
                              date: str = "") -> dict:
         """Preview a manual journal entry. Debits must equal credits. Inventory accounts can't be used (use stock
-        adjustments). Once confirmed it posts at once; fix a mistake by voiding it in the app. Nothing is saved until
+        adjustments). Once confirmed it posts at once; fix a mistake with void_journal_entry. Nothing is saved until
         confirm_change."""
         payload = {"lines": _dump(lines), "memo": memo, "reference": reference, "date": date}
         return run(ctx, "create_journal_entry", write.preview, operation="create_journal_entry", payload=payload)
@@ -420,8 +422,8 @@ def register(mcp):
         ("void_bill", "vendor bill", " (like BILL-00045)"), ("void_vendor_payment", "vendor payment", ""),
         ("void_credit_note", "customer credit note", ""), ("void_vendor_credit", "vendor credit", ""),
         ("void_refund", "customer refund", ""), ("void_deposit", "bank deposit", ""),
-        ("void_transfer", "bank transfer (like TR-12)", ""), ("void_journal_entry", "journal entry (like JE-000456)", ""),
-        ("void_stock_movement", "stock movement (SM- id from list_stock_movements)", ""),
+        ("void_transfer", "bank transfer (like TR-12)", ""), ("void_journal_entry", "manual journal entry (like JE-000456; an entry that belongs to a document is voided with that document)", ""),
+        ("void_stock_movement", "stock adjustment or opening movement (SM- id from list_stock_movements; a movement that belongs to a document is voided or edited with that document)", ""),
     ):
         _register_void(_tool, _label, _example)
 
@@ -429,8 +431,9 @@ def register(mcp):
     def edit_invoice(ctx: Context, number: str, lines: list[SaleLine], date: str = "", terms: str = "",
                      ship_to: str | None = None, notes: str | None = None, reason: str = "") -> dict:
         """Preview editing an invoice. Admin only. lines replace all current lines (a line with the same SKU keeps
-        its link to the sales order and its old price unless you give one). The old posting is voided and a new one
-        posted. Shows before and after. Nothing changes until confirm_change with confirm_document set to the number."""
+        its link to the sales order, its old price, and its drop-ship vendor unless you give one; drop_ship_vendor ""
+        makes it a stock line). The old posting is voided and a new one posted.
+        Shows before and after. Nothing changes until confirm_change with confirm_document set to the number."""
         payload = {"number": number, "lines": _dump(lines), "date": date, "terms": terms, "ship_to": ship_to,
                    "notes": notes, "reason": reason}
         return run(ctx, "edit_invoice", write.preview, operation="edit_invoice", payload=payload)
@@ -450,8 +453,9 @@ def register(mcp):
     @mcp.tool(annotations=PREVIEW)
     def edit_sales_order(ctx: Context, number: str, lines: list[SaleLine], date: str = "", ship_to: str | None = None,
                          notes: str | None = None) -> dict:
-        """Preview editing a sales order. Admin only. lines replace all current lines; lines already invoiced can't
-        be removed. Nothing changes until confirm_change with confirm_document set to the number."""
+        """Preview editing a sales order. Admin only. lines replace all current lines (a line with the same SKU
+        keeps its price and drop-ship vendor unless you give one; drop_ship_vendor "" makes it a stock line); lines
+        already invoiced can't be removed. Nothing changes until confirm_change with confirm_document set to the number."""
         payload = {"number": number, "lines": _dump(lines), "date": date, "ship_to": ship_to, "notes": notes}
         return run(ctx, "edit_sales_order", write.preview, operation="edit_sales_order", payload=payload)
 

@@ -79,7 +79,7 @@ def void_deposit(deposit: Deposit, *, user, reason: str, date: date_type | None 
         if when < current.date:
             raise DepositError(f"The void date can't be before {current.number}'s date.")
         assert_open(when)
-        void_entry(current.journal_entry, user=user, reason=reason, date=when)
+        void_entry(current.journal_entry, user=user, reason=reason, date=when, from_document=True)
         # The payments keep pointing at the void deposit and show as undeposited again.
         current.status = DocStatus.VOID
         current.voided_on = when

@@ -244,6 +244,22 @@ def _saved_summary(obj, form, created: bool, skip=("tax_id",)) -> dict:
             "record": shown}
 
 
+BOOLEAN_FIELDS = ("is_active", "is_1099")
+_YES, _NO = {"true", "yes", "y", "1", "on"}, {"false", "no", "n", "0", "off", ""}
+
+
+def _truth(key: str, value) -> bool:
+    """Claude may send a flag as a boolean, a number, or text like "no"; Django's own form reading treats most text as on."""
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in _YES:
+            return True
+        if text in _NO:
+            return False
+        raise Refused(f"{key} must be true or false.")
+    return bool(value)
+
+
 def _apply_fields(data: dict, fields: dict, accounts=(), allowed=()) -> dict:
     for key, value in (fields or {}).items():
         if key not in allowed:
@@ -257,6 +273,8 @@ def _apply_fields(data: dict, fields: dict, accounts=(), allowed=()) -> dict:
             value = cat.pk
         if key == "terms" and value:
             value = lookup.choice(str(value), Terms, "terms")
+        if key in BOOLEAN_FIELDS:
+            value = _truth(key, value)
         data[key] = "" if value is None else value
     return data
 
@@ -311,8 +329,8 @@ def _item(user, p, flags):
     if not form.is_valid():
         raise _form_errors(form)
     obj = form.save()
-    if existing and "is_active" in data and obj.is_active != bool(data["is_active"]):
-        obj.is_active = bool(data["is_active"])
+    if existing and "is_active" in form.cleaned_data and obj.is_active != form.cleaned_data["is_active"]:
+        obj.is_active = form.cleaned_data["is_active"]
         obj.save()
     advance_past(obj.sku)
     return obj.sku, _saved_summary(obj, form, existing is None)

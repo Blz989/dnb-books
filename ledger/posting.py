@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from core.roles import require_admin
 
-from .locks import lock_message, run_void_hooks
+from .locks import document_lock_message, lock_message, run_void_hooks
 from .errors import (
     EntryStateError, InactiveAccountError, InvalidLineError, UnbalancedEntryError,
 )
@@ -143,11 +143,13 @@ def post_draft(entry: JournalEntry, user) -> JournalEntry:
 
 def void_entry(
     entry: JournalEntry, *, user, reason: str, date: date_type | None = None, allow_items_source: bool = False,
-    system: bool = False,
+    system: bool = False, from_document: bool = False,
 ) -> JournalEntry:
     """Void by posting a reversing entry; the original stays on record as VOID.
 
     system=True is for services that void on a user's behalf (editing an invoice). No view passes it.
+    from_document=True is for the document's own void or edit service. An entry that belongs to a document is
+    refused without it, so a document can't be left open while its entry is void. No view or tool passes it.
     """
     if not system:
         require_admin(user)
@@ -157,6 +159,10 @@ def void_entry(
         locked = lock_message(current)
         if locked:
             raise EntryStateError(locked)
+        if not from_document:
+            owned = document_lock_message(current)
+            if owned:
+                raise EntryStateError(owned)
         if current.status != EntryStatus.POSTED:
             raise EntryStateError("Only posted entries can be voided.")
         if not reason:

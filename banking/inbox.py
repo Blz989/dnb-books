@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Q, Sum
 
 from contacts.models import Customer, Vendor
+from ledger.errors import PostingError
 from ledger.models import Account, JournalEntry, JournalLine
 from ledger.posting import LineSpec, post_entry
 from purchasing.models import VendorPayment, VendorPaymentMethod
@@ -295,8 +296,8 @@ def bulk_confirm(txns: Sequence[BankTransaction], *, user) -> int:
             continue
         try:
             confirm(txn, candidate, user=user)
-        except InboxError:
-            continue  # taken by an earlier row in this batch
+        except (InboxError, PostingError):
+            continue  # taken by an earlier row, or refused by the ledger (closed month, inactive account)
         done += 1
     return done
 

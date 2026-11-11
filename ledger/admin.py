@@ -10,6 +10,7 @@ from core.roles import is_admin
 
 from .errors import PeriodCloseBlockedError, PostingError
 from .forms import CloseAnywayForm, JournalLineForm, ReopenForm, VoidForm
+from .locks import document_lock_message
 from .models import Account, AccountingPeriod, EntryStatus, JournalEntry, JournalLine
 from .periods import close_period, close_problems, reopen_period
 from .posting import post_draft, void_entry
@@ -127,7 +128,8 @@ class JournalEntryAdmin(admin.ModelAdmin):
     def change_view(self, request, object_id, form_url="", extra_context=None):
         extra = dict(extra_context or {})
         obj = self.get_object(request, unquote(object_id))
-        extra["show_void"] = bool(obj and obj.status == EntryStatus.POSTED and is_admin(request.user))
+        extra["show_void"] = bool(
+            obj and obj.status == EntryStatus.POSTED and is_admin(request.user) and not document_lock_message(obj))
         return super().change_view(request, object_id, form_url, extra)
 
     def get_urls(self):

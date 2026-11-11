@@ -152,7 +152,7 @@ def void_vendor_credit(
         when = void_date(current, date, list(current.applications.all()))
         for line in current.lines.select_related("stock_movement"):
             if line.stock_movement_id:
-                void_movement(line.stock_movement, user=user, reason=reason, date=when, system=True,
+                void_movement(line.stock_movement, user=user, reason=reason, date=when, system=True, from_document=True,
                               allow_negative=allow_negative)
         finish_void(current, user=user, reason=reason, when=when)
     credit.refresh_from_db()
