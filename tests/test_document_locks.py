@@ -318,3 +318,60 @@ def test_void_handling_run_still_works_through_the_bill_service(billed, admin_us
     void_run(billed, user=admin_user, reason="Wrong rate")
     billed.bill.refresh_from_db()
     assert billed.bill.status == DocStatus.VOID
+
+
+# ---- Task 2: close check ----
+
+def sales_document_check():
+    from sales.checks import document_check
+
+    return document_check()
+
+
+def purchasing_document_check():
+    from purchasing.checks import document_check
+
+    return document_check()
+
+
+def test_close_check_clean_data_reports_nothing(bolt, stock_bill, customer, admin_user):
+    create_invoice(customer=customer, date=d(10, 5), user=admin_user, lines=[InvoiceLineSpec(bolt, 4, D("2.00"))])
+    assert sales_document_check() == []
+    assert purchasing_document_check() == []
+
+
+def test_close_check_reports_open_invoice_with_voided_entry(bolt, customer, admin_user):
+    invoice = create_invoice(customer=customer, date=d(10, 5), user=admin_user,
+                             lines=[InvoiceLineSpec(bolt, 4, D("2.00"))])
+    void_entry(invoice.journal_entry, user=admin_user, reason="Test setup", system=True, from_document=True)
+    assert sales_document_check() == [f"{invoice.number} is open but its journal entry was voided. Ask for a repair."]
+
+
+def test_close_check_ignores_void_invoices(bolt, customer, admin_user):
+    invoice = create_invoice(customer=customer, date=d(10, 5), user=admin_user,
+                             lines=[InvoiceLineSpec(bolt, 4, D("2.00"))])
+    void_invoice(invoice, user=admin_user, reason="Wrong customer")
+    assert sales_document_check() == []
+
+
+def test_close_check_reports_open_bill_with_voided_movement(stock_bill, admin_user):
+    movement = StockMovement.objects.get(source_type="purchasing.bill")
+    void_movement(movement, user=admin_user, reason="Test setup", system=True, from_document=True, allow_negative=True)
+    assert purchasing_document_check() == [
+        f"{stock_bill.number} is open but its journal entry was voided. Ask for a repair."]
+
+
+def test_close_check_reports_open_bill_with_voided_entry(stock_bill, admin_user):
+    void_entry(stock_bill.journal_entry, user=admin_user, reason="Test setup", system=True, from_document=True)
+    assert purchasing_document_check() == [
+        f"{stock_bill.number} is open but its journal entry was voided. Ask for a repair."]
+
+
+def test_close_check_is_part_of_month_close(bolt, customer, admin_user):
+    from ledger.periods import close_problems
+
+    invoice = create_invoice(customer=customer, date=d(10, 5), user=admin_user,
+                             lines=[InvoiceLineSpec(bolt, 4, D("2.00"))])
+    void_entry(invoice.journal_entry, user=admin_user, reason="Test setup", system=True, from_document=True)
+    problems = close_problems(2026, 10)
+    assert any(f"{invoice.number} is open but its journal entry was voided." in p for p in problems)

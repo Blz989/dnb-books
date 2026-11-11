@@ -80,9 +80,9 @@ Files: `sales/checks.py`, `purchasing/checks.py`, `tests/test_document_locks.py`
 
 A safety net for data that got into the bad state before Task 1 (for example in a dry run), reported at month close and in the Claude `close_checklist`.
 
-- [ ] Tests first: an open invoice whose journal entry is VOID produces `INV-000123 is open but its journal entry was voided. Ask for a repair.`; an open bill whose stock movement is voided produces the same line with the bill number; clean data produces nothing.
-- [ ] Add the check to the existing close checks for sales and purchasing (open documents only, one query per document type).
-- [ ] Commit: `Close check: documents whose entry or movement was voided`.
+- [x] Tests first: an open invoice whose journal entry is VOID produces `INV-000123 is open but its journal entry was voided. Ask for a repair.`; an open bill whose stock movement is voided produces the same line with the bill number; clean data produces nothing.
+- [x] Add the check to the existing close checks for sales and purchasing (open documents only, one query per document type).
+- [x] Commit: `Close check: documents whose entry or movement was voided`.
 
 No repair command is included. If the check ever reports a line, stop and ask; the repair depends on the case.
 
