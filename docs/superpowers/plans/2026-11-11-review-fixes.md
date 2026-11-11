@@ -142,8 +142,8 @@ Files: `banking/importers.py`, `banking/forms.py`, the import mapping template, 
 
 ### Task 8: Wrap up
 
-- [ ] `README.md`: status line, the backup section from Task 6, and one line under "Use DNB Books from Claude" on voiding documents.
-- [ ] Final `uv run pytest -q`; paste the output in the PR.
+- [x] `README.md`: status line, the backup section from Task 6, and one line under "Use DNB Books from Claude" on voiding documents.
+- [x] Final `uv run pytest -q`; paste the output in the PR.
 - [ ] Open a PR into `main` titled `Review fixes: document locks, inbox errors, Claude item saves, admin, backups`, with each task's status, deviations, screenshots sent, and the owner's manual check from Task 6.
 
 ## Order and size
