@@ -2,7 +2,7 @@
 
 Source: the code review of 2026-11-11 (five bugs and four smaller items). No separate spec; the design decisions are in "Decisions for the owner" below and need a yes before Task 1 starts. Executed inline, task by task, test first.
 
-Status: draft, waiting for the owner's approval.
+Status: approved 2026-11-11 and built (PR 48). Card CSV signs in Task 7 is waiting for the owner.
 
 ## What is being fixed
 
@@ -144,7 +144,7 @@ Files: `banking/importers.py`, `banking/forms.py`, the import mapping template, 
 
 - [x] `README.md`: status line, the backup section from Task 6, and one line under "Use DNB Books from Claude" on voiding documents.
 - [x] Final `uv run pytest -q`; paste the output in the PR.
-- [ ] Open a PR into `main` titled `Review fixes: document locks, inbox errors, Claude item saves, admin, backups`, with each task's status, deviations, screenshots sent, and the owner's manual check from Task 6.
+- [x] Open a PR into `main` titled `Review fixes: document locks, inbox errors, Claude item saves, admin, backups`, with each task's status, deviations, screenshots sent, and the owner's manual check from Task 6.
 
 ## Order and size
 
