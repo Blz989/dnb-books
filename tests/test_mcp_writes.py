@@ -9,7 +9,8 @@ from banking.models import AccountKind, BankAccount, Transfer
 from ledger.models import Account, AccountSubtype, AccountType, JournalEntry
 from ledger.periods import close_period
 from mcpserver import write
-from mcpserver.runtime import run
+from mcpserver.runtime import Refused, run
+from contacts.models import Vendor
 from purchasing.models import VendorCredit
 from purchasing.posting.bills import BillExpenseSpec, create_bill
 from sales.models import CreditNote, Deposit, Payment, Refund, SalesOrder
@@ -249,3 +250,57 @@ def test_drop_ship_po_vendor_text_can_be_mapped_and_repeat_is_refused(books, own
     with pytest.raises(ToolError, match="Give at least one sales order number."):
         run(ctx_for(owner), "create_drop_ship_pos", write.preview, operation="create_drop_ship_pos",
             payload={"sales_orders": []})
+
+
+# ---- save_item on items with stock history, and is_active as text ----
+
+def _opening(item, owner):
+    from items.models import MovementKind
+    from items.stock import StockLine, record_movements
+
+    record_movements(kind=MovementKind.OPENING, date=DAY, user=owner,
+                     lines=[StockLine(item, 10, unit_cost=D("2.00"))])
+
+
+def test_save_item_price_change_works_with_stock_history(books, owner):
+    from items.models import Item
+
+    _opening(books.widget, owner)
+    go(owner, "save_item", {"sku": "WID-1", "fields": {"sale_price": "9.99"}})
+    assert Item.objects.get(sku="WID-1").sale_price == D("9.99")
+
+
+def test_save_item_still_refuses_a_new_inventory_account_with_stock_history(books, owner, db):
+    from tests.conftest import _account
+
+    _opening(books.widget, owner)
+    _account("1310", "Other Inventory", AccountType.ASSET, AccountSubtype.INVENTORY)
+    with pytest.raises(Refused, match="The inventory account can.t change after an item has stock history."):
+        write.preview(owner, "save_item", {"sku": "WID-1", "fields": {"inventory_account": "1310"}})
+
+
+@pytest.mark.parametrize("value", [False, "false", "False", "no", "0", 0])
+def test_save_item_is_active_false_in_any_form_deactivates(books, owner, value):
+    from items.models import Item
+
+    p = write.preview(owner, "save_item", {"sku": "WID-1", "fields": {"is_active": value}})
+    assert p["preview"]["record"]["is_active"] == "False"
+    write.confirm(owner, p["confirmation_id"])
+    assert Item.objects.get(sku="WID-1").is_active is False
+
+
+@pytest.mark.parametrize("value", [True, "true", "yes", 1])
+def test_save_item_is_active_true_reactivates(books, owner, value):
+    from items.models import Item
+
+    Item.objects.filter(sku="WID-1").update(is_active=False)
+    p = write.preview(owner, "save_item", {"sku": "WID-1", "fields": {"is_active": value}})
+    write.confirm(owner, p["confirmation_id"])
+    assert Item.objects.get(sku="WID-1").is_active is True
+
+
+@pytest.mark.parametrize("value", ["false", "no", "0", False])
+def test_save_vendor_is_active_as_text(books, owner, value):
+    p = write.preview(owner, "save_vendor", {"name": "Acme Supply", "fields": {"is_active": value}})
+    write.confirm(owner, p["confirmation_id"])
+    assert Vendor.objects.get(name="Acme Supply").is_active is False

@@ -278,3 +278,21 @@ def test_packaging_is_on_the_item_form_and_detail(adm, make_item):
     item.packaging = "25X16OZ"
     item.save()
     assert "25X16OZ" in adm.get(reverse("items:detail", args=[item.sku])).content.decode()
+
+
+def test_locked_item_form_accepts_the_same_account_as_text_or_number_and_refuses_another(stocked):
+    from items.forms import ItemForm
+    from items.models import Item
+    from tests.conftest import _account
+    from ledger.models import AccountSubtype, AccountType
+    from django.forms.models import model_to_dict
+
+    item = Item.objects.get(sku="BOLT-14")
+    other = _account("1399", "Other Inventory", AccountType.ASSET, AccountSubtype.INVENTORY)
+    base = {k: v for k, v in model_to_dict(item, fields=list(ItemForm._meta.fields)).items() if v is not None}
+    base["is_active"] = True
+    for same in (item.inventory_account_id, str(item.inventory_account_id)):
+        assert ItemForm({**base, "inventory_account": same}, instance=item).is_valid()
+    form = ItemForm({**base, "inventory_account": str(other.pk)}, instance=item)
+    assert not form.is_valid()
+    assert "The inventory account can't change after an item has stock history." in form.non_field_errors()
