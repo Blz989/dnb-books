@@ -8,7 +8,7 @@ import hashlib
 import io
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date as date_type, datetime
+from datetime import date as date_type, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
@@ -183,6 +183,32 @@ def _long_date(day: date_type) -> str:
     return f"{day:%b} {day.day}, {day.year}"
 
 
+def _unclaimed_other_row(bank_account: BankAccount, t: ParsedTxn, source, other):
+    """The other source's row this incoming row duplicates: same amount, within a day, not already taken.
+
+    Plaid and bank files often differ by a day, so the date can be off by one. Each row of the other source can be
+    matched by only one row of this source, so two real same-amount charges are not both set aside. Rows already
+    saved from this source claim their closest free match first, in date order, then the incoming row takes the
+    closest one left."""
+    rows = BankTransaction.objects.filter(bank_account=bank_account, amount=t.amount)
+    mine = list(rows.filter(source=source, date__range=(t.date - timedelta(days=2), t.date + timedelta(days=2)))
+                .order_by("date", "id"))
+    free = list(rows.filter(source=other, date__range=(t.date - timedelta(days=3), t.date + timedelta(days=3)))
+                .order_by("date", "id"))
+
+    def take(day):
+        near = [r for r in free if abs((r.date - day).days) <= 1]
+        if not near:
+            return None
+        found = min(near, key=lambda r: abs((r.date - day).days))  # ties go to the earlier row
+        free.remove(found)
+        return found
+
+    for row in mine:
+        take(row.date)
+    return take(t.date)
+
+
 def import_transactions(
     bank_account: BankAccount, txns: Sequence[ParsedTxn], *, source: TxnSource, user,
 ) -> ImportResult:
@@ -206,13 +232,11 @@ def import_transactions(
                 )
                 before_feed += 1
                 continue
-            rows = BankTransaction.objects.filter(bank_account=bank_account, date=t.date, amount=t.amount)
-            other_rows = list(rows.filter(source=other).order_by("date", "id")[:1])
-            # Pair one-to-one: a second identical charge only counts as a duplicate if the other source has a second.
-            is_duplicate = bool(other_rows) and rows.filter(source=source).count() < rows.filter(source=other).count()
+            match = _unclaimed_other_row(bank_account, t, source, other)
+            is_duplicate = match is not None
             if is_duplicate:
                 status = TxnStatus.EXCLUDED
-                reason = f"Possible duplicate of a {other.label} transaction on {_long_date(other_rows[0].date)}."
+                reason = f"Possible duplicate of a {other.label} transaction on {_long_date(match.date)}."
                 duplicates += 1
             else:
                 status, reason = TxnStatus.NEW, ""

@@ -100,14 +100,14 @@ Files: `banking/views/inbox.py`, `banking/inbox.py`, `tests/test_inbox_views.py`
 
 Files: `items/forms.py`, `mcpserver/write.py`, `mcpserver/write_void.py`, `mcpserver/server.py`, `tests/test_mcp_writes.py`, `tests/test_mcp_voids.py`.
 
-- [ ] Tests first: `save_item` changing the sale price of an item with stock history previews and saves; changing its inventory account is still refused with `The inventory account can't change after an item has stock history.`; `is_active` given as `false`, `"false"`, `"no"`, or `0` deactivates an item with nothing on hand, and the preview and the saved record agree.
-- [ ] `ItemForm.clean` compares the posted inventory account as text on both sides. `_item` reads `is_active` from `form.cleaned_data`, as `_customer` does.
-- [ ] Tests first: `edit_invoice` on an invoice with a drop-ship line, with no `drop_ship_vendor` given for that line, keeps the line drop-ship with its vendor; giving a vendor changes it; giving `drop_ship_vendor: ""` on a new line makes a stock line. Same for `edit_sales_order`.
-- [ ] A line matched to an existing line by SKU keeps that line's fulfillment and vendor unless the call sets them.
-- [ ] `edit_invoice` and `edit_bill` on a document with no journal entry (a zero total) return a preview instead of the generic error.
-- [ ] After Task 1, `void_journal_entry` and `void_stock_movement` on a document's entry or movement return the Task 1 messages. Add one test each.
-- [ ] Replace the last line of `INSTRUCTIONS` in `mcpserver/server.py` with: `Voids and edits need an admin and the document number typed back in confirm_change. Void a document with its own void tool, never through its journal entry or stock movement. Month close is done in the app.`
-- [ ] Commit per group: `MCP: save_item works on items with stock history`, `MCP: edits keep drop-ship lines`, `MCP: instructions match the tools`.
+- [x] Tests first: `save_item` changing the sale price of an item with stock history previews and saves; changing its inventory account is still refused with `The inventory account can't change after an item has stock history.`; `is_active` given as `false`, `"false"`, `"no"`, or `0` deactivates an item with nothing on hand, and the preview and the saved record agree.
+- [x] `ItemForm.clean` compares the posted inventory account as text on both sides. `_item` reads `is_active` from `form.cleaned_data`, as `_customer` does.
+- [x] Tests first: `edit_invoice` on an invoice with a drop-ship line, with no `drop_ship_vendor` given for that line, keeps the line drop-ship with its vendor; giving a vendor changes it; giving `drop_ship_vendor: ""` on a new line makes a stock line. Same for `edit_sales_order`.
+- [x] A line matched to an existing line by SKU keeps that line's fulfillment and vendor unless the call sets them.
+- [x] `edit_invoice` and `edit_bill` on a document with no journal entry (a zero total) return a preview instead of the generic error.
+- [x] After Task 1, `void_journal_entry` and `void_stock_movement` on a document's entry or movement return the Task 1 messages. Add one test each.
+- [x] Replace the last line of `INSTRUCTIONS` in `mcpserver/server.py` with: `Voids and edits need an admin and the document number typed back in confirm_change. Void a document with its own void tool, never through its journal entry or stock movement. Month close is done in the app.`
+- [x] Commit per group: `MCP: save_item works on items with stock history`, `MCP: edits keep drop-ship lines`, `MCP: instructions match the tools`.
 
 ### Task 5: Read-only documents in the admin
 
@@ -136,7 +136,7 @@ Interfaces: a backup is `dnb-YYYYMMDD-HHMMSS.tar.enc`, a Fernet-encrypted tar wi
 Files: `banking/importers.py`, `banking/forms.py`, the import mapping template, `tests/test_importers.py`.
 
 - [ ] Card CSV signs (decision 4): add `flip_sign` to the saved CSV mapping, a tick box labeled `Purchases show as positive numbers in this file` on the mapping screen, off by default. Tests: a card file with positive purchases imports them as money out when ticked; existing mappings are unchanged.
-- [ ] Duplicate pairing: a row from the other source with the same amount within one day either side counts as a possible duplicate, still paired one to one. Tests: Plaid on the 10th and a file row on the 11th pair up; two real charges of the same amount on the same day from one source do not.
+- [x] Duplicate pairing: a row from the other source with the same amount within one day either side counts as a possible duplicate, still paired one to one. Tests: Plaid on the 10th and a file row on the 11th pair up; two real charges of the same amount on the same day from one source do not.
 - [ ] Screenshot: the mapping screen with the tick box.
 - [ ] Commit: `Bank imports: sign option for card files, duplicates within a day`.
 

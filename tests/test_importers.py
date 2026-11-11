@@ -162,3 +162,73 @@ def test_card_file_is_read_as_exported(card_account, admin_user):
                         user=admin_user)
     assert BankTransaction.objects.get(external_id="F001").amount == D("-86.40")
     assert BankTransaction.objects.get(external_id="F003").amount == D("500.00")
+
+
+# ---- duplicates within a day ----
+
+def _row(account, ext, day, source, amount="-15.00", description="Service fee"):
+    return BankTransaction.objects.create(
+        bank_account=account, external_id=ext, date=day, description=description, amount=D(amount), source=source)
+
+
+def _import(account, user, ext, day, source, amount="-15.00"):
+    return import_transactions(account, [ParsedTxn(ext, day, "Service fee", D(amount))], source=source, user=user)
+
+
+def test_file_row_one_day_after_plaid_is_a_possible_duplicate(checking, admin_user):
+    _row(checking, "plaid-1", date(2026, 1, 10), TxnSource.PLAID)
+    result = _import(checking, admin_user, "f-1", date(2026, 1, 11), TxnSource.FILE)
+    assert (result.added, result.possible_duplicates) == (0, 1)
+    dup = BankTransaction.objects.get(external_id="f-1")
+    assert dup.status == TxnStatus.EXCLUDED
+    assert dup.exclude_reason == "Possible duplicate of a Plaid transaction on Jan 10, 2026."
+
+
+def test_plaid_row_one_day_before_file_is_a_possible_duplicate_and_names_the_file_date(checking, admin_user):
+    _row(checking, "f-1", date(2026, 1, 11), TxnSource.FILE)
+    result = _import(checking, admin_user, "plaid-1", date(2026, 1, 10), TxnSource.PLAID)
+    assert result.possible_duplicates == 1
+    assert BankTransaction.objects.get(external_id="plaid-1").exclude_reason == \
+        "Possible duplicate of a file transaction on Jan 11, 2026."
+
+
+def test_two_days_apart_is_not_a_duplicate(checking, admin_user):
+    _row(checking, "plaid-1", date(2026, 1, 10), TxnSource.PLAID)
+    result = _import(checking, admin_user, "f-1", date(2026, 1, 12), TxnSource.FILE)
+    assert (result.added, result.possible_duplicates) == (1, 0)
+
+
+def test_other_amount_one_day_apart_is_not_a_duplicate(checking, admin_user):
+    _row(checking, "plaid-1", date(2026, 1, 10), TxnSource.PLAID)
+    result = _import(checking, admin_user, "f-1", date(2026, 1, 11), TxnSource.FILE, amount="-15.01")
+    assert (result.added, result.possible_duplicates) == (1, 0)
+
+
+def test_two_same_amount_file_rows_beside_one_plaid_row_swallow_only_one(checking, admin_user):
+    _row(checking, "plaid-1", date(2026, 1, 10), TxnSource.PLAID)
+    first = _import(checking, admin_user, "f-1", date(2026, 1, 11), TxnSource.FILE)
+    second = _import(checking, admin_user, "f-2", date(2026, 1, 11), TxnSource.FILE)
+    assert (first.possible_duplicates, second.possible_duplicates, second.added) == (1, 0, 1)
+    assert BankTransaction.objects.get(external_id="f-2").status == TxnStatus.NEW
+
+
+def test_one_plaid_row_cannot_absorb_file_rows_on_both_neighboring_days(checking, admin_user):
+    _row(checking, "plaid-1", date(2026, 1, 11), TxnSource.PLAID)
+    a = _import(checking, admin_user, "f-1", date(2026, 1, 10), TxnSource.FILE)
+    b = _import(checking, admin_user, "f-2", date(2026, 1, 12), TxnSource.FILE)
+    assert (a.possible_duplicates, b.possible_duplicates, b.added) == (1, 0, 1)
+
+
+def test_a_plaid_row_already_matched_one_day_away_is_not_matched_again(checking, admin_user):
+    _row(checking, "plaid-1", date(2026, 1, 11), TxnSource.PLAID)
+    _row(checking, "f-1", date(2026, 1, 12), TxnSource.FILE)  # takes plaid-1
+    result = _import(checking, admin_user, "f-2", date(2026, 1, 10), TxnSource.FILE)
+    assert (result.added, result.possible_duplicates) == (1, 0)
+
+
+def test_the_closest_plaid_row_is_the_one_named(checking, admin_user):
+    _row(checking, "plaid-1", date(2026, 1, 9), TxnSource.PLAID)
+    _row(checking, "plaid-2", date(2026, 1, 11), TxnSource.PLAID)
+    _import(checking, admin_user, "f-1", date(2026, 1, 11), TxnSource.FILE)
+    assert BankTransaction.objects.get(external_id="f-1").exclude_reason == \
+        "Possible duplicate of a Plaid transaction on Jan 11, 2026."
