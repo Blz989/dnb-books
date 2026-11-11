@@ -354,3 +354,135 @@ def test_transfer_list_and_admin_only_void(adm, std, setup, checking, savings, a
     r = adm.post(f"/banking/transfers/{t.pk}/void/", {"reason": "Wrong account"}, follow=True)
     t.refresh_from_db()
     assert t.status == TransferStatus.VOID and "Void" in text(r)
+
+
+# ---- posting errors show on the page instead of a server error ----
+
+CLOSED = "January 2026 is closed. Choose a date in an open month or ask an admin to reopen it."
+
+
+@pytest.fixture
+def jan_closed(admin_user):
+    from ledger.periods import close_period
+
+    def close():
+        close_period(2026, 1, admin_user, override_reason="x")
+
+    return close
+
+
+@pytest.fixture
+def safe(admin_user):
+    c = Client(raise_request_exception=False)
+    c.force_login(admin_user)
+    return c
+
+
+def test_change_to_an_account_in_a_closed_month_shows_the_message(safe, setup, make_txn, fees, jan_closed):
+    txn = make_txn("-22.50", description="WIRE FEE")
+    page = text(safe.get(f"/banking/inbox/{txn.pk}/change/"))
+    jan_closed()
+    r = safe.post(f"/banking/inbox/{txn.pk}/change/", {"token": token(page), "action": "new", "account": fees.pk})
+    assert r.status_code == 200 and CLOSED in text(r)
+    txn.refresh_from_db()
+    assert txn.status == TxnStatus.NEW and Match.objects.count() == 0
+
+
+def test_change_to_a_candidate_in_a_closed_month_shows_the_message(safe, setup, make_txn, fees, jan_closed):
+    rule = Rule.objects.create(pattern="fee", account=fees)
+    txn = make_txn("-15.00", description="service fee")
+    page = text(safe.get(f"/banking/inbox/{txn.pk}/change/"))
+    jan_closed()
+    from banking.inbox import candidate_key, candidates
+    key = candidate_key(next(c for c in candidates(txn) if c.kind == "rule"))
+    r = safe.post(f"/banking/inbox/{txn.pk}/change/", {"token": token(page), "action": "candidate", "candidate": key})
+    assert r.status_code == 200 and CLOSED in text(r)
+    assert rule.pk
+
+
+def test_confirm_a_rule_suggestion_in_a_closed_month_shows_a_message(safe, setup, make_txn, fees, jan_closed):
+    Rule.objects.create(pattern="fee", account=fees)
+    txn = make_txn("-15.00", description="service fee")
+    page = text(safe.get("/banking/inbox/"))
+    jan_closed()
+    r = safe.post(f"/banking/inbox/{txn.pk}/confirm/", {"token": token(page)}, follow=True)
+    assert r.status_code == 200 and CLOSED in text(r)
+    txn.refresh_from_db()
+    assert txn.status == TxnStatus.NEW
+
+
+def test_rule_to_an_inactive_account_shows_the_ledger_message(safe, setup, make_txn, fees):
+    Rule.objects.create(pattern="fee", account=fees)
+    txn = make_txn("-15.00", description="service fee")
+    page = text(safe.get("/banking/inbox/"))
+    Account.objects.filter(pk=fees.pk).update(is_active=False)
+    r = safe.post(f"/banking/inbox/{txn.pk}/confirm/", {"token": token(page)}, follow=True)
+    assert r.status_code == 200 and "inactive" in text(r).lower()
+    txn.refresh_from_db()
+    assert txn.status == TxnStatus.NEW
+
+
+def test_pay_bills_in_a_closed_month_shows_the_message(safe, setup, make_txn, vendor, expense, admin_user, jan_closed):
+    from purchasing.posting.bills import BillExpenseSpec, create_bill
+
+    bill = create_bill(vendor=vendor, date=d(1, 2), vendor_invoice_number="V-1", user=admin_user,
+                       expense_lines=[BillExpenseSpec(expense, D("12.00"))])
+    txn = make_txn("-12.00")
+    url = f"/banking/inbox/{txn.pk}/pay-bills/"
+    page = text(safe.get(url, {"vendor": vendor.pk}))
+    jan_closed()
+    r = safe.post(url, {"token": token(page), "vendor": vendor.pk, f"amt-{bill.pk}": "12.00"})
+    assert r.status_code == 200 and CLOSED in text(r)
+    txn.refresh_from_db()
+    assert txn.status == TxnStatus.NEW
+
+
+def test_receive_payment_in_a_closed_month_shows_the_message(
+        safe, setup, make_txn, customer, admin_user, jan_closed, make_item):
+    from items.models import ItemType
+    from sales.posting.invoices import InvoiceLineSpec, create_invoice
+
+    service = make_item("SVC", item_type=ItemType.NON_STOCK, costing_method="", cogs_account=None,
+                        inventory_account=None)
+    invoice = create_invoice(customer=customer, date=d(1, 2), user=admin_user,
+                             lines=[InvoiceLineSpec(service, 1, D("40.00"))])
+    txn = make_txn("40.00")
+    url = f"/banking/inbox/{txn.pk}/receive/"
+    page = text(safe.get(url, {"customer": customer.pk}))
+    jan_closed()
+    r = safe.post(url, {"token": token(page), "customer": customer.pk, "method": "ACH",
+                        f"amt-{invoice.pk}": "40.00"})
+    assert r.status_code == 200 and CLOSED in text(r)
+    txn.refresh_from_db()
+    assert txn.status == TxnStatus.NEW
+
+
+def test_bulk_confirm_skips_a_row_in_a_closed_month(safe, ach, make_txn, fees, admin_user):
+    from ledger.periods import close_period
+
+    Rule.objects.create(pattern="fee", account=fees)
+    a = make_txn("75.00", on=d(1, 9))
+    b = make_txn("-15.00", on=d(2, 10), description="fee")
+    c = make_txn("-16.00", on=d(1, 11), description="fee")
+    page = text(safe.get("/banking/inbox/"))
+    close_period(2026, 1, admin_user, override_reason="x")
+    r = safe.post("/banking/inbox/bulk/", {"token": token(page), "rows": [a.pk, b.pk, c.pk]}, follow=True)
+    assert r.status_code == 200
+    assert "Confirmed 2 of 3 selected." in text(r)
+    statuses = {t.pk: t.status for t in BankTransaction.objects.filter(pk__in=[a.pk, b.pk, c.pk])}
+    assert statuses[c.pk] == TxnStatus.NEW and statuses[b.pk] == TxnStatus.BOOKED
+
+
+def test_change_screen_leaves_out_inventory_accounts(adm, setup, make_txn, fees, inventory_account):
+    txn = make_txn("-5.00")
+    page = text(adm.get(f"/banking/inbox/{txn.pk}/change/"))
+    assert fees.name in page and inventory_account.name not in page
+
+
+def test_booking_to_an_inventory_account_shows_the_ledger_message(safe, setup, make_txn, inventory_account):
+    txn = make_txn("5.00")
+    page = text(safe.get(f"/banking/inbox/{txn.pk}/change/"))
+    r = safe.post(f"/banking/inbox/{txn.pk}/change/", {
+        "token": token(page), "action": "new", "account": inventory_account.pk})
+    assert r.status_code == 200
+    assert "Line 2: inventory accounts can only change through stock movements." in text(r)

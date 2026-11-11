@@ -10,7 +10,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from contacts.models import Customer, Vendor
-from ledger.models import Account
+from ledger.errors import PostingError
+from ledger.models import Account, AccountSubtype
 from sales.models import DocStatus, PaymentMethod
 
 from .. import inbox
@@ -89,7 +90,7 @@ def _run(request, txn, action, error_context=None):
                 messages.info(request, common.ALREADY_DONE)
                 return redirect(_inbox_url(request))
             match = action()
-    except InboxError as exc:
+    except (InboxError, PostingError) as exc:
         if error_context is not None:
             return render(request, "banking/inbox_change.html", {**error_context, "errors": [str(exc)]})
         messages.error(request, str(exc))
@@ -119,7 +120,8 @@ def change_row(request, pk):
     found = candidates(txn)
     context = {
         "txn": txn, "candidates": [{"c": c, "key": candidate_key(c)} for c in found], "token": common.new_token(),
-        "accounts": Account.objects.filter(is_active=True).exclude(pk=txn.bank_account.ledger_account_id).order_by("number"),
+        "accounts": Account.objects.filter(is_active=True).exclude(pk=txn.bank_account.ledger_account_id)
+        .exclude(subtype=AccountSubtype.INVENTORY).order_by("number"),
         "nav_active": "inbox", "next": _inbox_url(request),
     }
     if request.method != "POST":
@@ -344,7 +346,7 @@ def _catchup(request, pk, *, kind):
                     else:
                         inbox.receive_payment_from_row(
                             txn, customer=party, amounts=amounts, method=method, user=request.user)
-            except InboxError as exc:
+            except (InboxError, PostingError) as exc:
                 errors.append(str(exc))
             else:
                 done = "Paid bills" if pay else "Recorded payment"
