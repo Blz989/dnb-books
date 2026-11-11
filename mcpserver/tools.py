@@ -400,7 +400,7 @@ def register(mcp):
     def create_journal_entry(ctx: Context, lines: list[EntryLine], memo: str = "", reference: str = "",
                              date: str = "") -> dict:
         """Preview a manual journal entry. Debits must equal credits. Inventory accounts can't be used (use stock
-        adjustments). Once confirmed it posts at once; fix a mistake by voiding it in the app. Nothing is saved until
+        adjustments). Once confirmed it posts at once; fix a mistake with void_journal_entry. Nothing is saved until
         confirm_change."""
         payload = {"lines": _dump(lines), "memo": memo, "reference": reference, "date": date}
         return run(ctx, "create_journal_entry", write.preview, operation="create_journal_entry", payload=payload)
@@ -422,8 +422,8 @@ def register(mcp):
         ("void_bill", "vendor bill", " (like BILL-00045)"), ("void_vendor_payment", "vendor payment", ""),
         ("void_credit_note", "customer credit note", ""), ("void_vendor_credit", "vendor credit", ""),
         ("void_refund", "customer refund", ""), ("void_deposit", "bank deposit", ""),
-        ("void_transfer", "bank transfer (like TR-12)", ""), ("void_journal_entry", "journal entry (like JE-000456)", ""),
-        ("void_stock_movement", "stock movement (SM- id from list_stock_movements)", ""),
+        ("void_transfer", "bank transfer (like TR-12)", ""), ("void_journal_entry", "manual journal entry (like JE-000456; an entry that belongs to a document is voided with that document)", ""),
+        ("void_stock_movement", "stock adjustment or opening movement (SM- id from list_stock_movements; a movement that belongs to a document is voided or edited with that document)", ""),
     ):
         _register_void(_tool, _label, _example)
 
