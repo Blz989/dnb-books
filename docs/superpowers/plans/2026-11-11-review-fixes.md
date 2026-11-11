@@ -90,11 +90,11 @@ No repair command is included. If the check ever reports a line, stop and ask; t
 
 Files: `banking/views/inbox.py`, `banking/inbox.py`, `tests/test_inbox_views.py`.
 
-- [ ] Tests first, failing with a 500 today: Change, book to an account, on a row in a closed month shows `January 2026 is closed. Choose a date in an open month or ask an admin to reopen it.` on the page; Confirm of a rule suggestion in a closed month shows it as a message; Pay bills and Receive payment in a closed month show it in the form's errors; booking to an inactive account shows the ledger's message; bulk confirm with one row in a closed month confirms the others and reports `Confirmed 2 of 3 selected.`
-- [ ] `_run` and `_catchup` catch `PostingError` as well as `InboxError`. `inbox.bulk_confirm` skips a row on `PostingError` (each row already runs in its own nested transaction).
-- [ ] The Change screen's account list leaves out inventory accounts, and a hand-made post of one shows `Line 2: inventory accounts can only change through stock movements.` instead of a server error.
-- [ ] Screenshots: the Change screen and the Pay bills screen showing the closed-month message.
-- [ ] Commit: `Bank inbox: show posting errors instead of a server error`.
+- [x] Tests first, failing with a 500 today: Change, book to an account, on a row in a closed month shows `January 2026 is closed. Choose a date in an open month or ask an admin to reopen it.` on the page; Confirm of a rule suggestion in a closed month shows it as a message; Pay bills and Receive payment in a closed month show it in the form's errors; booking to an inactive account shows the ledger's message; bulk confirm with one row in a closed month confirms the others and reports `Confirmed 2 of 3 selected.`
+- [x] `_run` and `_catchup` catch `PostingError` as well as `InboxError`. `inbox.bulk_confirm` skips a row on `PostingError` (each row already runs in its own nested transaction).
+- [x] The Change screen's account list leaves out inventory accounts, and a hand-made post of one shows `Line 2: inventory accounts can only change through stock movements.` instead of a server error.
+- [x] Screenshots: the Change screen and the Pay bills screen showing the closed-month message.
+- [x] Commit: `Bank inbox: show posting errors instead of a server error`.
 
 ### Task 4: Claude tools
 
@@ -113,10 +113,10 @@ Files: `items/forms.py`, `mcpserver/write.py`, `mcpserver/write_void.py`, `mcpse
 
 Files: `purchasing/admin.py`, `banking/admin.py`, a shared `core/admin.py` holding `ReadOnlyAdmin` (moved from `migration/admin.py`, a mechanical change), `tests/test_admin_readonly.py`.
 
-- [ ] Tests first: a superuser gets 403 on the add, change-post, and delete pages for `Bill`, `VendorPayment`, `VendorCredit`, `PurchaseOrder`, `BankTransaction`, and `Transfer`, and can still open the list and the detail page. `PurchasingSettings`, `Threshold1099`, `BankAccount`, and `Rule` stay editable.
-- [ ] Register the six models with `ReadOnlyAdmin`.
-- [ ] Screenshot: a bill in `/admin/` with no Save or Delete button.
-- [ ] Commit: `Admin: purchasing documents and bank rows are read-only`.
+- [x] Tests first: a superuser gets 403 on the add, change-post, and delete pages for `Bill`, `VendorPayment`, `VendorCredit`, `PurchaseOrder`, `BankTransaction`, and `Transfer`, and can still open the list and the detail page. `PurchasingSettings`, `Threshold1099`, `BankAccount`, and `Rule` stay editable.
+- [x] Register the six models with `ReadOnlyAdmin`.
+- [x] Screenshot: a bill in `/admin/` with no Save or Delete button.
+- [x] Commit: `Admin: purchasing documents and bank rows are read-only`.
 
 ### Task 6: Back up uploaded files
 
