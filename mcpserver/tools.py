@@ -326,6 +326,16 @@ def register(mcp):
         return run(ctx, "create_sales_order", write.preview, operation="create_sales_order", payload=payload)
 
     @mcp.tool(annotations=PREVIEW)
+    def create_drop_ship_pos(ctx: Context, sales_orders: list[str], vendors: dict[str, str] | None = None,
+                             date: str = "") -> dict:
+        """Preview purchase orders for the drop-ship lines of these sales orders (numbers like SO-00012) that are not
+        yet on a PO: one PO per vendor, each line linked to its sales orders, as the Drop-ship screen does. A line's
+        vendor text must match a vendor; if one doesn't, vendors maps the text as typed to a real vendor name. Bill
+        the PO later with create_bill and purchase_order. Nothing is saved until confirm_change."""
+        payload = {"sales_orders": sales_orders, "vendors": vendors or {}, "date": date}
+        return run(ctx, "create_drop_ship_pos", write.preview, operation="create_drop_ship_pos", payload=payload)
+
+    @mcp.tool(annotations=PREVIEW)
     def create_credit_note(ctx: Context, customer: str, lines: list[CreditLine], reason: str = "", date: str = "",
                            apply_to: list[InvoicePayment] | None = None) -> dict:
         """Preview a customer credit note, optionally applied to invoices. Nothing is saved until confirm_change."""

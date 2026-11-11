@@ -85,6 +85,14 @@ Files: `mcpserver/views.py`, the Claude connections template, `README.md`, `test
 - [x] Screenshots of the call log page with the filter, sent with `SendUserFile` (throwaway demo database).
 - [x] Commit: `MCP: call log filter, README, end to end test`.
 
+### Task 7 (added after PR 46): drop-ship purchase orders
+
+Files: `mcpserver/write_more.py`, `mcpserver/tools.py`, `tests/test_mcp_writes.py`.
+
+- [x] Tests: sales order with a drop-ship line, then `create_drop_ship_pos`, then `create_bill` against the PO (line kind is drop ship, remaining quantity 0); an unmatched vendor text is refused and fixed with `vendors`; a repeat is refused; no sales orders is refused.
+- [x] Implement `_drop_ship_pos` and the `create_drop_ship_pos` tool.
+- [x] Commit: `MCP: create drop-ship purchase orders`.
+
 ## Out of scope
 
 Month close and reopen writes, bank inbox, reconciliation, check printing, imports, user and settings changes, hard deletes.

@@ -204,3 +204,48 @@ def test_journal_entry_follows_the_app_permission(books, clerk, django_user_mode
     with pytest.raises(ToolError, match=r"Your role \(Standard\) can't do this. Ask an admin."):
         run(ctx_for(nobody, email="nobody@example.com"), "create_journal_entry", write.preview,
             operation="create_journal_entry", payload={"date": "2026-10-20", "lines": lines})
+
+
+# ---- drop ship: sales order, then its PO, then the vendor's bill ----
+
+def _drop_ship_order(owner, vendor_text="Acme Supply"):
+    p = write.preview(owner, "create_sales_order", {"customer": "Acme Builders", "date": "2026-10-05", "lines": [
+        {"sku": "WID-1", "quantity": 3, "drop_ship_vendor": vendor_text}]})
+    return write.confirm(owner, p["confirmation_id"])["document"]
+
+
+def test_drop_ship_order_then_po_then_bill(books, owner):
+    from purchasing.models import BillLineKind, PurchaseOrder
+
+    so = _drop_ship_order(owner)
+    p, done = go(owner, "create_drop_ship_pos", {"sales_orders": [so], "date": "2026-10-06"}, PurchaseOrder)
+    (po_summary,) = p["preview"]["purchase_orders"]
+    assert po_summary["vendor"] == "Acme Supply" and po_summary["total"] == "30.00"
+    assert po_summary["lines"][0]["for"] == [{"sales_order": so, "customer": "Acme Builders", "quantity": 3}]
+    po = PurchaseOrder.objects.get()
+    assert done["document"] == po.number
+    from mcpserver import read
+
+    assert read.get_purchase_order(owner, po.number)["drop_ship_for"] == so
+    # The vendor's invoice: create_bill against the PO, by SKU.
+    bp, _ = go(owner, "create_bill", {"vendor": "Acme Supply", "vendor_invoice_number": "AS-77", "date": "2026-10-10",
+                                      "purchase_order": po.number, "item_lines": [{"sku": "WID-1", "quantity": 3}]})
+    assert bp["preview"]["item_lines"][0]["kind"] == dict(BillLineKind.choices)[BillLineKind.DROP_SHIP]
+    assert bp["preview"]["total"] == "30.00"
+    assert read.get_purchase_order(owner, po.number)["lines"][0]["remaining"] == 0
+
+
+def test_drop_ship_po_vendor_text_can_be_mapped_and_repeat_is_refused(books, owner):
+    from purchasing.models import PurchaseOrder
+
+    so = _drop_ship_order(owner, vendor_text="Acme Sply")
+    with pytest.raises(ToolError, match="No vendor named Acme Sply. Choose a vendor for these lines."):
+        run(ctx_for(owner), "create_drop_ship_pos", write.preview, operation="create_drop_ship_pos",
+            payload={"sales_orders": [so]})
+    go(owner, "create_drop_ship_pos", {"sales_orders": [so], "vendors": {"Acme Sply": "Acme Supply"}}, PurchaseOrder)
+    with pytest.raises(ToolError, match="Every drop-ship line on this order is already on a purchase order"):
+        run(ctx_for(owner), "create_drop_ship_pos", write.preview, operation="create_drop_ship_pos",
+            payload={"sales_orders": [so]})
+    with pytest.raises(ToolError, match="Give at least one sales order number."):
+        run(ctx_for(owner), "create_drop_ship_pos", write.preview, operation="create_drop_ship_pos",
+            payload={"sales_orders": []})
