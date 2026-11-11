@@ -45,12 +45,8 @@ def test_html_has_the_invoice_facts(invoice):
     assert "VOID" not in html
 
 
-def test_drop_ship_line_has_the_note(invoice):
-    assert html_count(render_invoice_html(invoice), "Shipped directly from the manufacturer") == 1
-
-
-def html_count(html, text):
-    return html.count(text)
+def test_drop_ship_line_has_no_shipping_note(invoice):
+    assert "Shipped directly" not in render_invoice_html(invoice)
 
 
 def test_payments_and_credits_reduce_the_balance(invoice, customer, admin_user):

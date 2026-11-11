@@ -39,7 +39,7 @@
     {% if group.heading %}<tr class="cat"><td colspan="7">{{ group.heading }}</td></tr>{% endif %}
     {% for row in group.rows %}{% with line=row.line %}
     <tr><td class="n">{{ row.n }}</td>
-      <td>{{ line.description|default:line.item.name }}{% if line.fulfillment == drop_ship %}<div class="note">Shipped directly from the manufacturer</div>{% endif %}</td>
+      <td>{{ line.description|default:line.item.name }}</td>
       <td>{{ line.item.packaging }}</td>
       <td class="num">{{ line.quantity }}{% if line.item.unit %}<div class="unit">{{ line.item.unit|upper }}</div>{% endif %}</td>
       <td class="num">{{ line.price|floatformat:"2g" }}</td><td class="num">{{ line.amount|floatformat:"2g" }}</td><td class="num">{{ line.amount|floatformat:"2g" }}</td></tr>
