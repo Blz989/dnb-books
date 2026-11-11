@@ -18,7 +18,9 @@ class SaleLine(BaseModel):
     quantity: int
     price: str | None = Field(None, description="Unit price like 12.50. Leave out to use the item's sale price.")
     description: str = ""
-    drop_ship_vendor: str = Field("", description="Vendor name when the line ships direct from the vendor.")
+    drop_ship_vendor: str | None = Field(
+        None, description="Vendor name when the line ships direct from the vendor. On an edit, leave it out to keep "
+                          "the existing line's fulfillment and vendor, or give \"\" to make it a stock line.")
 
 
 class PurchaseLine(BaseModel):
@@ -429,8 +431,9 @@ def register(mcp):
     def edit_invoice(ctx: Context, number: str, lines: list[SaleLine], date: str = "", terms: str = "",
                      ship_to: str | None = None, notes: str | None = None, reason: str = "") -> dict:
         """Preview editing an invoice. Admin only. lines replace all current lines (a line with the same SKU keeps
-        its link to the sales order and its old price unless you give one). The old posting is voided and a new one
-        posted. Shows before and after. Nothing changes until confirm_change with confirm_document set to the number."""
+        its link to the sales order, its old price, and its drop-ship vendor unless you give one; drop_ship_vendor ""
+        makes it a stock line). The old posting is voided and a new one posted.
+        Shows before and after. Nothing changes until confirm_change with confirm_document set to the number."""
         payload = {"number": number, "lines": _dump(lines), "date": date, "terms": terms, "ship_to": ship_to,
                    "notes": notes, "reason": reason}
         return run(ctx, "edit_invoice", write.preview, operation="edit_invoice", payload=payload)
@@ -450,8 +453,9 @@ def register(mcp):
     @mcp.tool(annotations=PREVIEW)
     def edit_sales_order(ctx: Context, number: str, lines: list[SaleLine], date: str = "", ship_to: str | None = None,
                          notes: str | None = None) -> dict:
-        """Preview editing a sales order. Admin only. lines replace all current lines; lines already invoiced can't
-        be removed. Nothing changes until confirm_change with confirm_document set to the number."""
+        """Preview editing a sales order. Admin only. lines replace all current lines (a line with the same SKU
+        keeps its price and drop-ship vendor unless you give one; drop_ship_vendor "" makes it a stock line); lines
+        already invoiced can't be removed. Nothing changes until confirm_change with confirm_document set to the number."""
         payload = {"number": number, "lines": _dump(lines), "date": date, "ship_to": ship_to, "notes": notes}
         return run(ctx, "edit_sales_order", write.preview, operation="edit_sales_order", payload=payload)
 

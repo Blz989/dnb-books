@@ -183,6 +183,26 @@ def _pick(existing: list, sku: str, used: set):
     return None
 
 
+def _line_fulfillment(line: dict, old) -> tuple[str, str]:
+    """Fulfillment and vendor for an edited line. A vendor name sets drop ship, "" sets stock, and leaving it out
+    keeps the matched existing line as it was (a new line with nothing given is stock)."""
+    given = line.get("drop_ship_vendor")
+    if given is None and old is not None:
+        return old.fulfillment, old.drop_ship_vendor
+    vendor = (given or "").strip()
+    return (Fulfillment.DROP_SHIP if vendor else Fulfillment.STOCK), vendor
+
+
+def _posting_effect(what: str, old, new) -> str:
+    if old is not None and new is not None:
+        return f"The old posting {old.display_number} is voided and a new entry is posted for the edited {what}."
+    if old is not None:
+        return f"The old posting {old.display_number} is voided. The edited {what} totals zero, so nothing new posts."
+    if new is not None:
+        return f"The {what} had no posting before. A new entry is posted for the edited {what}."
+    return f"The {what} totals zero, so nothing posts to the ledger."
+
+
 def _edit_invoice(user, p, flags):
     require_admin(user)
     inv = lookup.document(Invoice, p["number"], "invoice")
@@ -195,11 +215,10 @@ def _edit_invoice(user, p, flags):
         old = _pick(existing, l["sku"], used)
         price = money(l["price"], f"price on line {n}") if l.get("price") not in (None, "") \
             else (old.price if old else item.sale_price)
-        vendor = (l.get("drop_ship_vendor") or "").strip()
+        fulfillment, vendor = _line_fulfillment(l, old)
         specs.append(InvoiceLineSpec(
             item, int(l["quantity"]), price, description=l.get("description") or "",
-            fulfillment=Fulfillment.DROP_SHIP if vendor else Fulfillment.STOCK, drop_ship_vendor=vendor,
-            so_line=old.so_line if old else None))
+            fulfillment=fulfillment, drop_ship_vendor=vendor, so_line=old.so_line if old else None))
     old_entry = inv.journal_entry
     edit_invoice(inv, user=user, date=lookup.day(p.get("date"), "date", inv.date), lines=specs,
                  terms=_terms(p.get("terms"), inv.terms), ship_to=p["ship_to"] if p.get("ship_to") is not None else inv.ship_to,
@@ -208,7 +227,7 @@ def _edit_invoice(user, p, flags):
     inv.refresh_from_db()
     return inv.number, {
         "edit": inv.number, "before": before, "after": read.get_invoice(user, inv.number),
-        "effect": f"The old posting {old_entry.display_number} is voided and a new entry is posted for the edited invoice.",
+        "effect": _posting_effect("invoice", old_entry, inv.journal_entry),
         "posts": _entry_lines(inv.journal_entry)}
 
 
@@ -239,7 +258,7 @@ def _edit_bill(user, p, flags):
     bill.refresh_from_db()
     return bill.number, {
         "edit": bill.number, "before": before, "after": read.get_bill(user, bill.number),
-        "effect": f"The old posting {old_entry.display_number} is voided and a new entry is posted for the edited bill.",
+        "effect": _posting_effect("bill", old_entry, bill.journal_entry),
         "posts": _entry_lines(bill.journal_entry)}
 
 
@@ -253,10 +272,9 @@ def _edit_sales_order(user, p, flags):
         old = _pick(existing, l["sku"], used)
         price = money(l["price"], f"price on line {n}") if l.get("price") not in (None, "") \
             else (old.price if old else item.sale_price)
-        vendor = (l.get("drop_ship_vendor") or "").strip()
+        fulfillment, vendor = _line_fulfillment(l, old)
         specs.append(OrderLineSpec(item, int(l["quantity"]), price, description=l.get("description") or "",
-                                   fulfillment=Fulfillment.DROP_SHIP if vendor else Fulfillment.STOCK,
-                                   drop_ship_vendor=vendor, line_id=old.pk if old else None))
+                                   fulfillment=fulfillment, drop_ship_vendor=vendor, line_id=old.pk if old else None))
     update_order(order, lines=specs, user=user, date=lookup.day(p.get("date"), "date"),
                  ship_to=p.get("ship_to"), notes=p.get("notes"))
     return order.number, {"edit": order.number, "before": before, "after": read_more.get_sales_order(user, order.number),
