@@ -21,7 +21,7 @@ The owner chooses between defined invoice layouts in Settings. The choice applie
 4. **Modern, closing block:**
    - Notes: the invoice notes, under a "Notes" heading, only when the invoice has notes. (Owner, 2026-11-12, after the first build: the "How to pay" section and the "Put invoice number X on your payment." line were removed.)
    - Totals: Total quantity, Invoice total, Payments and credits (only when there are any), Balance due, due date.
-   - Customer sign-off box: Customer signature, Printed name, Date, filled in by hand. (Owner, 2026-11-12: the "How paid" check boxes and "Amount paid" line were removed.)
+   - Customer sign-off box: check boxes for Check (with a number line), Cash, Zelle, Card, and Not yet paid; Amount paid; Customer signature, Printed name, Date. Filled in by hand; nothing is recorded in the app. (Owner, 2026-11-12: the heading "How paid (check one)" was removed; the boxes stay.)
    - No payment instructions, no ACH details, no QR code, no remittance stub, no "Questions" line.
 5. **Page breaks (Modern):**
    - A line never splits across pages.
@@ -35,6 +35,7 @@ The owner chooses between defined invoice layouts in Settings. The choice applie
 ## 3. Out of scope
 
 - Other documents (statements, purchase orders, checks) keep their layouts.
+- Zelle and Card as recorded payment methods.
 - Customer PO number, ship date, carrier, tracking.
 - A per-customer or per-invoice layout choice.
 - The Claude (MCP) sales order tools do not set the expected delivery date yet.

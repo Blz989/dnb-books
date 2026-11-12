@@ -94,10 +94,16 @@ h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3
 .signoff .head { display: flex; justify-content: space-between; align-items: baseline; }
 .signoff .head b { font-size: 10pt; font-weight: 700; }
 .signoff .head span { color: #404040; }
-.signoff .cols { display: flex; gap: 18pt; align-items: flex-end; margin-top: 4pt; }
-.signoff .sig { flex: 1.7; }
-.signoff .name { flex: 1.3; }
-.signoff .date { flex: 0.8; }
-.line { height: 30pt; border-bottom: 0.75pt solid #1a1a1a; margin-bottom: 2pt; }
+.signoff .cols { display: flex; gap: 24pt; align-items: flex-end; margin-top: 3pt; }
+.signoff .cols > div { flex: 1; }
+.signoff .row { display: flex; align-items: flex-end; gap: 6pt; margin-top: 9pt; }
+.signoff .row.opts span:nth-child(2n) { margin-right: 10pt; }
+.box { display: inline-block; width: 9.75pt; height: 9.75pt; border: 0.75pt solid #1a1a1a; flex: none; }
+.fill { flex: 1; height: 10.5pt; border-bottom: 0.75pt solid #1a1a1a; }
+.line { height: 12pt; border-bottom: 0.75pt solid #1a1a1a; margin-bottom: 2pt; }
+.line.tall { height: 25pt; }
+.pair { display: flex; gap: 12pt; margin-top: 9pt; }
+.pair .name { flex: 1.6; }
+.pair .date { flex: 1; }
 
 .void-mark { position: fixed; top: 34%; left: 12%; transform: rotate(-28deg); font-weight: 600; font-size: 130pt; letter-spacing: .08em; color: rgba(156, 42, 42, 0.16); border: 8pt solid rgba(156, 42, 42, 0.16); padding: 0 24pt; }

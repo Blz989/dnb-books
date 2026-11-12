@@ -144,11 +144,11 @@ def test_modern_has_the_invoice_facts(invoice, modern):
                  "Terms", "Net 30", "Due date", "Nov 26, 2026", "Balance due", "$1,320.00", "Bill to", "Ship to",
                  "Acme Builders", "Reference", "Invoice no.", "Packaging", "Qty", "Unit", "Price", "Amount", "Install",
                  "Consulting hour", "Total quantity 3", "Invoice total 1,320.00", "Notes COD", "Customer sign-off",
-                 "Customer signature", "Printed name"):
+                 "Check No.", "Cash", "Zelle", "Card", "Not yet paid", "Amount paid $", "Customer signature",
+                 "Printed name"):
         assert part in text, part
     for gone in ("Authorized Signature", "ACH", "Questions", "Sales order", "Expected delivery", "Payments and credits",
-                 "How to pay", "Check (preferred)", "Payable to", "on your payment", "How paid", "Cash", "Zelle",
-                 "Card", "Not yet paid", "Amount paid"):
+                 "How to pay", "Check (preferred)", "Payable to", "on your payment", "How paid", "check one"):
         assert gone not in text, gone
     assert "VOID" not in text
     assert invoice_pdf(invoice).startswith(b"%PDF")

@@ -87,9 +87,18 @@
   <div class="signoff">
     <div class="head"><b>Customer sign-off</b><span>Invoice {{ invoice.number }} · {{ bill_name }}</span></div>
     <div class="cols">
-      <div class="sig"><div class="line"></div><div class="dim">Customer signature</div></div>
-      <div class="name"><div class="line"></div><div class="dim">Printed name</div></div>
-      <div class="date"><div class="line"></div><div class="dim">Date</div></div>
+      <div class="paid">
+        <div class="row"><span class="box"></span><span>Check</span><span class="dim">No.</span><span class="fill"></span></div>
+        <div class="row opts"><span class="box"></span><span>Cash</span><span class="box"></span><span>Zelle</span><span class="box"></span><span>Card</span><span class="box"></span><span>Not yet paid</span></div>
+        <div class="row"><span class="dim">Amount paid $</span><span class="fill"></span></div>
+      </div>
+      <div class="sign">
+        <div class="line tall"></div><div class="dim">Customer signature</div>
+        <div class="pair">
+          <div class="name"><div class="line"></div><div class="dim">Printed name</div></div>
+          <div class="date"><div class="line"></div><div class="dim">Date</div></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
