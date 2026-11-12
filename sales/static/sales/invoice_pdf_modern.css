@@ -35,18 +35,20 @@ b { font-weight: 600; }
 h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3a5f; }
 .number { font-size: 11pt; font-weight: 600; }
 
-/* The bar: three plain cells and the gray balance box (.due). The thin bottom rule belongs to the plain cells
-   only, and the gray box fills the full height beside them, down to the rule's lower edge. A thin rule that touches
-   or crosses a fill blends with it on screen and looks uneven next to the part over white paper, so the rule never
-   meets the gray. */
-.bar { display: flex; margin-top: 9pt; border-top: 1.5pt solid #1f3a5f; }
-.bar > div { flex: 1; padding: 5pt 9pt; border-left: 0.75pt solid #d9d9d9; border-bottom: 0.75pt solid #b3b3b3; }
+/* The bar's top and bottom rules are each ONE shape drawn across the full width, on top of the cells (::before and
+   ::after), so a rule has the same thickness over the white cells and over the gray balance box. The gray fill
+   reaches to the middle of each rule: it fills the bar, and the outer edge of each rule lies on white everywhere. */
+.bar { display: flex; position: relative; margin-top: 9pt; padding: 1.5pt 0 0.75pt; }
+.bar::before, .bar::after { content: ""; position: absolute; left: 0; right: 0; }
+.bar::before { top: 0; height: 1.5pt; background: #1f3a5f; }
+.bar::after { bottom: 0; height: 0.75pt; background: #b3b3b3; }
+.bar > div { flex: 1; padding: 5pt 9pt; border-left: 0.75pt solid #d9d9d9; }
 .bar > div:first-child { padding-left: 0; border-left: none; }
 .bar span { display: block; color: #595959; }
 .bar b { display: block; font-size: 10.5pt; }
 /* The balance box is exactly as wide as the Reference column under it (three columns with two 18pt gaps on a
    576pt line), so its left edge lines up with Reference and with the totals block on the last page. */
-.bar .due { flex: none; width: 180pt; background: #f1f2f4; text-align: right; border-left: none; border-bottom: none; }
+.bar .due { flex: none; width: 180pt; margin: -0.75pt 0 -0.375pt; background: #f1f2f4; text-align: right; border-left: none; }
 .bar .due span { color: #404040; }
 .bar .due b { font-size: 13pt; font-weight: 700; line-height: 1.2; }
 
