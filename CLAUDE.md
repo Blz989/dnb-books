@@ -7,6 +7,7 @@ Self-hosted replacement for Zoho Books and Zoho Inventory for a small business. 
 - **System spec:** `docs/superpowers/specs/2026-10-27-zoho-replacement-design.md` (whole system, approved).
 - **Current spec:** `docs/superpowers/specs/2026-11-04-reports-and-bank-page-design.md` (sidebar width, FIFO lot tracking, unpaid invoices, bank account page; in review).
 - **Current plan:** `docs/superpowers/plans/2026-11-04-reports-and-bank-page.md`.
+- **Invoice layouts:** spec `docs/superpowers/specs/2026-11-12-invoice-layouts-design.md`, plan `docs/superpowers/plans/2026-11-12-invoice-layouts.md` (Classic and Modern invoice PDFs chosen in Settings, expected delivery date on sales orders; in review). The Modern template `sales/templates/sales/invoice_pdf_modern.html` is its own visual reference.
 - **Visual references:** `docs/design/items-mockup.html` ("Ledger paper"; open with `?t=light` or `?t=dark`; all screens match it) `docs/design/invoice-mockup.html` (invoice PDF), and `docs/design/check-mockup.html` (printed check).
 - **Done:** Phases 1 to 5a (specs and plans in `docs/superpowers/`, merged), Docker deployment, Order profitability and handling, Phase 5b (Zoho migration and catch-up), shared drop-ship POs.
 
