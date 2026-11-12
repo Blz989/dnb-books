@@ -1,0 +1,110 @@
+/* Modern invoice layout (spec 2026-11-12-invoice-layouts-design.md). Sizes are points: 0.75pt is one screen pixel.
+   Page margins are 0.25in. Pages after the first get a taller top margin that holds the running header, and the
+   bottom margin holds one "continued" line on every page but the last. */
+@page {
+  size: letter;
+  margin: 64pt 0.25in 34pt;
+  @top-center { content: element(runhead); width: 100%; vertical-align: bottom; padding-bottom: 9pt; }
+  @bottom-center { content: element(continued, last); width: 100%; vertical-align: top; padding-top: 4pt; }
+}
+@page :first { margin-top: 0.25in; @top-center { content: none; } }
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, sans-serif; font-size: 9pt; line-height: 1.4; color: #1a1a1a; background: #fff; font-variant-numeric: tabular-nums; font-variant-ligatures: no-contextual; }
+/* no-contextual: Inter would otherwise turn the x in a packaging size such as 18x90GM into a multiplication sign. */
+b { font-weight: 600; }
+.label { font-weight: 600; color: #595959; margin-bottom: 2pt; }
+.dim { color: #404040; }
+.num { text-align: right; }
+
+/* Running header and "continued" line: taken out of the flow and printed in the page margins. */
+.runhead { position: running(runhead); display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1.5pt solid #1f3a5f; padding-bottom: 5pt; color: #404040; }
+.runhead b { color: #1a1a1a; }
+.runhead b:first-child { font-size: 10.5pt; font-weight: 700; }
+.continued { position: running(continued); text-align: right; font-weight: 600; color: #404040; }
+.pageno { color: #595959; }
+.pageno::after { content: "Page " counter(page) " of " counter(pages); }
+
+.top { display: flex; justify-content: space-between; align-items: flex-start; }
+.brand { display: flex; gap: 9pt; align-items: center; }
+.logo { height: 51pt; max-width: 150pt; }
+.logo img { height: 51pt; max-width: 150pt; width: auto; object-fit: contain; }
+.co { color: #404040; }
+.co b { color: #1a1a1a; font-size: 13pt; font-weight: 700; white-space: nowrap; }
+.title { text-align: right; }
+h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3a5f; }
+.number { font-size: 11pt; font-weight: 600; }
+
+.bar { display: flex; margin-top: 9pt; border-top: 1.5pt solid #1f3a5f; border-bottom: 0.75pt solid #b3b3b3; }
+.bar > div { flex: 1; padding: 5pt 9pt; border-left: 0.75pt solid #d9d9d9; }
+.bar > div:first-child { padding-left: 0; border-left: none; }
+.bar span { display: block; color: #595959; }
+.bar b { display: block; font-size: 10.5pt; }
+.bar .due { background: #f1f2f4; text-align: right; border-left: none; }
+.bar .due span { color: #404040; }
+.bar .due b { font-size: 13pt; font-weight: 700; line-height: 1.2; }
+
+.parties { display: flex; gap: 18pt; margin-top: 9pt; }
+.parties > div { flex: 1; }
+.parties > div > b { font-size: 10pt; font-weight: 700; }
+.ref { width: 100%; border-collapse: collapse; }
+.ref td { padding: 0 0 1pt; vertical-align: top; }
+.ref td:first-child { color: #404040; }
+.ref td:last-child { text-align: right; }
+
+.lines { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 9pt; }
+.lines thead { display: table-header-group; }
+.lines th { text-align: left; font-weight: 600; padding: 4.5pt 6pt; border-top: 0.75pt solid #1a1a1a; border-bottom: 0.75pt solid #1a1a1a; }
+.lines th.num { text-align: right; }
+.lines td { padding: 3pt 6pt; border-bottom: 0.75pt solid #d9d9d9; vertical-align: top; }
+.lines th:first-child, .lines td:first-child { padding-left: 0; }
+.lines th:last-child, .lines td:last-child { padding-right: 0; }
+.lines tbody tr:last-child td { border-bottom-color: #1a1a1a; }
+/* Page-break rules: a line never splits, and a category heading stays with the line after it. */
+.lines tr { break-inside: avoid; }
+.lines tr.cat { break-after: avoid; }
+.lines tr.cat td { font-weight: 700; background: #f1f2f4; padding: 3.5pt 6pt; }
+.lines .n { width: 21pt; color: #595959; }
+.lines th.n { color: #1a1a1a; }
+.lines .pack { width: 84pt; }
+.lines td.pack, .lines td.unit { color: #404040; }
+.lines .qty { width: 33pt; }
+.lines td.qty { font-weight: 600; }
+.lines .unit { width: 45pt; }
+.lines .price { width: 57pt; }
+.lines .amount { width: 66pt; }
+.lines td.item { font-weight: 500; overflow-wrap: anywhere; }
+
+/* The closing block is never split: if it does not fit, all of it moves to the next page. */
+.closing { break-inside: avoid; padding-top: 10pt; }
+.money { display: flex; justify-content: space-between; align-items: flex-start; gap: 30pt; }
+.pay { flex: 1; }
+.pay .remind { margin-top: 6pt; color: #404040; }
+.pay .notes { margin-top: 3pt; color: #404040; white-space: pre-line; }
+.sums { width: 201pt; }
+.totals { width: 100%; border-collapse: collapse; }
+.totals td { padding: 1.5pt 0; }
+.totals td:first-child { color: #404040; }
+.totals .total td { font-weight: 600; color: #1a1a1a; border-top: 0.75pt solid #b3b3b3; padding-top: 4pt; }
+.balance { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4.5pt; padding: 6pt 7.5pt; background: #f1f2f4; border-top: 1.5pt solid #1f3a5f; }
+.balance span { font-size: 10pt; font-weight: 700; }
+.balance b { font-size: 13pt; font-weight: 700; }
+.dueline { text-align: right; color: #404040; padding-top: 3pt; }
+
+.signoff { margin-top: 12pt; border: 0.75pt solid #1a1a1a; padding: 9pt 10.5pt 10.5pt; }
+.signoff .head { display: flex; justify-content: space-between; align-items: baseline; }
+.signoff .head b { font-size: 10pt; font-weight: 700; }
+.signoff .head span { color: #404040; }
+.signoff .cols { display: flex; gap: 24pt; align-items: flex-end; margin-top: 9pt; }
+.signoff .cols > div { flex: 1; }
+.signoff .row { display: flex; align-items: flex-end; gap: 6pt; margin-top: 9pt; }
+.signoff .row.opts span:nth-child(2n) { margin-right: 10pt; }
+.box { display: inline-block; width: 9.75pt; height: 9.75pt; border: 0.75pt solid #1a1a1a; flex: none; }
+.fill { flex: 1; height: 10.5pt; border-bottom: 0.75pt solid #1a1a1a; }
+.line { height: 12pt; border-bottom: 0.75pt solid #1a1a1a; margin-bottom: 2pt; }
+.line.tall { height: 25pt; }
+.pair { display: flex; gap: 12pt; margin-top: 9pt; }
+.pair .name { flex: 1.6; }
+.pair .date { flex: 1; }
+
+.void-mark { position: fixed; top: 34%; left: 12%; transform: rotate(-28deg); font-weight: 600; font-size: 130pt; letter-spacing: .08em; color: rgba(156, 42, 42, 0.16); border: 8pt solid rgba(156, 42, 42, 0.16); padding: 0 24pt; }

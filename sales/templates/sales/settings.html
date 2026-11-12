@@ -1,7 +1,7 @@
 {% extends "core/settings_base.html" %}
 {% block title %}Sales settings{% endblock %}
 {% block page_title %}Sales{% endblock %}
-{% block page_subtitle %}<div class="sub">Sales accounts, default invoice notes, and document numbering.</div>{% endblock %}
+{% block page_subtitle %}<div class="sub">Sales accounts, default invoice notes, invoice layout, and document numbering.</div>{% endblock %}
 {% block settings_content %}
 {% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
 <div class="card"><div class="body">

@@ -104,7 +104,8 @@ def order_new(request):
                     return redirect(reverse("sales:order-list"))
                 order = create_order(
                     customer=d["customer"], date=d["date"], lines=_specs(parsed), user=request.user,
-                    ship_to=d["ship_to"] or None, notes=d["notes"])
+                    ship_to=d["ship_to"] or None, notes=d["notes"],
+                    expected_delivery_date=d["expected_delivery_date"])
         except (SalesError, PostingError, StockError) as exc:
             return render(request, "sales/order_form.html", _form_context(request, form, rows, token, **common.error_context(exc)))
         messages.success(request, f"Saved {order.number}.")
@@ -118,6 +119,7 @@ def order_edit(request, number):
     if request.method != "POST":
         form = OrderHeaderForm(initial={
             "customer": order.customer_id, "date": order.date.isoformat(), "ship_to": order.ship_to, "notes": order.notes,
+            "expected_delivery_date": order.expected_delivery_date.isoformat() if order.expected_delivery_date else "",
         }, all_customers=True)
         rows = common.rows_from_lines(order.lines.select_related("item"))
         return render(request, "sales/order_form.html", _form_context(request, form, rows, common.new_token(), order))
@@ -131,7 +133,8 @@ def order_edit(request, number):
                 raise SalesError("The customer on an order can't be changed.")
             update_order(
                 order, lines=_specs(parsed), user=request.user, date=d["date"],
-                ship_to=d["ship_to"] or order.customer.ship_to_address, notes=d["notes"])
+                ship_to=d["ship_to"] or order.customer.ship_to_address, notes=d["notes"],
+                expected_delivery_date=d["expected_delivery_date"])
         except (SalesError, PostingError, StockError) as exc:
             return render(request, "sales/order_form.html", _form_context(
                 request, form, rows, request.POST.get("token", ""), order, **common.error_context(exc)))

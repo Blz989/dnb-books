@@ -24,6 +24,11 @@ class PaymentMethod(models.TextChoices):
     WIRE = "WIRE", "Wire"
 
 
+class InvoiceLayout(models.TextChoices):
+    CLASSIC = "CLASSIC", "Classic"
+    MODERN = "MODERN", "Modern"
+
+
 class RefundMethod(models.TextChoices):
     CHECK = "CHECK", "Check"
     ACH = "ACH", "ACH"
@@ -65,6 +70,7 @@ class SalesSettings(models.Model):
     company_email = models.CharField(max_length=200, blank=True)
     logo = models.FileField(upload_to="logo/", blank=True)
     default_invoice_notes = models.TextField(blank=True)
+    invoice_layout = models.CharField(max_length=10, choices=InvoiceLayout.choices, default=InvoiceLayout.CLASSIC)
 
     class Meta:
         verbose_name_plural = "sales settings"
@@ -104,6 +110,7 @@ class SalesOrder(models.Model):
     number = models.CharField(max_length=30, unique=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="sales_orders")
     date = models.DateField()
+    expected_delivery_date = models.DateField(null=True, blank=True)
     ship_to = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     status = models.CharField(max_length=10, choices=OrderStatus.choices, default=OrderStatus.OPEN)
