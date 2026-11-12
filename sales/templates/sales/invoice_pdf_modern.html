@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ invoice.number }}</title>
+<style>
+@font-face { font-family: "Inter"; font-weight: 100 900; src: url("{{ font_uri }}/inter-latin-wght-normal.woff2") format("woff2"); }
+</style>
+</head>
+<body>
+{# Running elements: printed in the page margins by invoice_pdf_modern.css, not where they sit here. #}
+<div class="runhead">
+  <div><b>{{ company.company_name|default:"Your company" }}</b><br>Invoice <b>{{ invoice.number }}</b> · {{ bill_name }} · {{ invoice.date|date:"M j, Y" }}</div>
+  <div class="pageno"></div>
+</div>
+<div class="continued">Continued on the next page. Totals and sign-off are on the last page.</div>
+{% if is_void %}<div class="void-mark">VOID</div>{% endif %}
+
+<div class="top">
+  <div class="brand">
+    {% if logo_uri %}<div class="logo"><img src="{{ logo_uri }}" alt=""></div>{% endif %}
+    <div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div>
+  </div>
+  <div class="title">
+    <h1>Invoice</h1>
+    <div class="number">{{ invoice.number }}</div>
+    <div class="pageno"></div>
+  </div>
+</div>
+
+<div class="bar">
+  <div><span>Invoice date</span><b>{{ invoice.date|date:"M j, Y" }}</b></div>
+  <div><span>Terms</span><b>{{ invoice.get_terms_display }}</b></div>
+  <div><span>Due date</span><b>{{ invoice.due_date|date:"M j, Y" }}</b></div>
+  <div class="due"><span>Balance due (USD)</span><b>${{ balance|floatformat:"2g" }}</b></div>
+</div>
+
+<div class="parties">
+  <div><div class="label">Bill to</div><b>{{ bill_name }}</b>{% for line in bill_lines %}<br>{{ line }}{% endfor %}</div>
+  <div><div class="label">Ship to</div><b>{{ ship_first }}</b>{% for line in ship_lines %}<br>{{ line }}{% endfor %}</div>
+  <div>
+    <div class="label">Reference</div>
+    <table class="ref">
+      <tr><td>Invoice no.</td><td><b>{{ invoice.number }}</b></td></tr>
+      <tr><td>Invoice date</td><td>{{ invoice.date|date:"M j, Y" }}</td></tr>
+      <tr><td>Terms</td><td>{{ invoice.get_terms_display }}</td></tr>
+      <tr><td>Due date</td><td><b>{{ invoice.due_date|date:"M j, Y" }}</b></td></tr>
+      {% if invoice.sales_order %}<tr><td>Sales order</td><td>{{ invoice.sales_order.number }}</td></tr>{% endif %}
+      {% if expected_delivery %}<tr><td>Expected delivery</td><td>{{ expected_delivery|date:"M j, Y" }}</td></tr>{% endif %}
+    </table>
+  </div>
+</div>
+
+<table class="lines">
+  <thead><tr><th class="n">#</th><th>Item</th><th class="pack">Packaging</th><th class="qty num">Qty</th><th class="unit">Unit</th><th class="price num">Price</th><th class="amount num">Amount</th></tr></thead>
+  <tbody>
+  {% for group in groups %}
+    {% if group.heading %}<tr class="cat"><td colspan="7">{{ group.heading }}</td></tr>{% endif %}
+    {% for row in group.rows %}{% with line=row.line %}
+    <tr><td class="n">{{ row.n }}</td>
+      <td class="item">{{ line.description|default:line.item.name }}</td>
+      <td class="pack">{{ line.item.packaging }}</td>
+      <td class="qty num">{{ line.quantity }}</td>
+      <td class="unit">{{ line.item.unit|lower }}</td>
+      <td class="num">{{ line.price|floatformat:"2g" }}</td><td class="num">{{ line.amount|floatformat:"2g" }}</td></tr>
+    {% endwith %}{% endfor %}
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="closing">
+  <div class="money">
+    <div class="pay">
+      <div class="label">How to pay</div>
+      <div><b>Check (preferred)</b><br>Payable to {{ company.company_name|default:"Your company" }}{% for line in company_address %}<br>{{ line }}{% endfor %}</div>
+      <div class="remind">Put invoice number {{ invoice.number }} on your payment.</div>
+      {% if invoice.notes %}<div class="notes">{{ invoice.notes }}</div>{% endif %}
+    </div>
+    <div class="sums">
+      <table class="totals">
+        <tr><td>Total quantity</td><td class="num">{{ items_total }}</td></tr>
+        <tr class="total"><td>Invoice total</td><td class="num">{{ subtotal|floatformat:"2g" }}</td></tr>
+        {% if applied %}<tr><td>Payments and credits</td><td class="num">−{{ applied|floatformat:"2g" }}</td></tr>{% endif %}
+      </table>
+      <div class="balance"><span>Balance due (USD)</span><b>${{ balance|floatformat:"2g" }}</b></div>
+      <div class="dueline">Due {{ invoice.due_date|date:"M j, Y" }}</div>
+    </div>
+  </div>
+
+  <div class="signoff">
+    <div class="head"><b>Customer sign-off</b><span>Invoice {{ invoice.number }} · {{ bill_name }}</span></div>
+    <div class="cols">
+      <div class="paid">
+        <div class="label">How paid (check one)</div>
+        <div class="row"><span class="box"></span><span>Check</span><span class="dim">No.</span><span class="fill"></span></div>
+        <div class="row opts"><span class="box"></span><span>Cash</span><span class="box"></span><span>Zelle</span><span class="box"></span><span>Card</span><span class="box"></span><span>Not yet paid</span></div>
+        <div class="row"><span class="dim">Amount paid $</span><span class="fill"></span></div>
+      </div>
+      <div class="sign">
+        <div class="line tall"></div><div class="dim">Customer signature</div>
+        <div class="pair">
+          <div class="name"><div class="line"></div><div class="dim">Printed name</div></div>
+          <div class="date"><div class="line"></div><div class="dim">Date</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{# An empty running element on the last page: it replaces the "continued" line there. #}
+<div class="continued"></div>
+</body>
+</html>
