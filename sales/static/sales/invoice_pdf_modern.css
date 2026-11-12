@@ -43,6 +43,10 @@ h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3
 /* The balance box is exactly as wide as the Reference column under it (three columns with two 18pt gaps on a
    576pt line), so its left edge lines up with Reference and with the totals block on the last page. */
 .bar .due { flex: none; width: 180pt; background: #f1f2f4; text-align: right; border-left: none; }
+/* The gray fill used to stop exactly where the bar's top and bottom rules start. On screen the two edges blended
+   and the fill looked as if it ran into the rule. The box now covers the bar's rules and draws the same rules
+   itself, on top of its own fill, so each rule is one clean line across the bar. */
+.bar .due { margin: -1.5pt 0 -0.75pt; border-top: 1.5pt solid #1f3a5f; border-bottom: 0.75pt solid #b3b3b3; }
 .bar .due span { color: #404040; }
 .bar .due b { font-size: 13pt; font-weight: 700; line-height: 1.2; }
 

@@ -58,5 +58,6 @@ Owner: the gray boxes from the first build should stay; the alignment should imp
 - [x] Restore the gray fill and inner padding on both balance due boxes (undoes Task 6).
 - [x] Top bar: the balance box is exactly as wide as the Reference column under it.
 - [x] Totals: the block is the same width as the Reference column; its rows carry the same side padding as the gray box, so labels and figures form one column. The totals label is "Balance due" (the top bar keeps "(USD)").
-- [x] Screenshots: Modern PDF page 1 and last page.
-- [x] Commit: `Modern invoice: gray balance boxes back, lined up with the Reference column`
+- [x] Top bar: the gray box draws the bar's top and bottom rules on top of its own fill. Before, the fill stopped where the rule began and on screen the fill looked as if it ran into the rule (owner's zoomed screenshot).
+- [x] Screenshots: Modern PDF page 1 and last page; zoom of the box corner at three resolutions.
+- [x] Commits: `Modern invoice: gray balance boxes back, lined up with the Reference column`, `Modern invoice: clean rule under the gray balance box`
