@@ -64,7 +64,7 @@ def _line_values(spec: OrderLineSpec, position: int) -> dict:
 
 def create_order(
     *, customer: Customer, date: date_type, lines: Sequence[OrderLineSpec], user,
-    ship_to: str | None = None, notes: str = "",
+    ship_to: str | None = None, notes: str = "", expected_delivery_date: date_type | None = None,
 ) -> SalesOrder:
     if not lines:
         raise OrderError("An order needs at least one line.")
@@ -73,6 +73,7 @@ def create_order(
         order = SalesOrder.objects.create(
             number=next_number(DocType.SO), customer=customer, date=date, created_by=user, notes=notes,
             ship_to=customer.ship_to_address if ship_to is None else ship_to,
+            expected_delivery_date=expected_delivery_date,
         )
         for position, spec in enumerate(lines):
             SalesOrderLine.objects.create(order=order, **_line_values(spec, position))
@@ -90,9 +91,12 @@ def remaining(line: SalesOrderLine, exclude_invoice: Invoice | None = None) -> i
     return line.quantity - invoiced_quantity(line, exclude_invoice)
 
 
+KEEP = object()  # update_order: leave the expected delivery date as it is (None clears it)
+
+
 def update_order(
     order: SalesOrder, *, lines: Sequence[OrderLineSpec], user, date: date_type | None = None,
-    ship_to: str | None = None, notes: str | None = None,
+    ship_to: str | None = None, notes: str | None = None, expected_delivery_date=KEEP,
 ) -> SalesOrder:
     if not lines:
         raise OrderError("An order needs at least one line.")
@@ -134,6 +138,8 @@ def update_order(
             current.ship_to = ship_to
         if notes is not None:
             current.notes = notes
+        if expected_delivery_date is not KEEP:
+            current.expected_delivery_date = expected_delivery_date
         current.save()
     order.refresh_from_db()
     return order

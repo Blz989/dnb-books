@@ -12,6 +12,7 @@
 {% block content %}
 <div class="card"><div class="body">
   <dl class="facts">
+    <dt>Expected delivery</dt><dd>{{ order.expected_delivery_date|date:"Y-m-d"|default:"—" }}</dd>
     <dt>Ship to</dt><dd>{{ order.ship_to|linebreaksbr|default:"—" }}</dd>
     <dt>Notes</dt><dd>{{ order.notes|linebreaksbr|default:"—" }}</dd>
   </dl>

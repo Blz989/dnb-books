@@ -110,6 +110,7 @@ class SalesOrder(models.Model):
     closed_by = models.ForeignKey(USER, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     closed_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
+    expected_delivery_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
