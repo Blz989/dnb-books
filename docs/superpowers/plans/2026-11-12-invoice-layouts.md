@@ -46,3 +46,9 @@ Owner request after the first build. PR title: "Modern invoice: remove How to pa
 - [x] Tests updated in `tests/test_invoice_layouts.py`.
 - [x] Screenshots: Modern PDF, one page and two pages.
 - [x] Commit: `Modern invoice: remove How to pay and How paid`, then `Modern invoice: keep the payment check boxes, drop only their heading`
+
+## Task 6: Balance due alignment (follow-up, third PR)
+Owner report: the balance due figure in the top bar sat inside a shaded box, inset from the right edge, out of line with the figures below it. PR title: "Modern invoice: line up the balance due figures"
+- [x] Top bar and totals: no fill and no right padding on the balance due figures, so they are flush with the Amount column and the Reference values.
+- [x] Screenshots: Modern PDF page 1 and last page.
+- [x] Commit: `Modern invoice: line up the balance due figures`
