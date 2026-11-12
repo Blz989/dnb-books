@@ -35,13 +35,20 @@ b { font-weight: 600; }
 h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3a5f; }
 .number { font-size: 11pt; font-weight: 600; }
 
-.bar { display: flex; margin-top: 9pt; border-top: 1.5pt solid #1f3a5f; border-bottom: 0.75pt solid #b3b3b3; }
+/* The bar's top and bottom rules are each ONE shape drawn across the full width, on top of the cells (::before and
+   ::after), so a rule has the same thickness over the white cells and over the gray balance box. The gray fill
+   reaches to the middle of each rule: it fills the bar, and the outer edge of each rule lies on white everywhere. */
+.bar { display: flex; position: relative; margin-top: 9pt; padding: 1.5pt 0 0.75pt; }
+.bar::before, .bar::after { content: ""; position: absolute; left: 0; right: 0; }
+.bar::before { top: 0; height: 1.5pt; background: #1f3a5f; }
+.bar::after { bottom: 0; height: 0.75pt; background: #b3b3b3; }
 .bar > div { flex: 1; padding: 5pt 9pt; border-left: 0.75pt solid #d9d9d9; }
 .bar > div:first-child { padding-left: 0; border-left: none; }
 .bar span { display: block; color: #595959; }
 .bar b { display: block; font-size: 10.5pt; }
-/* Balance figures have no fill and no right padding, so they line up with the Amount column and Reference values. */
-.bar .due { text-align: right; padding-right: 0; }
+/* The balance box is exactly as wide as the Reference column under it (three columns with two 18pt gaps on a
+   576pt line), so its left edge lines up with Reference and with the totals block on the last page. */
+.bar .due { flex: none; width: 180pt; margin: -0.75pt 0 -0.375pt; background: #f1f2f4; text-align: right; border-left: none; }
 .bar .due span { color: #404040; }
 .bar .due b { font-size: 13pt; font-weight: 700; line-height: 1.2; }
 
@@ -81,15 +88,16 @@ h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3
 .money { display: flex; justify-content: space-between; align-items: flex-start; gap: 30pt; }
 .pay { flex: 1; }
 .pay .notes { white-space: pre-line; }
-.sums { width: 201pt; }
+.sums { width: 180pt; }
 .totals { width: 100%; border-collapse: collapse; }
-.totals td { padding: 1.5pt 0; }
+/* Totals rows carry the same side padding as the gray balance box, so labels and figures form one column with it. */
+.totals td { padding: 1.5pt 7.5pt; }
 .totals td:first-child { color: #404040; }
 .totals .total td { font-weight: 600; color: #1a1a1a; border-top: 0.75pt solid #b3b3b3; padding-top: 4pt; }
-.balance { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4.5pt; padding: 6pt 0 0; border-top: 1.5pt solid #1f3a5f; }
+.balance { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4.5pt; padding: 6pt 7.5pt; background: #f1f2f4; border-top: 1.5pt solid #1f3a5f; }
 .balance span { font-size: 10pt; font-weight: 700; }
 .balance b { font-size: 13pt; font-weight: 700; }
-.dueline { text-align: right; color: #404040; padding-top: 3pt; }
+.dueline { text-align: right; color: #404040; padding: 3pt 7.5pt 0; }
 
 .signoff { margin-top: 12pt; border: 0.75pt solid #1a1a1a; padding: 9pt 10.5pt 10.5pt; }
 .signoff .head { display: flex; justify-content: space-between; align-items: baseline; }
