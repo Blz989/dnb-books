@@ -19,14 +19,14 @@ The owner chooses between defined invoice layouts in Settings. The choice applie
    - Three columns: Bill to, Ship to, Reference. Reference rows: Invoice no., Invoice date, Terms, Due date, Sales order, Expected delivery. The last two appear only when the invoice came from a sales order (and the order has the date).
    - Lines: #, Item, Packaging, Qty, Unit, Price, Amount. One line per row. Category headings as in Classic (uncategorized first, then A to Z, numbering runs on).
 4. **Modern, closing block:**
-   - How to pay: "Check (preferred)", payable to the company name, at the company address. Then "Put invoice number X on your payment." and the invoice notes.
+   - Notes: the invoice notes, under a "Notes" heading, only when the invoice has notes. (Owner, 2026-11-12, after the first build: the "How to pay" section and the "Put invoice number X on your payment." line were removed.)
    - Totals: Total quantity, Invoice total, Payments and credits (only when there are any), Balance due, due date.
-   - Customer sign-off box: How paid (Check with a number line, Cash, Zelle, Card, Not yet paid), Amount paid, Customer signature, Printed name, Date. These are printed boxes to fill in by hand; nothing is recorded in the app.
-   - No ACH details, no QR code, no remittance stub, no "Questions" line.
+   - Customer sign-off box: Customer signature, Printed name, Date, filled in by hand. (Owner, 2026-11-12: the "How paid" check boxes and "Amount paid" line were removed.)
+   - No payment instructions, no ACH details, no QR code, no remittance stub, no "Questions" line.
 5. **Page breaks (Modern):**
    - A line never splits across pages.
    - A category heading never ends a page; it moves with its first line.
-   - The closing block (how to pay, totals, sign-off) is never split. If it does not fit, the whole block moves to the next page.
+   - The closing block (notes, totals, sign-off) is never split. If it does not fit, the whole block moves to the next page.
    - Every page after the first has a short running header (company, invoice number, customer, date, "Page X of N") and repeats the column headings.
    - Every page except the last ends with "Continued on the next page. Totals and sign-off are on the last page."
 6. **Expected delivery date.** A sales order records an optional expected delivery date. It shows on the order form and order page, and prints in Reference on Modern invoices made from that order.
@@ -35,7 +35,6 @@ The owner chooses between defined invoice layouts in Settings. The choice applie
 ## 3. Out of scope
 
 - Other documents (statements, purchase orders, checks) keep their layouts.
-- Zelle and Card as recorded payment methods.
 - Customer PO number, ship date, carrier, tracking.
 - A per-customer or per-invoice layout choice.
 - The Claude (MCP) sales order tools do not set the expected delivery date yet.

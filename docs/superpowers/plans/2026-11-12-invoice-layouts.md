@@ -38,3 +38,11 @@ PR title: "Invoice layout choice with a Modern layout, and expected delivery on 
 - [x] README status line and CLAUDE.md pointers.
 - [x] Full `uv run pytest -q`.
 - [x] PR into `main` with the title above.
+
+## Task 5: Remove payment sections from Modern (follow-up, second PR)
+Owner request after the first build. PR title: "Modern invoice: remove How to pay and How paid"
+- [x] Remove the "How to pay" section and the "Put invoice number X on your payment." line. Invoice notes stay, under a "Notes" heading, only when present.
+- [x] Remove "How paid (check one)" and "Amount paid" from the sign-off box. Signature, printed name, and date stay.
+- [x] Tests updated in `tests/test_invoice_layouts.py`.
+- [x] Screenshots: Modern PDF, one page and two pages.
+- [x] Commit: `Modern invoice: remove How to pay and How paid`

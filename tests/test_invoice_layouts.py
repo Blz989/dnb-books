@@ -128,7 +128,7 @@ def test_admin_changes_the_layout_in_settings(adm, sales_settings):
 
 @pytest.fixture
 def invoice(service, customer, admin_user):
-    return create_invoice(customer=customer, date=d(10, 27), user=admin_user, notes="Zelle to pay@example.com",
+    return create_invoice(customer=customer, date=d(10, 27), user=admin_user, notes="COD",
                           lines=[InvoiceLineSpec(service, 2, D("40.00"), description="Install"),
                                  InvoiceLineSpec(service, 1, D("1240.00"))])
 
@@ -143,12 +143,12 @@ def test_modern_has_the_invoice_facts(invoice, modern):
     for part in ("DNB Supply Co.", "1450 Commerce Drive", "Invoice", "INV-000001", "Invoice date", "Oct 27, 2026",
                  "Terms", "Net 30", "Due date", "Nov 26, 2026", "Balance due", "$1,320.00", "Bill to", "Ship to",
                  "Acme Builders", "Reference", "Invoice no.", "Packaging", "Qty", "Unit", "Price", "Amount", "Install",
-                 "Consulting hour", "Total quantity 3", "Invoice total 1,320.00", "How to pay", "Check (preferred)",
-                 "Payable to DNB Supply Co.", "Put invoice number INV-000001 on your payment.",
-                 "Zelle to pay@example.com", "Customer sign-off", "How paid", "Cash", "Zelle", "Card", "Not yet paid",
-                 "Amount paid", "Customer signature", "Printed name"):
+                 "Consulting hour", "Total quantity 3", "Invoice total 1,320.00", "Notes COD", "Customer sign-off",
+                 "Customer signature", "Printed name"):
         assert part in text, part
-    for gone in ("Authorized Signature", "ACH", "Questions", "Sales order", "Expected delivery", "Payments and credits"):
+    for gone in ("Authorized Signature", "ACH", "Questions", "Sales order", "Expected delivery", "Payments and credits",
+                 "How to pay", "Check (preferred)", "Payable to", "on your payment", "How paid", "Cash", "Zelle",
+                 "Card", "Not yet paid", "Amount paid"):
         assert gone not in text, gone
     assert "VOID" not in text
     assert invoice_pdf(invoice).startswith(b"%PDF")
@@ -183,6 +183,11 @@ def test_modern_groups_lines_by_category_and_lowercases_the_unit(make_item, cust
     order = [html.index(x) for x in ("Dry Goods", "Rice stick", "25X16OZ", "Refrigerated/Frozen Goods", "Marinated baby")]
     assert order == sorted(order)
     assert ">case<" in html and ">CASE<" not in html
+
+
+def test_modern_without_notes_has_no_notes_heading(service, customer, admin_user, modern):
+    inv = create_invoice(customer=customer, date=d(10, 27), user=admin_user, lines=[InvoiceLineSpec(service, 1, D("40.00"))])
+    assert "Notes" not in _text(render_invoice_html(inv))
 
 
 def test_modern_single_page_has_no_continued_line_and_no_running_header(invoice, modern):
@@ -220,7 +225,7 @@ def test_modern_page_breaks(service, customer, admin_user, modern, count):
         assert (CONTINUED in page) == (number < total)
     assert seen == [f"Line {n:03d}" for n in range(1, count + 1)]  # no line lost, repeated, or split
     last = pages[-1]
-    for part in ("How to pay", "Invoice total", "Customer sign-off", "Customer signature", "Printed name"):
+    for part in ("Total quantity", "Invoice total", "Customer sign-off", "Customer signature", "Printed name"):
         assert part in last and all(part not in p for p in pages[:-1]), part
 
 
