@@ -71,10 +71,7 @@
 <div class="closing">
   <div class="money">
     <div class="pay">
-      <div class="label">How to pay</div>
-      <div><b>Check (preferred)</b><br>Payable to {{ company.company_name|default:"Your company" }}{% for line in company_address %}<br>{{ line }}{% endfor %}</div>
-      <div class="remind">Put invoice number {{ invoice.number }} on your payment.</div>
-      {% if invoice.notes %}<div class="notes">{{ invoice.notes }}</div>{% endif %}
+      {% if invoice.notes %}<div class="label">Notes</div><div class="notes">{{ invoice.notes }}</div>{% endif %}
     </div>
     <div class="sums">
       <table class="totals">
@@ -91,7 +88,6 @@
     <div class="head"><b>Customer sign-off</b><span>Invoice {{ invoice.number }} · {{ bill_name }}</span></div>
     <div class="cols">
       <div class="paid">
-        <div class="label">How paid (check one)</div>
         <div class="row"><span class="box"></span><span>Check</span><span class="dim">No.</span><span class="fill"></span></div>
         <div class="row opts"><span class="box"></span><span>Cash</span><span class="box"></span><span>Zelle</span><span class="box"></span><span>Card</span><span class="box"></span><span>Not yet paid</span></div>
         <div class="row"><span class="dim">Amount paid $</span><span class="fill"></span></div>

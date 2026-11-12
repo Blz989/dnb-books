@@ -79,8 +79,7 @@ h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3
 .closing { break-inside: avoid; padding-top: 10pt; }
 .money { display: flex; justify-content: space-between; align-items: flex-start; gap: 30pt; }
 .pay { flex: 1; }
-.pay .remind { margin-top: 6pt; color: #404040; }
-.pay .notes { margin-top: 3pt; color: #404040; white-space: pre-line; }
+.pay .notes { white-space: pre-line; }
 .sums { width: 201pt; }
 .totals { width: 100%; border-collapse: collapse; }
 .totals td { padding: 1.5pt 0; }
@@ -95,7 +94,7 @@ h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3
 .signoff .head { display: flex; justify-content: space-between; align-items: baseline; }
 .signoff .head b { font-size: 10pt; font-weight: 700; }
 .signoff .head span { color: #404040; }
-.signoff .cols { display: flex; gap: 24pt; align-items: flex-end; margin-top: 9pt; }
+.signoff .cols { display: flex; gap: 24pt; align-items: flex-end; margin-top: 3pt; }
 .signoff .cols > div { flex: 1; }
 .signoff .row { display: flex; align-items: flex-end; gap: 6pt; margin-top: 9pt; }
 .signoff .row.opts span:nth-child(2n) { margin-right: 10pt; }
