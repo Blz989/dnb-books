@@ -79,7 +79,7 @@
         <tr class="total"><td>Invoice total</td><td class="num">{{ subtotal|floatformat:"2g" }}</td></tr>
         {% if applied %}<tr><td>Payments and credits</td><td class="num">−{{ applied|floatformat:"2g" }}</td></tr>{% endif %}
       </table>
-      <div class="balance"><span>Balance due (USD)</span><b>${{ balance|floatformat:"2g" }}</b></div>
+      <div class="balance"><span>Balance due</span><b>${{ balance|floatformat:"2g" }}</b></div>
       <div class="dueline">Due {{ invoice.due_date|date:"M j, Y" }}</div>
     </div>
   </div>

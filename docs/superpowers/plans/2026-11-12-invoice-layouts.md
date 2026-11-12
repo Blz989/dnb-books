@@ -52,3 +52,11 @@ Owner report: the balance due figure in the top bar sat inside a shaded box, ins
 - [x] Top bar and totals: no fill and no right padding on the balance due figures, so they are flush with the Amount column and the Reference values.
 - [x] Screenshots: Modern PDF page 1 and last page.
 - [x] Commit: `Modern invoice: line up the balance due figures`
+
+## Task 7: Gray balance boxes back, lined up (follow-up, fourth PR)
+Owner: the gray boxes from the first build should stay; the alignment should improve. PR title: "Modern invoice: gray balance boxes back, lined up with the Reference column"
+- [x] Restore the gray fill and inner padding on both balance due boxes (undoes Task 6).
+- [x] Top bar: the balance box is exactly as wide as the Reference column under it.
+- [x] Totals: the block is the same width as the Reference column; its rows carry the same side padding as the gray box, so labels and figures form one column. The totals label is "Balance due" (the top bar keeps "(USD)").
+- [x] Screenshots: Modern PDF page 1 and last page.
+- [x] Commit: `Modern invoice: gray balance boxes back, lined up with the Reference column`
