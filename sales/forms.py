@@ -23,14 +23,16 @@ def logo_extension(data: bytes) -> str | None:
 class SalesSettingsForm(forms.ModelForm):
     class Meta:
         model = SalesSettings
-        fields = ["ar_account", "undeposited_account", "returns_account", "default_invoice_notes"]
+        fields = ["ar_account", "undeposited_account", "returns_account", "default_invoice_notes", "invoice_layout"]
         widgets = {"default_invoice_notes": forms.Textarea(attrs={"rows": 3})}
         labels = {
             "ar_account": "Accounts receivable account",
             "undeposited_account": "Undeposited Funds account",
             "returns_account": "Sales returns and allowances account",
             "default_invoice_notes": "Default invoice notes",
+            "invoice_layout": "Invoice layout",
         }
+        help_texts = {"invoice_layout": "Applies to every invoice each time it is printed."}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,6 +46,10 @@ class SalesSettingsForm(forms.ModelForm):
             self.fields[name].required = True
             self.fields[name].error_messages["required"] = "Choose an account."
         self.fields["default_invoice_notes"].required = False
+        self.fields["invoice_layout"].required = False
+
+    def clean_invoice_layout(self):
+        return self.cleaned_data.get("invoice_layout") or self.instance.invoice_layout
 
 
 class CompanyProfileForm(forms.ModelForm):
@@ -84,16 +90,16 @@ class OrderHeaderForm(forms.Form):
         Customer.objects.none(),
         error_messages={"required": "Choose a customer.", "invalid_choice": "Choose a customer."})
     date = date_field("Date")
+    expected_delivery_date = forms.DateField(
+        label="Expected delivery", required=False, input_formats=["%Y-%m-%d"],
+        error_messages={"invalid": "Enter a date like 2026-01-31."},
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
     ship_to = forms.CharField(
         label="Ship to", required=False, widget=forms.Textarea(attrs={"rows": 3}),
         help_text="Leave blank to use the customer's default ship-to address.")
     notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
 
     def __init__(self, *args, all_customers: bool = False, **kwargs):
-    expected_delivery_date = forms.DateField(
-        label="Expected delivery", required=False, input_formats=["%Y-%m-%d"],
-        error_messages={"invalid": "Enter a date like 2026-01-31."},
-        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
         super().__init__(*args, **kwargs)
         self.fields["customer"].queryset = Customer.objects.all() if all_customers else Customer.objects.filter(is_active=True)
 
@@ -105,13 +111,13 @@ class InvoiceHeaderForm(OrderHeaderForm):
 
     def __init__(self, *args, editing: bool = False, **kwargs):
         super().__init__(*args, all_customers=editing, **kwargs)
+        del self.fields["expected_delivery_date"]  # a sales order field; invoices print it from their order
         self.fields["ship_to"].help_text = "" if editing else self.fields["ship_to"].help_text
         if not editing:
             del self.fields["reason"]
 
 
 class ShipmentHeaderForm(forms.Form):
-        del self.fields["expected_delivery_date"]  # a sales order field; invoices print it from their order
     date = date_field("Invoice date")
     terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Customer's default")] + list(Terms.choices))
     ship_to = forms.CharField(label="Ship to", required=False, widget=forms.Textarea(attrs={"rows": 3}))
