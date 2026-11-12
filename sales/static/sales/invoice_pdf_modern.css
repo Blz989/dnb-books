@@ -40,7 +40,8 @@ h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3
 .bar > div:first-child { padding-left: 0; border-left: none; }
 .bar span { display: block; color: #595959; }
 .bar b { display: block; font-size: 10.5pt; }
-.bar .due { background: #f1f2f4; text-align: right; border-left: none; }
+/* Balance figures have no fill and no right padding, so they line up with the Amount column and Reference values. */
+.bar .due { text-align: right; padding-right: 0; }
 .bar .due span { color: #404040; }
 .bar .due b { font-size: 13pt; font-weight: 700; line-height: 1.2; }
 
@@ -85,7 +86,7 @@ h1 { margin: 0; font-size: 21pt; font-weight: 700; line-height: 1.1; color: #1f3
 .totals td { padding: 1.5pt 0; }
 .totals td:first-child { color: #404040; }
 .totals .total td { font-weight: 600; color: #1a1a1a; border-top: 0.75pt solid #b3b3b3; padding-top: 4pt; }
-.balance { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4.5pt; padding: 6pt 7.5pt; background: #f1f2f4; border-top: 1.5pt solid #1f3a5f; }
+.balance { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4.5pt; padding: 6pt 0 0; border-top: 1.5pt solid #1f3a5f; }
 .balance span { font-size: 10pt; font-weight: 700; }
 .balance b { font-size: 13pt; font-weight: 700; }
 .dueline { text-align: right; color: #404040; padding-top: 3pt; }
