@@ -58,6 +58,6 @@ Owner: the gray boxes from the first build should stay; the alignment should imp
 - [x] Restore the gray fill and inner padding on both balance due boxes (undoes Task 6).
 - [x] Top bar: the balance box is exactly as wide as the Reference column under it.
 - [x] Totals: the block is the same width as the Reference column; its rows carry the same side padding as the gray box, so labels and figures form one column. The totals label is "Balance due" (the top bar keeps "(USD)").
-- [x] Top bar: the gray box sits 2pt clear of the bar's top and bottom rules, so both rules run over white for their whole length. Two earlier tries (fill stopping at the rule, then fill under the rule) both left a visible variation along the rule on screen (owner's zoomed screenshots).
+- [x] Top bar: the gray box fills the bar's full height. The thin bottom rule runs under the three plain cells only and stops at the box, so the rule never touches the gray. Earlier tries (fill stopping at the rule, fill under the rule, a white gap) either left a visible variation along the rule on screen or did not fill the space (owner's zoomed screenshots).
 - [x] Screenshots: Modern PDF page 1 and last page; zoom of the box corner at three resolutions.
-- [x] Commits: `Modern invoice: gray balance boxes back, lined up with the Reference column`, `Modern invoice: clean rule under the gray balance box`, `Modern invoice: keep the gray balance box clear of the bar's rules`
+- [x] Commits: `Modern invoice: gray balance boxes back, lined up with the Reference column`, `Modern invoice: clean rule under the gray balance box`, `Modern invoice: keep the gray balance box clear of the bar's rules`, `Modern invoice: gray balance box fills the bar; thin rule stops at the box`
