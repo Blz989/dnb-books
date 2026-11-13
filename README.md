@@ -192,6 +192,8 @@ Backups are encrypted, then copied to Google Drive with [rclone](https://rclone.
 5. Finish the prompts, then set `DNB_BACKUP_REMOTE=gdrive:dnb-backups` in `.env` and run `docker compose up -d`.
 6. Test it: `docker compose exec -u dnb app python manage.py backup_now`, then check that the file appears in the `dnb-backups` folder in Google Drive, and run `docker compose exec -u dnb app python manage.py restore_drill`.
 
+The upload to Drive is tried up to 3 times, each stopped after 3 minutes, with a short pause between tries. A healthy upload takes seconds, so this only matters when Drive stalls. If all 3 tries fail, the backup stays in `./data/backups` and the home screen shows "Backup saved locally but not uploaded"; the next nightly run uploads again.
+
 ### Banking setup (Phase 5a)
 
 Do these once after `./update.sh`.

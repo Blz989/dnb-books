@@ -21,6 +21,7 @@ def remote(tmp_path, settings, monkeypatch):
     folder.mkdir()
     local = tmp_path / "local"
     local.mkdir()
+    monkeypatch.setattr("backup.remote.time.sleep", lambda s: None)   # no real pause between upload attempts
     monkeypatch.setenv("FAKE_RCLONE_ROOT", str(folder))
     settings.DNB_RCLONE = FAKE_RCLONE
     settings.DNB_BACKUP_REMOTE = "fake:dnb-backups"
@@ -85,3 +86,67 @@ def test_restore_drill_fails_when_remote_copy_missing(file_db_with_entries, remo
 ])
 def test_next_run(now, kwargs, expected):
     assert next_run(now, **kwargs) == expected
+
+
+# --- upload retries (rclone mocked; never touches Drive) ---
+
+import subprocess
+
+from backup import remote as remote_module
+
+
+def _fake_run(outcomes, calls):
+    def run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        outcome = outcomes[len(calls) - 1]
+        if outcome == "timeout":
+            raise subprocess.TimeoutExpired(cmd, kwargs["timeout"])
+        return subprocess.CompletedProcess(cmd, outcome, "", "" if outcome == 0 else "2026/11/13 01:15:00 ERROR : boom")
+    return run
+
+
+@pytest.fixture
+def mocked_rclone(file_db_with_entries, tmp_path, settings, monkeypatch):
+    settings.DNB_BACKUP_REMOTE = "gdrive:dnb-backups"
+    settings.DNB_BACKUP_DIR = tmp_path
+    sleeps = []
+    monkeypatch.setattr(remote_module.time, "sleep", sleeps.append)
+    calls = []
+
+    def install(outcomes):
+        monkeypatch.setattr(remote_module.subprocess, "run", _fake_run(outcomes, calls))
+        return calls, sleeps
+    return install
+
+
+def test_upload_first_attempt_succeeds_with_one_call(mocked_rclone):
+    calls, sleeps = mocked_rclone([0, 0])  # copy, then retention delete (none)
+    run = run_backup()
+    assert run.status == BackupRun.Status.SUCCESS and run.error == ""
+    copies = [c for c, _ in calls if "copy" in c]
+    assert len(copies) == 1 and sleeps == []
+    assert calls[0][1]["timeout"] == 180 and "--timeout" in calls[0][0]
+
+
+def test_stalled_upload_is_retried_and_succeeds(mocked_rclone):
+    calls, sleeps = mocked_rclone(["timeout", 0])
+    run = run_backup()
+    assert run.status == BackupRun.Status.SUCCESS and run.error == ""
+    assert len([c for c, _ in calls if "copy" in c]) == 2 and len(sleeps) == 1
+
+
+def test_upload_gives_up_after_three_attempts_and_keeps_local_file(mocked_rclone, tmp_path):
+    calls, sleeps = mocked_rclone(["timeout", "timeout", "timeout"])
+    run = run_backup()
+    assert run.status == BackupRun.Status.FAILED
+    assert run.error == "Backup saved locally but not uploaded: rclone took longer than 3 minutes."
+    assert len(calls) == 3 and len(sleeps) == 2
+    assert (tmp_path / run.filename).exists()
+    assert "not uploaded" in backup_status(run.finished_at).message
+
+
+def test_upload_retries_after_an_rclone_error_too(mocked_rclone):
+    calls, _ = mocked_rclone([1, 1, 1])
+    run = run_backup()
+    assert run.error == "Backup saved locally but not uploaded: boom"
+    assert len(calls) == 3

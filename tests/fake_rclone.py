@@ -19,6 +19,8 @@ def main(argv):
         print(f"2026/10/27 01:15:00 ERROR : {os.environ['FAKE_RCLONE_FAIL']}", file=sys.stderr)
         return 1
     command, *args = argv
+    while args and args[0].startswith("--"):   # real rclone flags, each with one value; ignored here
+        args = args[2:]
     if command == "copy":
         src, dst = args[0], local(args[1])
         dst.mkdir(parents=True, exist_ok=True)
