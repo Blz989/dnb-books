@@ -117,9 +117,17 @@ def update_order(
             invoiced = invoiced_quantity(line)
             if spec.quantity < invoiced:
                 raise OrderError(f"Line {n}: {invoiced} already invoiced.")
+            if spec.fulfillment != Fulfillment.DROP_SHIP and line.po_allocations.exists():
+                raise OrderError(f"Line {n} is on a purchase order, so it has to stay a drop-ship line.")
         for n, line in enumerate(current.lines.all(), 1):
             if line.pk not in kept and line.invoice_lines.exists():
                 raise OrderError(f"Line {n} has been invoiced and can't be removed.")
+            if line.pk not in kept:
+                pos = sorted({a.po_line.order.number for a in line.po_allocations.select_related("po_line__order")})
+                if pos:
+                    raise OrderError(
+                        f"Line {n} is on purchase order {', '.join(pos)} and can't be removed. "
+                        "Remove it from the purchase order first.")
         for line in existing.values():
             if line.pk not in kept:
                 line.delete()
