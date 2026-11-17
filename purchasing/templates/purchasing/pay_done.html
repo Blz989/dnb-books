@@ -16,7 +16,7 @@
     <thead><tr><th>Bill</th><th>Vendor invoice</th><th class="num">Paid</th></tr></thead>
     <tbody>
     {% for a in r.applications %}
-      <tr><td><a class="sku" href="/purchasing/bills/{{ a.bill.number }}/">{{ a.bill.number }}</a></td><td>{{ a.bill.vendor_invoice_number|default:"—" }}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td></tr>
+      <tr><td><a class="sku" href="/purchasing/bills/{{ a.bill.number|docnum }}/">{{ a.bill.number }}</a></td><td>{{ a.bill.vendor_invoice_number|default:"—" }}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td></tr>
     {% endfor %}
       <tr class="total"><td>Total</td><td></td><td class="num">{{ r.payment.amount|floatformat:"2g" }}</td></tr>
     </tbody>

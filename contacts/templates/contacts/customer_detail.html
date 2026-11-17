@@ -36,7 +36,7 @@
   <thead><tr><th>Invoice</th><th>Date</th><th>Due</th><th class="num">Balance</th><th></th></tr></thead>
   <tbody>
   {% for r in open_rows %}
-    <tr><td><a class="sku" href="/sales/invoices/{{ r.invoice.number }}/">{{ r.invoice.number }}</a></td>
+    <tr><td><a class="sku" href="/sales/invoices/{{ r.invoice.number|docnum }}/">{{ r.invoice.number }}</a></td>
       <td>{{ r.invoice.date|date:"Y-m-d" }}</td><td>{{ r.invoice.due_date|date:"Y-m-d" }}</td>
       <td class="num">{{ r.balance|floatformat:"2g" }}</td>
       <td>{% if r.days_overdue > 0 %}<span class="tag overdue">{{ r.days_overdue }} day{{ r.days_overdue|pluralize }} overdue</span>{% endif %}</td></tr>

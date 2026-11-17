@@ -98,6 +98,8 @@ def update_po(
     validate_po_lines(lines)
     with transaction.atomic():
         current = PurchaseOrder.objects.get(pk=po.pk)
+        if current.deleted_at:
+            raise PurchasingError(f"{current.number} was deleted.")
         if current.status == OrderStatus.CLOSED:
             raise PurchasingError(f"{current.number} is closed. Reopen it to make changes.")
         existing = {l.pk: l for l in current.lines.all()}
@@ -147,6 +149,8 @@ def update_po(
 
 
 def close_po(po: PurchaseOrder, user) -> PurchaseOrder:
+    if po.deleted_at:
+        raise PurchasingError(f"{po.number} was deleted.")
     po.status = OrderStatus.CLOSED
     po.closed_by = user
     po.closed_at = timezone.now()
@@ -155,6 +159,8 @@ def close_po(po: PurchaseOrder, user) -> PurchaseOrder:
 
 
 def reopen_po(po: PurchaseOrder, user) -> PurchaseOrder:
+    if po.deleted_at:
+        raise PurchasingError(f"{po.number} was deleted.")
     po.status = OrderStatus.OPEN
     po.closed_by = None
     po.closed_at = None
@@ -190,6 +196,8 @@ def drop_ship_candidates(orders: SalesOrder | Sequence[SalesOrder]) -> dict[str,
     oldest sales order first, then in line order."""
     groups: dict[str, list[SalesOrderLine]] = defaultdict(list)
     for order in _orders(orders):
+        if order.deleted_at:
+            continue
         lines = order.lines.filter(
             fulfillment=Fulfillment.DROP_SHIP, po_allocations__isnull=True).select_related("item", "order")
         for line in lines:

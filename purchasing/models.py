@@ -80,6 +80,8 @@ class PurchaseOrder(models.Model):
     closed_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)  # hidden from lists; the record stays
+    deleted_by = models.ForeignKey(USER, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
 
     class Meta:
         ordering = ["-date", "-id"]
@@ -146,6 +148,8 @@ class Bill(HasTerms, models.Model):
     void_reason = models.CharField(max_length=200, blank=True)
     created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)  # hidden from lists; the record stays
+    deleted_by = models.ForeignKey(USER, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
 
     class Meta:
         ordering = ["-date", "-id"]

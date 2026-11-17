@@ -7,9 +7,11 @@
   <a class="btn" href="{% url 'purchasing:po-pdf' order.number %}" target="_blank" rel="noopener">Download PDF</a>
   {% if order.status == "OPEN" %}<a class="btn" href="{% url 'purchasing:po-edit' order.number %}">Edit</a>{% endif %}
   {% if can_bill %}<a class="btn primary" href="{% url 'purchasing:po-bill' order.number %}">Bill this order</a>{% endif %}
-  <form method="post" action="{% url 'purchasing:po-close' order.number %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">{% if order.status == "OPEN" %}Close order{% else %}Reopen order{% endif %}</button></form>
+  {% if is_admin and not order.deleted_at %}<a class="btn danger" href="{% url 'purchasing:po-delete' order.number %}">Delete</a>{% endif %}
+  {% if not order.deleted_at %}<form method="post" action="{% url 'purchasing:po-close' order.number %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">{% if order.status == "OPEN" %}Close order{% else %}Reopen order{% endif %}</button></form>{% endif %}
 {% endblock %}
 {% block content %}
+{% if order.deleted_at %}<div class="banner error">Deleted on {{ order.deleted_at|date:"Y-m-d" }}. It is kept for the audit log and no longer appears in lists.</div>{% endif %}
 {% if order.notes %}<div class="card"><div class="body"><dl class="facts"><dt>Notes</dt><dd>{{ order.notes|linebreaksbr }}</dd></dl></div></div>{% endif %}
 <h2>Lines</h2>
 <div class="card">

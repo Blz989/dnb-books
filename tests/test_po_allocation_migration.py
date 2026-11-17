@@ -13,7 +13,8 @@ from tests.test_dropship_regression import scenario  # noqa: F401  (fixture)
 
 D = Decimal
 BEFORE = [("purchasing", "0002_seed_thresholds")]
-AFTER = [("purchasing", "0003_po_allocations")]
+# 0004 only adds the delete fields; the tests below use the live models, which need them.
+AFTER = [("purchasing", "0004_bill_deleted_at_bill_deleted_by_and_more")]
 
 
 def migrate(target):

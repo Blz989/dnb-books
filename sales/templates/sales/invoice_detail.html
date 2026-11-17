@@ -10,8 +10,10 @@
   <a class="btn" href="{% url 'sales:invoice-pdf' invoice.number %}">Download PDF</a>
   {% if not is_void %}<a class="btn" href="/sales/payments/new/?customer={{ invoice.customer.pk }}&amp;invoice={{ invoice.number }}">Receive payment</a>{% endif %}
   {% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:invoice-void' invoice.number %}">Void</a>{% endif %}
+  {% if is_admin and is_void and not invoice.deleted_at %}<a class="btn danger" href="{% url 'sales:invoice-delete' invoice.number %}">Delete</a>{% endif %}
 {% endblock %}
 {% block content %}
+{% if invoice.deleted_at %}<div class="banner error">Deleted on {{ invoice.deleted_at|date:"Y-m-d" }}. It is kept for the audit log and no longer appears in lists.</div>{% endif %}
 {% if is_void %}<div class="banner error">Voided on {{ invoice.voided_on|date:"Y-m-d" }}: {{ invoice.void_reason }}</div>{% endif %}
 <div class="kpis">
   <div class="kpi"><div class="l">Total</div><div class="v">{{ total|floatformat:"2g" }}</div></div>
@@ -46,12 +48,12 @@
   <thead><tr><th>Document</th><th>Applied on</th><th class="num">Amount</th><th></th></tr></thead>
   <tbody>
   {% for a in payment_apps %}
-    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/payments/{{ a.payment.number }}/">{{ a.payment.number }}</a> <span class="dash">Payment</span></td>
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/payments/{{ a.payment.number|docnum }}/">{{ a.payment.number }}</a> <span class="dash">Payment</span></td>
       <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
       <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'sales:application-remove' invoice.number 'payment' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
   {% endfor %}
   {% for a in credit_apps %}
-    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/credits/{{ a.credit_note.number }}/">{{ a.credit_note.number }}</a> <span class="dash">Credit note</span></td>
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/credits/{{ a.credit_note.number|docnum }}/">{{ a.credit_note.number }}</a> <span class="dash">Credit note</span></td>
       <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
       <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'sales:application-remove' invoice.number 'credit' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
   {% endfor %}

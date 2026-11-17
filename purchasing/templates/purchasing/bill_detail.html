@@ -8,8 +8,10 @@
   {% if not is_void %}<a class="btn" href="{% url 'purchasing:bill-edit' bill.number %}">Edit</a>{% endif %}
   {% if not is_void and balance > 0 %}<a class="btn primary" href="/purchasing/pay/?vendor={{ bill.vendor.pk }}">Pay</a>{% endif %}
   {% if is_admin and not is_void %}<a class="btn" href="{% url 'purchasing:bill-void' bill.number %}">Void</a>{% endif %}
+  {% if is_admin and is_void and not bill.deleted_at %}<a class="btn danger" href="{% url 'purchasing:bill-delete' bill.number %}">Delete</a>{% endif %}
 {% endblock %}
 {% block content %}
+{% if bill.deleted_at %}<div class="banner error">Deleted on {{ bill.deleted_at|date:"Y-m-d" }}. It is kept for the audit log and no longer appears in lists.</div>{% endif %}
 {% if is_void %}<div class="banner error">Voided on {{ bill.voided_on|date:"Y-m-d" }}: {{ bill.void_reason }}</div>{% endif %}
 <div class="kpis">
   <div class="kpi"><div class="l">Total</div><div class="v">{{ total|floatformat:"2g" }}</div></div>
@@ -50,7 +52,7 @@
   {% for l in item_lines %}{% if l.kind == "DROP_SHIP" %}
     {% for a in l.drop_ship_allocations %}
     <tr><td><span class="sku">{{ l.item.sku }}</span></td>
-      <td><a class="sku" href="/sales/invoices/{{ a.invoice_line.invoice.number }}/">{{ a.invoice_line.invoice.number }}</a></td>
+      <td><a class="sku" href="/sales/invoices/{{ a.invoice_line.invoice.number|docnum }}/">{{ a.invoice_line.invoice.number }}</a></td>
       <td>{{ a.invoice_line.invoice.customer.name }}</td><td class="num">{{ a.quantity }}</td></tr>
     {% endfor %}
     {% if l.drop_ship_unmatched > 0 %}<tr><td><span class="sku">{{ l.item.sku }}</span></td><td colspan="2"><span class="dash">Not yet matched to a customer invoice. The next invoice for this sales order line picks it up.</span></td><td class="num">{{ l.drop_ship_unmatched }}</td></tr>{% endif %}
@@ -66,12 +68,12 @@
   <thead><tr><th>Document</th><th>Applied on</th><th class="num">Amount</th><th></th></tr></thead>
   <tbody>
   {% for a in payment_apps %}
-    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/payments/{{ a.payment.number }}/">{{ a.payment.number }}</a> <span class="dash">Payment ({{ a.payment.get_method_display }})</span></td>
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/payments/{{ a.payment.number|docnum }}/">{{ a.payment.number }}</a> <span class="dash">Payment ({{ a.payment.get_method_display }})</span></td>
       <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
       <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'purchasing:application-remove' bill.number 'payment' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
   {% endfor %}
   {% for a in credit_apps %}
-    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/credits/{{ a.credit.number }}/">{{ a.credit.number }}</a> <span class="dash">Vendor credit</span></td>
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/credits/{{ a.credit.number|docnum }}/">{{ a.credit.number }}</a> <span class="dash">Vendor credit</span></td>
       <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
       <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'purchasing:application-remove' bill.number 'credit' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
   {% endfor %}
