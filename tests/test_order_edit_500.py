@@ -64,3 +64,11 @@ def test_switching_allocated_line_to_stock_is_blocked(client, admin_user, so):
     data["lines-0-fulfillment"] = Fulfillment.STOCK
     r = client.post(reverse("sales:order-edit", args=[so.number]), data)
     assert r.status_code == 200 and b"has to stay a drop-ship line" in r.content
+
+
+def test_changing_quantity_of_allocated_line_is_blocked(client, admin_user, so):
+    client.force_login(admin_user)
+    data = post_data(so)
+    data["lines-0-quantity"] = "5"
+    r = client.post(reverse("sales:order-edit", args=[so.number]), data)
+    assert r.status_code == 200 and b"is on a purchase order for 3" in r.content

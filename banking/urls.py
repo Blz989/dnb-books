@@ -1,5 +1,7 @@
 from django.urls import path
 
+import core.urlnumbers  # noqa: F401  (registers the docnum converter)
+
 from .views import account_page, accounts, checks, inbox, reconcile, transfers
 
 app_name = "banking"
@@ -47,10 +49,10 @@ urlpatterns = [
     path("reconcile/<int:account_id>/<int:pk>/undo/", reconcile.reconcile_undo, name="reconcile-undo"),
     path("reconcile/<int:account_id>/<int:pk>/report.pdf", reconcile.reconcile_report, name="reconcile-report"),
     path("checks/", checks.checks_to_print, name="checks"),
-    path("checks/<str:number>/print/", checks.check_print, name="check-print"),
-    path("checks/<str:number>/pdf/", checks.check_pdf_view, name="check-pdf"),
-    path("checks/<str:number>/confirm/", checks.check_confirm, name="check-confirm"),
-    path("checks/<str:number>/reprint/", checks.check_reprint, name="check-reprint"),
+    path("checks/<docnum:number>/print/", checks.check_print, name="check-print"),
+    path("checks/<docnum:number>/pdf/", checks.check_pdf_view, name="check-pdf"),
+    path("checks/<docnum:number>/confirm/", checks.check_confirm, name="check-confirm"),
+    path("checks/<docnum:number>/reprint/", checks.check_reprint, name="check-reprint"),
     path("layout/<int:account_id>/", checks.layout_page, name="layout"),
     path("layout/<int:account_id>/calibrate.pdf", checks.calibrate_pdf, name="calibrate"),
 ]

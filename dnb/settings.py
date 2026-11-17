@@ -101,6 +101,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.nav",
             ],
+            "builtins": ["core.templatetags.docnum"],
         },
     },
 ]

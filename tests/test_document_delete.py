@@ -248,3 +248,41 @@ def test_standard_user_cannot_open_delete_screens(client, standard_user, order, 
     client.force_login(standard_user)
     assert client.get(reverse("sales:order-delete", args=[order.number])).status_code == 403
     assert client.get(reverse("purchasing:po-delete", args=[po.number])).status_code == 403
+
+
+# ---- imported numbers with a slash ----
+
+def test_numbers_with_a_slash_list_and_open(client, admin_user, order, po):
+    """Zoho numbers like "GF-Net Credit 6/2025" must not break lists or routes."""
+    from purchasing.models import Bill, PurchaseOrder, VendorCredit
+    from sales.models import Invoice, SalesOrder
+
+    inv = invoice(order, admin_user)
+    b = bill(po, admin_user)
+    for model, old, new in ((Invoice, inv.number, "INV 6/2025"), (Bill, b.number, "GF-Net Bill 6/2025"),
+                            (PurchaseOrder, po.number, "PO 6/2025"), (SalesOrder, order.number, "SO 6/2025")):
+        model.objects.filter(number=old).update(number=new)
+    client.force_login(admin_user)
+    for name, number in (("sales:invoice-detail", "INV 6/2025"), ("purchasing:bill-detail", "GF-Net Bill 6/2025"),
+                         ("purchasing:po-detail", "PO 6/2025"), ("sales:order-detail", "SO 6/2025")):
+        url = reverse(name, args=[number])
+        assert "~s~" in url and "/" not in url.rsplit("/", 2)[-2]
+        assert client.get(url).status_code == 200
+    for name in ("sales:invoice-list", "purchasing:bill-list", "purchasing:po-list", "sales:order-list"):
+        page = client.get(reverse(name))
+        assert page.status_code == 200
+    assert client.get(reverse("sales:order-delete", args=["SO 6/2025"])).status_code == 200
+    assert client.get(reverse("sales:order-edit", args=["SO 6/2025"])).status_code == 200
+
+
+def test_vendor_credit_number_with_a_slash(client, admin_user, setup):
+    from purchasing.models import VendorCredit, VendorCreditKind
+
+    vendor = Vendor.objects.get(name="Acme Mfg")
+    credit = VendorCredit.objects.create(
+        number="GF-Net Credit 6/2025", vendor=vendor, date=d(6, 1), kind=VendorCreditKind.ALLOWANCE,
+        reason="x", created_by=admin_user)
+    client.force_login(admin_user)
+    page = client.get(reverse("purchasing:credit-list"))
+    assert page.status_code == 200 and "GF-Net Credit 6/2025" in page.content.decode()
+    assert client.get(reverse("purchasing:credit-detail", args=[credit.number])).status_code == 200

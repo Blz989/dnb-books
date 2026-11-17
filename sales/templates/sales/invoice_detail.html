@@ -48,12 +48,12 @@
   <thead><tr><th>Document</th><th>Applied on</th><th class="num">Amount</th><th></th></tr></thead>
   <tbody>
   {% for a in payment_apps %}
-    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/payments/{{ a.payment.number }}/">{{ a.payment.number }}</a> <span class="dash">Payment</span></td>
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/payments/{{ a.payment.number|docnum }}/">{{ a.payment.number }}</a> <span class="dash">Payment</span></td>
       <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
       <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'sales:application-remove' invoice.number 'payment' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
   {% endfor %}
   {% for a in credit_apps %}
-    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/credits/{{ a.credit_note.number }}/">{{ a.credit_note.number }}</a> <span class="dash">Credit note</span></td>
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/sales/credits/{{ a.credit_note.number|docnum }}/">{{ a.credit_note.number }}</a> <span class="dash">Credit note</span></td>
       <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td>
       <td>{% if not a.removed and not is_void %}<form method="post" action="{% url 'sales:application-remove' invoice.number 'credit' a.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Remove</button></form>{% endif %}</td></tr>
   {% endfor %}

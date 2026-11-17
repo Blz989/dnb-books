@@ -14,7 +14,7 @@
     <thead><tr><th>Invoice</th><th>Date</th><th>Due</th><th class="num">Balance</th><th class="num">Apply</th></tr></thead>
     <tbody>
     {% for r in rows %}
-      <tr><td><a class="sku" href="/sales/invoices/{{ r.invoice.number }}/">{{ r.invoice.number }}</a></td>
+      <tr><td><a class="sku" href="/sales/invoices/{{ r.invoice.number|docnum }}/">{{ r.invoice.number }}</a></td>
         <td>{{ r.invoice.date|date:"Y-m-d" }}</td><td>{{ r.invoice.due_date|date:"Y-m-d" }}</td>
         <td class="num">{{ r.balance|floatformat:"2g" }}</td>
         <td class="num"><input type="text" inputmode="decimal" name="apply-{{ r.invoice.pk }}" value="{{ r.value }}" data-balance="{{ r.balance }}" style="width:7rem;text-align:right"></td></tr>
