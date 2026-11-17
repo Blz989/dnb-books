@@ -1,0 +1,23 @@
+{% extends "core/settings_base.html" %}
+{% block title %}Payment terms{% endblock %}
+{% block page_title %}Payment terms{% endblock %}
+{% block page_subtitle %}<div class="sub">When customer invoices and vendor bills fall due.</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url 'settings:term-new' %}">New term</a>{% endblock %}
+{% block settings_content %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>Name</th><th>Due date</th><th>Used by</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td><a href="{% url 'settings:term-edit' r.term.pk %}">{{ r.term.name }}</a></td>
+      <td>{{ r.term.description }}</td>
+      <td>{% if r.used_by %}{{ r.used_by }}{% else %}<span class="dash">Not used yet</span>{% endif %}</td>
+      <td>{% if r.term.is_active %}Active{% else %}<span class="tag ns">Inactive</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="dash">A term that is in use can be renamed or made inactive, but not deleted, and its due date rule is locked so existing due dates stay explainable. For a different rule, add a new term. Changing a term never changes the due date of an invoice or bill that already exists.</p>
+{% endblock %}

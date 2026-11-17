@@ -10,7 +10,6 @@ from typing import Callable
 
 from banking.transfers import void_transfer
 from banking.models import Transfer
-from contacts.models import Terms
 from core.roles import is_admin
 from items.models import StockMovement
 from items.stock import void_movement
@@ -171,7 +170,7 @@ def _void(tool: str):
 # ---- edits ----
 
 def _terms(value, current):
-    return lookup.choice(value, Terms, "terms") if value else current
+    return lookup.term(value) if value else current
 
 
 def _pick(existing: list, sku: str, used: set):

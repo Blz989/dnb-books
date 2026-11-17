@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
-from contacts.models import Customer, Terms
+from contacts.models import Customer, HasTerms, Terms
 from items.models import Item
 from ledger.models import Account, JournalEntry
 
@@ -142,11 +142,11 @@ class SalesOrderLine(models.Model):
         ordering = ["position", "id"]
 
 
-class Invoice(models.Model):
+class Invoice(HasTerms, models.Model):
     number = models.CharField(max_length=30, unique=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="invoices")
     date = models.DateField()
-    terms = models.CharField(max_length=20, choices=Terms.choices, default=Terms.NET_30)
+    terms = models.CharField(max_length=20, default=Terms.NET_30)
     due_date = models.DateField()
     ship_to = models.TextField(blank=True)
     notes = models.TextField(blank=True)

@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
 from banking.models import AccountKind
-from contacts.models import Terms
+from contacts.models import PaymentTerm, Terms
+from contacts.terms import find_term
 from ledger.models import AccountSubtype, AccountType
 from purchasing.models import VendorPaymentMethod
 from sales.models import PaymentMethod
@@ -142,13 +143,16 @@ def bank_kind(name: str, zoho_type: str) -> AccountKind | None:
     return None
 
 
-def terms(label: str, issued: str = "", due: str = "") -> Terms:
+def terms(label: str, issued: str = "", due: str = "") -> str:
     """Zoho's terms label as DNB Books terms. "Custom" terms carry only a due date, so their length is the gap
     between the document date and the due date (Net 30 when either date is missing)."""
     text = (label or "").strip()
     if not text:
         return Terms.NET_30
     lowered = text.lower()
+    named = find_term(text)
+    if named is not None:
+        return named.code
     if lowered == "due on receipt":
         return Terms.DUE_ON_RECEIPT
     if lowered == "due end of the month":
@@ -167,11 +171,12 @@ def terms(label: str, issued: str = "", due: str = "") -> Terms:
     return _net_terms(int(match.group(1)))
 
 
-def _net_terms(days: int) -> Terms:
-    options = sorted((int(t.value.split("_")[1]), t) for t in Terms if t.value.startswith("NET_"))
-    for option_days, term in options:
+def _net_terms(days: int) -> str:
+    """The active net-days term with exactly that many days, else the next longer one, else the longest."""
+    options = sorted((t.days, t.code) for t in PaymentTerm.objects.filter(is_active=True, end_of_month=False))
+    for option_days, code in options:
         if option_days >= days:
-            return term
+            return code
     return options[-1][1]
 
 

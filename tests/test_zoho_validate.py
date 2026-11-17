@@ -1,6 +1,10 @@
+import pytest
+
 from migration.zoho.reader import read_export
 from migration.zoho.validate import validate
 from tests.zoho_sample import CUSTOMERS, VENDORS, build_sample_export, sample_rows
+
+pytestmark = pytest.mark.django_db  # payment terms are read from the database
 
 LINE = {"Item Name": "Blue Widget", "SKU": "WID-A", "Quantity": "1", "Item Price": "10.00"}
 

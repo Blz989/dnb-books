@@ -2,7 +2,7 @@ from auditlog.registry import auditlog
 from django.conf import settings
 from django.db import models
 
-from contacts.models import Terms, Vendor
+from contacts.models import HasTerms, Terms, Vendor
 from items.models import Item
 from ledger.models import Account, JournalEntry
 from sales.models import DocStatus, DocType, InvoiceLine, OrderStatus, SalesOrder, SalesOrderLine
@@ -130,12 +130,12 @@ class PurchaseOrderAllocation(models.Model):
         constraints = [models.UniqueConstraint(fields=["po_line", "so_line"], name="po_allocation_unique")]
 
 
-class Bill(models.Model):
+class Bill(HasTerms, models.Model):
     number = models.CharField(max_length=30, unique=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.PROTECT, related_name="bills")
     vendor_invoice_number = models.CharField(max_length=100, blank=True)
     date = models.DateField()
-    terms = models.CharField(max_length=20, choices=Terms.choices, default=Terms.NET_30)
+    terms = models.CharField(max_length=20, default=Terms.NET_30)
     due_date = models.DateField()
     notes = models.TextField(blank=True)
     purchase_order = models.ForeignKey(
