@@ -1,6 +1,7 @@
 """Customer statement: dated events from the customer's documents, with a running balance. The closing balance is
 the customer's A/R aging total for the same date. Every document is an event; a voided one gets a second,
 opposite event on its void date, so a past statement never changes when a later document is voided."""
+from core.urlnumbers import encode
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -94,13 +95,13 @@ def _events(customer: Customer, end: date) -> list[tuple[date, int, str, Stateme
     """(date, sort key, number, row) for every document, plus a reversal for each voided one."""
     docs = []
     for inv in customer.invoices.prefetch_related("lines"):
-        docs.append(("Invoice", inv, invoice_total(inv), +1, f"/sales/invoices/{inv.number}/"))
+        docs.append(("Invoice", inv, invoice_total(inv), +1, f"/sales/invoices/{encode(inv.number)}/"))
     for pay in customer.payments.prefetch_related("applications__invoice", "refunds"):
-        docs.append(("Payment", pay, pay.amount, -1, f"/sales/payments/{pay.number}/"))
+        docs.append(("Payment", pay, pay.amount, -1, f"/sales/payments/{encode(pay.number)}/"))
     for note in customer.credit_notes.prefetch_related("lines", "applications__invoice", "refunds"):
-        docs.append(("Credit note", note, credit_total(note), -1, f"/sales/credits/{note.number}/"))
+        docs.append(("Credit note", note, credit_total(note), -1, f"/sales/credits/{encode(note.number)}/"))
     for ref in customer.refunds.all():
-        docs.append(("Refund", ref, ref.amount, +1, f"/sales/refunds/{ref.number}/"))
+        docs.append(("Refund", ref, ref.amount, +1, f"/sales/refunds/{encode(ref.number)}/"))
 
     events = []
     for kind, doc, amount, sign, url in docs:
@@ -119,7 +120,7 @@ def _events(customer: Customer, end: date) -> list[tuple[date, int, str, Stateme
 def _fill_applications(row: StatementRow, doc, amount: Decimal, end: date) -> None:
     """Which invoices this payment or credit paid, as of the statement end, and what is still unapplied."""
     apps = sorted(_active(doc.applications.all(), end), key=lambda a: (a.applied_on, a.pk))
-    row.applied = [Applied(a.invoice.number, f"/sales/invoices/{a.invoice.number}/", money(a.amount)) for a in apps]
+    row.applied = [Applied(a.invoice.number, f"/sales/invoices/{encode(a.invoice.number)}/", money(a.amount)) for a in apps]
     refunded = sum((r.amount for r in doc.refunds.all() if _counts(r, end)), ZERO)
     row.unapplied = money(amount - sum((a.amount for a in apps), ZERO) - refunded)
 
@@ -196,15 +197,15 @@ def _invoice_blocks(customer: Customer, start: date, end: date) -> list[InvoiceB
         for a in _active(inv.payment_applications.all(), end):
             if _counts(a.payment, end):
                 lines.append((a.applied_on, a.pk, AppliedLine(a.applied_on, "Payment", a.payment.number,
-                              f"/sales/payments/{a.payment.number}/", _label(a.payment), money(a.amount))))
+                              f"/sales/payments/{encode(a.payment.number)}/", _label(a.payment), money(a.amount))))
         for a in _active(inv.credit_applications.all(), end):
             if _counts(a.credit_note, end):
                 lines.append((a.applied_on, a.pk, AppliedLine(a.applied_on, "Credit note", a.credit_note.number,
-                              f"/sales/credits/{a.credit_note.number}/", _label(a.credit_note), money(a.amount))))
+                              f"/sales/credits/{encode(a.credit_note.number)}/", _label(a.credit_note), money(a.amount))))
         applied = [line for *_, line in sorted(lines, key=lambda t: t[:2])]
         balance = invoice_balance(inv, end)
         if start <= inv.date <= end or any(start <= a.date <= end for a in applied) or balance != 0:
-            blocks.append(InvoiceBlock(inv.number, f"/sales/invoices/{inv.number}/", inv.date, inv.due_date,
+            blocks.append(InvoiceBlock(inv.number, f"/sales/invoices/{encode(inv.number)}/", inv.date, inv.due_date,
                                        money(invoice_total(inv)), applied, balance))
     return blocks
 
@@ -214,9 +215,9 @@ def _unapplied_rows(customer: Customer, end: date) -> list[UnappliedRow]:
     for pay in payments_with_balances().filter(customer=customer):
         left = payment_unapplied(pay, end)
         if left != 0:
-            rows.append(UnappliedRow(pay.date, "Payment", pay.number, f"/sales/payments/{pay.number}/", _label(pay), left))
+            rows.append(UnappliedRow(pay.date, "Payment", pay.number, f"/sales/payments/{encode(pay.number)}/", _label(pay), left))
     for note in credit_notes_with_balances().filter(customer=customer):
         left = credit_unapplied(note, end)
         if left != 0:
-            rows.append(UnappliedRow(note.date, "Credit note", note.number, f"/sales/credits/{note.number}/", _label(note), left))
+            rows.append(UnappliedRow(note.date, "Credit note", note.number, f"/sales/credits/{encode(note.number)}/", _label(note), left))
     return sorted(rows, key=lambda r: (r.date, r.number))

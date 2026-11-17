@@ -1,4 +1,5 @@
 from datetime import timedelta
+from core.urlnumbers import encode
 from decimal import Decimal
 
 from django.contrib import messages
@@ -72,14 +73,14 @@ def _history(vendor: Vendor) -> list[dict]:
     for bill in vendor.bills.prefetch_related("item_lines", "expense_lines"):
         total = sum((l.amount for l in bill.item_lines.all()), 0) + sum((l.amount for l in bill.expense_lines.all()), 0)
         rows.append({"date": bill.date, "kind": "Bill", "number": bill.number, "void": bill.status == DocStatus.VOID,
-                     "url": f"/purchasing/bills/{bill.number}/", "amount": total})
+                     "url": f"/purchasing/bills/{encode(bill.number)}/", "amount": total})
     for pay in vendor.payments.all():
         rows.append({"date": pay.date, "kind": f"Payment ({pay.get_method_display()})", "number": pay.number,
-                     "void": pay.status == DocStatus.VOID, "url": f"/purchasing/payments/{pay.number}/",
+                     "void": pay.status == DocStatus.VOID, "url": f"/purchasing/payments/{encode(pay.number)}/",
                      "amount": pay.amount})
     for credit in vendor.credits.prefetch_related("lines"):
         rows.append({"date": credit.date, "kind": "Vendor credit", "number": credit.number,
-                     "void": credit.status == DocStatus.VOID, "url": f"/purchasing/credits/{credit.number}/",
+                     "void": credit.status == DocStatus.VOID, "url": f"/purchasing/credits/{encode(credit.number)}/",
                      "amount": sum((l.amount for l in credit.lines.all()), 0)})
     return sorted(rows, key=lambda r: (r["date"], r["number"]), reverse=True)
 

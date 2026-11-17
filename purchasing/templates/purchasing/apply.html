@@ -14,7 +14,7 @@
     <thead><tr><th>Bill</th><th>Vendor invoice</th><th>Due</th><th class="num">Balance</th><th class="num">Apply</th></tr></thead>
     <tbody>
     {% for r in rows %}
-      <tr><td><a class="sku" href="/purchasing/bills/{{ r.bill.number }}/">{{ r.bill.number }}</a></td>
+      <tr><td><a class="sku" href="/purchasing/bills/{{ r.bill.number|docnum }}/">{{ r.bill.number }}</a></td>
         <td>{{ r.bill.vendor_invoice_number|default:"—" }}</td><td>{{ r.bill.due_date|date:"Y-m-d" }}</td>
         <td class="num">{{ r.balance|floatformat:"2g" }}</td>
         <td class="num"><input type="text" inputmode="decimal" name="apply-{{ r.bill.pk }}" value="{{ r.value }}" data-balance="{{ r.balance }}" style="width:7rem;text-align:right"></td></tr>

@@ -30,7 +30,7 @@
   <thead><tr><th>Bill</th><th>Applied on</th><th class="num">Amount</th></tr></thead>
   <tbody>
   {% for a in applications %}
-    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/bills/{{ a.bill.number }}/">{{ a.bill.number }}</a></td>
+    <tr{% if a.removed %} style="text-decoration: line-through"{% endif %}><td><a class="sku" href="/purchasing/bills/{{ a.bill.number|docnum }}/">{{ a.bill.number }}</a></td>
       <td>{{ a.applied_on|date:"Y-m-d" }}{% if a.removed %} <span class="tag ns">Removed {{ a.removed_on|date:"Y-m-d" }}</span>{% endif %}</td><td class="num">{{ a.amount|floatformat:"2g" }}</td></tr>
   {% empty %}<tr><td colspan="3" class="empty">Not applied to any bill.</td></tr>
   {% endfor %}

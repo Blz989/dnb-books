@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from core.urlnumbers import encode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
@@ -58,19 +59,19 @@ def _history(customer: Customer) -> list[dict]:
     rows = []
     for inv in customer.invoices.prefetch_related("lines"):
         rows.append({"date": inv.date, "kind": "Invoice", "number": inv.number, "void": inv.status == DocStatus.VOID,
-                     "url": f"/sales/invoices/{inv.number}/", "sign": 1,
+                     "url": f"/sales/invoices/{encode(inv.number)}/", "sign": 1,
                      "amount": sum((l.amount for l in inv.lines.all()), 0)})
     for pay in customer.payments.all():
         rows.append({"date": pay.date, "kind": f"Payment ({pay.get_method_display()})", "number": pay.number,
-                     "void": pay.status == DocStatus.VOID, "url": f"/sales/payments/{pay.number}/", "sign": -1,
+                     "void": pay.status == DocStatus.VOID, "url": f"/sales/payments/{encode(pay.number)}/", "sign": -1,
                      "amount": pay.amount})
     for note in customer.credit_notes.prefetch_related("lines"):
         rows.append({"date": note.date, "kind": "Credit note", "number": note.number,
-                     "void": note.status == DocStatus.VOID, "url": f"/sales/credits/{note.number}/", "sign": -1,
+                     "void": note.status == DocStatus.VOID, "url": f"/sales/credits/{encode(note.number)}/", "sign": -1,
                      "amount": sum((l.amount for l in note.lines.all()), 0)})
     for ref in customer.refunds.all():
         rows.append({"date": ref.date, "kind": "Refund", "number": ref.number, "void": ref.status == DocStatus.VOID,
-                     "url": f"/sales/refunds/{ref.number}/", "sign": 1, "amount": ref.amount})
+                     "url": f"/sales/refunds/{encode(ref.number)}/", "sign": 1, "amount": ref.amount})
     return sorted(rows, key=lambda r: (r["date"], r["number"]), reverse=True)
 
 

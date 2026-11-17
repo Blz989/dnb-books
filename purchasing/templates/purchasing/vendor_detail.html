@@ -35,7 +35,7 @@
   <thead><tr><th>Bill</th><th>Vendor invoice</th><th>Date</th><th>Due</th><th class="num">Balance</th><th></th></tr></thead>
   <tbody>
   {% for r in open_rows %}
-    <tr><td><a class="sku" href="/purchasing/bills/{{ r.bill.number }}/">{{ r.bill.number }}</a></td>
+    <tr><td><a class="sku" href="/purchasing/bills/{{ r.bill.number|docnum }}/">{{ r.bill.number }}</a></td>
       <td>{{ r.bill.vendor_invoice_number|default:"—" }}</td>
       <td>{{ r.bill.date|date:"Y-m-d" }}</td><td>{{ r.bill.due_date|date:"Y-m-d" }}</td>
       <td class="num">{{ r.balance|floatformat:"2g" }}</td>

@@ -9,7 +9,7 @@
   <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>SKU</th><th class="num">Quantity</th><th>Vendor</th></tr></thead>
   <tbody>
   {% for l in lines %}
-    <tr><td><a class="sku" href="/sales/invoices/{{ l.invoice.number }}/">{{ l.invoice.number }}</a></td><td>{{ l.invoice.date|date:"Y-m-d" }}</td>
+    <tr><td><a class="sku" href="/sales/invoices/{{ l.invoice.number|docnum }}/">{{ l.invoice.number }}</a></td><td>{{ l.invoice.date|date:"Y-m-d" }}</td>
       <td>{{ l.invoice.customer.name }}</td><td>{{ l.item.sku }}</td><td class="num">{{ l.quantity }}</td><td>{{ l.drop_ship_vendor }}</td></tr>
   {% empty %}<tr><td colspan="6" class="empty">No drop shipments are waiting for a vendor bill.</td></tr>
   {% endfor %}
