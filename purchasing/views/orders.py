@@ -19,7 +19,10 @@ from sales.models import DocStatus, OrderStatus, SalesOrder
 from ..balances import bill_total, po_line_amount, po_total
 from ..errors import PurchasingError, UnresolvedVendors
 from ..forms import PurchaseOrderHeaderForm
+from core.roles import is_admin, require_admin
+
 from ..models import PurchaseOrder, PurchaseOrderAllocation, PurchaseOrderLine
+from ..posting.deletion import delete_po, po_delete_blocker
 from ..posting.orders import (
     POLineSpec, billed_quantity, close_po, create_drop_ship_pos, create_po, drop_ship_candidates, po_remaining,
     reopen_po, update_po,
@@ -39,7 +42,7 @@ def po_or_404(number: str) -> PurchaseOrder:
 
 @login_required
 def po_list(request):
-    orders = PurchaseOrder.objects.select_related("vendor").prefetch_related("lines").annotate(
+    orders = PurchaseOrder.objects.filter(deleted_at__isnull=True).select_related("vendor").prefetch_related("lines").annotate(
         drop_ship=Exists(PurchaseOrderAllocation.objects.filter(po_line__order=OuterRef("pk"))))
     status = request.GET.get("status", "")
     if status in OrderStatus.values:
@@ -145,10 +148,10 @@ def po_detail(request, number):
     for line in po.lines.select_related("item").prefetch_related(allocations):
         lines.append({"line": line, "amount": po_line_amount(line), "billed": billed_quantity(line), "left": po_remaining(line),
                       "allocations": list(line.allocations.all())})
-    bills = [{"bill": b, "total": bill_total(b)} for b in po.bills.prefetch_related("item_lines", "expense_lines")]
+    bills = [{"bill": b, "total": bill_total(b)} for b in po.bills.filter(deleted_at__isnull=True).prefetch_related("item_lines", "expense_lines")]
     return render(request, "purchasing/po_detail.html", {
         "order": po, "lines": lines, "total": sum((l["amount"] for l in lines), Decimal("0.00")), "bills": bills, "sales_orders": po.sales_orders(),
-        "drop_ship": any(l["allocations"] for l in lines),
+        "drop_ship": any(l["allocations"] for l in lines), "is_admin": is_admin(request.user),
         "can_bill": po.status == OrderStatus.OPEN and any(l["left"] > 0 for l in lines),
         "nav_active": "purchase-orders",
     })
@@ -158,13 +161,41 @@ def po_detail(request, number):
 @require_POST
 def po_close(request, number):
     po = po_or_404(number)
-    if po.status == OrderStatus.OPEN:
-        close_po(po, request.user)
-        messages.success(request, f"{po.number} is closed.")
-    else:
-        reopen_po(po, request.user)
-        messages.success(request, f"{po.number} is open again.")
+    try:
+        if po.status == OrderStatus.OPEN:
+            close_po(po, request.user)
+            messages.success(request, f"{po.number} is closed.")
+        else:
+            reopen_po(po, request.user)
+            messages.success(request, f"{po.number} is open again.")
+    except PurchasingError as exc:
+        messages.error(request, str(exc))
     return redirect(reverse("purchasing:po-detail", args=[po.number]))
+
+
+@login_required
+def po_delete(request, number):
+    require_admin(request.user)
+    po = po_or_404(number)
+    back = reverse("purchasing:po-detail", args=[po.number])
+    errors = []
+    if request.method == "POST":
+        try:
+            delete_po(po, user=request.user)
+        except PurchasingError as exc:
+            errors = [str(exc)]
+        else:
+            messages.success(request, f"{po.number} was deleted.")
+            return redirect(reverse("purchasing:po-list"))
+    blocker = po_delete_blocker(po)
+    effects = [f"{so.number} ({so.customer.name}) goes back to needing a drop-ship purchase order."
+               for so in po.sales_orders()]
+    return render(request, "core/delete_confirm.html", {
+        "doc": po, "who": po.vendor.name, "kind": "purchase order", "back": back, "nav_active": "purchase-orders",
+        "intro": f"Delete purchase order {po.number}? It leaves the order list and the open-orders report, "
+                 "and can no longer be edited or billed.",
+        "effects": effects, "blocker": blocker, "errors": errors or ([blocker] if blocker else []),
+    })
 
 
 # ---- drop-ship POs from one or several sales orders ----

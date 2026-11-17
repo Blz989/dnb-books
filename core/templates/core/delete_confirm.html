@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}Delete {{ doc.number }}{% endblock %}
+{% block page_title %}Delete {{ doc.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ who }} · {{ doc.date|date:"Y-m-d" }}</div>{% endblock %}
+{% block content %}
+{% if errors %}<div class="banner error"><div>{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div></div>{% endif %}
+<div class="card"><div class="body">
+  <p>{{ intro }}</p>
+  {% if effects %}
+  <ul>{% for e in effects %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% endif %}
+  <p class="sub">It stays in the audit log, and its number is never reused. This can't be undone from the screen.</p>
+  <form method="post">{% csrf_token %}
+    {% if blocker %}
+    <button type="button" class="btn" disabled>Delete {{ kind }}</button>
+    {% else %}
+    <button type="submit" class="btn danger">Delete {{ kind }}</button>
+    {% endif %}
+    <a class="btn" href="{{ back }}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

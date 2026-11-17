@@ -8,8 +8,10 @@
   {% if not is_void %}<a class="btn" href="{% url 'purchasing:bill-edit' bill.number %}">Edit</a>{% endif %}
   {% if not is_void and balance > 0 %}<a class="btn primary" href="/purchasing/pay/?vendor={{ bill.vendor.pk }}">Pay</a>{% endif %}
   {% if is_admin and not is_void %}<a class="btn" href="{% url 'purchasing:bill-void' bill.number %}">Void</a>{% endif %}
+  {% if is_admin and is_void and not bill.deleted_at %}<a class="btn danger" href="{% url 'purchasing:bill-delete' bill.number %}">Delete</a>{% endif %}
 {% endblock %}
 {% block content %}
+{% if bill.deleted_at %}<div class="banner error">Deleted on {{ bill.deleted_at|date:"Y-m-d" }}. It is kept for the audit log and no longer appears in lists.</div>{% endif %}
 {% if is_void %}<div class="banner error">Voided on {{ bill.voided_on|date:"Y-m-d" }}: {{ bill.void_reason }}</div>{% endif %}
 <div class="kpis">
   <div class="kpi"><div class="l">Total</div><div class="v">{{ total|floatformat:"2g" }}</div></div>

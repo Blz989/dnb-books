@@ -16,6 +16,8 @@ from items.stock import on_hand
 from ledger.errors import PostingError
 
 from ..balances import invoice_total
+from core.roles import is_admin, require_admin
+
 from ..errors import SalesError
 from ..forms import OrderHeaderForm
 from ..models import OrderStatus, SalesOrder
@@ -41,7 +43,7 @@ def _sku_options():
 
 @login_required
 def order_list(request):
-    orders = SalesOrder.objects.select_related("customer")
+    orders = SalesOrder.objects.filter(deleted_at__isnull=True).select_related("customer")
     status = request.GET.get("status", "")
     if status in OrderStatus.values:
         orders = orders.filter(status=status)
@@ -116,6 +118,9 @@ def order_new(request):
 @login_required
 def order_edit(request, number):
     order = order_or_404(number)
+    if order.deleted_at:
+        messages.error(request, f"{order.number} was deleted.")
+        return redirect(reverse("sales:order-detail", args=[order.number]))
     if request.method != "POST":
         form = OrderHeaderForm(initial={
             "customer": order.customer_id, "date": order.date.isoformat(), "ship_to": order.ship_to, "notes": order.notes,
@@ -153,10 +158,11 @@ def order_detail(request, number):
             "line": line, "invoiced": invoiced_quantity(line), "left": remaining(line),
             "on_hand": on_hand(line.item) if line.item.is_stock else None,
         })
-    invoices = [{"invoice": i, "total": invoice_total(i)} for i in order.invoices.order_by("date", "id")]
+    invoices = [{"invoice": i, "total": invoice_total(i)} for i in order.invoices.filter(deleted_at__isnull=True).order_by("date", "id")]
     return render(request, "sales/order_detail.html", {
         "order": order, "lines": lines, "invoices": invoices,
         "can_invoice": order.status == OrderStatus.OPEN and any(l["left"] > 0 for l in lines),
+        "is_admin": is_admin(request.user),
         "nav_active": "orders",
     })
 
@@ -165,10 +171,46 @@ def order_detail(request, number):
 @require_POST
 def order_close(request, number):
     order = order_or_404(number)
-    if order.status == OrderStatus.OPEN:
-        close_order(order, request.user)
-        messages.success(request, f"{order.number} is closed.")
-    else:
-        reopen_order(order, request.user)
-        messages.success(request, f"{order.number} is open again.")
+    try:
+        if order.status == OrderStatus.OPEN:
+            close_order(order, request.user)
+            messages.success(request, f"{order.number} is closed.")
+        else:
+            reopen_order(order, request.user)
+            messages.success(request, f"{order.number} is open again.")
+    except SalesError as exc:
+        messages.error(request, str(exc))
     return redirect(reverse("sales:order-detail", args=[order.number]))
+
+
+@login_required
+def order_delete(request, number):
+    from purchasing.posting.deletion import delete_sales_order, so_delete_blocker, so_delete_effects
+
+    require_admin(request.user)
+    order = order_or_404(number)
+    back = reverse("sales:order-detail", args=[order.number])
+    errors = []
+    if request.method == "POST":
+        try:
+            delete_sales_order(order, user=request.user)
+        except SalesError as exc:
+            errors = [str(exc)]
+        else:
+            messages.success(request, f"{order.number} was deleted.")
+            return redirect(reverse("sales:order-list"))
+    blocker = so_delete_blocker(order)
+    effects = []
+    for e in so_delete_effects(order):
+        if e.deleted_too:
+            effects.append(f"{e.po.number} ({e.po.vendor.name}) only buys for this order, so it is deleted too.")
+        else:
+            qty = sum(e.quantities.values())
+            effects.append(f"{e.po.number} ({e.po.vendor.name}) drops by {qty} unit{'s' if qty != 1 else ''} "
+                           "bought for this order. Its other orders are not affected.")
+    return render(request, "core/delete_confirm.html", {
+        "doc": order, "who": order.customer.name, "kind": "order", "back": back, "nav_active": "orders",
+        "intro": f"Delete sales order {order.number}? It leaves the order list and the open-orders report, "
+                 "and can no longer be edited or invoiced.",
+        "effects": effects, "blocker": blocker, "errors": errors or ([blocker] if blocker else []),
+    })

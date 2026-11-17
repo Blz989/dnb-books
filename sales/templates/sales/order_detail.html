@@ -7,9 +7,11 @@
   {% if order.status == "OPEN" %}<a class="btn" href="{% url 'sales:order-edit' order.number %}">Edit</a>{% endif %}
   {% drop_ship_po_button order %}
   {% if can_invoice %}<a class="btn primary" href="{% url 'sales:order-invoice' order.number %}">Invoice a shipment</a>{% endif %}
-  <form method="post" action="{% url 'sales:order-close' order.number %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">{% if order.status == "OPEN" %}Close order{% else %}Reopen order{% endif %}</button></form>
+  {% if not order.deleted_at %}<form method="post" action="{% url 'sales:order-close' order.number %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">{% if order.status == "OPEN" %}Close order{% else %}Reopen order{% endif %}</button></form>{% endif %}
+  {% if is_admin and not order.deleted_at %}<a class="btn danger" href="{% url 'sales:order-delete' order.number %}">Delete</a>{% endif %}
 {% endblock %}
 {% block content %}
+{% if order.deleted_at %}<div class="banner error">Deleted on {{ order.deleted_at|date:"Y-m-d" }}. It is kept for the audit log and no longer appears in lists.</div>{% endif %}
 <div class="card"><div class="body">
   <dl class="facts">
     <dt>Expected delivery</dt><dd>{{ order.expected_delivery_date|date:"Y-m-d"|default:"—" }}</dd>
