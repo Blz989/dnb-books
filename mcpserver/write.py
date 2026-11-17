@@ -13,7 +13,8 @@ from django.forms.models import model_to_dict
 from django.utils import timezone
 
 from contacts.forms import CustomerForm
-from contacts.models import Customer, Terms, Vendor
+from contacts.models import Customer, Vendor
+from contacts.terms import default_term_code
 from items.errors import NegativeStockWarning
 from items.forms import ItemForm
 from items.models import Category, Item
@@ -53,7 +54,7 @@ def _entry_lines(entry) -> list[dict]:
 
 
 def _terms(value: str | None):
-    return lookup.choice(value, Terms, "terms") if value else None
+    return lookup.term(value) if value else None
 
 
 # ---- the operations: each takes (user, payload, flags) and returns (document number, summary dict) ----
@@ -272,7 +273,7 @@ def _apply_fields(data: dict, fields: dict, accounts=(), allowed=()) -> dict:
                 raise Refused(f"No category named {value}.")
             value = cat.pk
         if key == "terms" and value:
-            value = lookup.choice(str(value), Terms, "terms")
+            value = lookup.term(str(value))
         if key in BOOLEAN_FIELDS:
             value = _truth(key, value)
         data[key] = "" if value is None else value
@@ -291,7 +292,7 @@ ITEM_FIELDS = ("sku", "name", "description", "item_type", "category", "unit", "p
 def _customer(user, p, flags):
     existing = Customer.objects.filter(name__iexact=p["name"].strip()).first()
     require_perm(user, "contacts.change_customer" if existing else "contacts.add_customer")
-    data = _form_data(CustomerForm, existing) if existing else {"name": p["name"].strip(), "terms": Terms.NET_30}
+    data = _form_data(CustomerForm, existing) if existing else {"name": p["name"].strip(), "terms": default_term_code()}
     _apply_fields(data, p.get("fields"), allowed=CUSTOMER_FIELDS)
     form = CustomerForm(data, instance=existing)
     if not form.is_valid():
@@ -306,7 +307,7 @@ def _customer(user, p, flags):
 def _vendor(user, p, flags):
     existing = Vendor.objects.filter(name__iexact=p["name"].strip()).first()
     require_perm(user, "contacts.change_vendor" if existing else "contacts.add_vendor")
-    data = _form_data(VendorForm, existing, user=user) if existing else {"name": p["name"].strip(), "terms": Terms.NET_30}
+    data = _form_data(VendorForm, existing, user=user) if existing else {"name": p["name"].strip(), "terms": default_term_code()}
     _apply_fields(data, p.get("fields"), accounts=("default_expense_account",), allowed=VENDOR_FIELDS)
     form = VendorForm(data, instance=existing, user=user)
     if not form.is_valid():

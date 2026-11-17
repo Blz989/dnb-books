@@ -1,0 +1,16 @@
+{% extends "core/settings_base.html" %}
+{% block title %}{% if term %}{{ term.name }}{% else %}New payment term{% endif %}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'settings:index' %}">Settings</a> / <a href="{% url 'settings:terms' %}">Payment terms</a></div>{% endblock %}
+{% block page_title %}{% if term %}{{ term.name }}{% else %}New payment term{% endif %}{% endblock %}
+{% block settings_content %}
+{% if form.in_use %}<div class="banner info">This term is in use, so its due date rule is locked. You can still rename it or make it inactive.</div>{% endif %}
+<div class="card"><div class="body">
+<form method="post" autocomplete="off">{% csrf_token %}
+  {% include "core/_form_rows.html" %}
+  <div class="form-actions">
+    <button type="submit" class="btn primary">{% if term %}Save term{% else %}Add term{% endif %}</button>
+    <a class="btn" href="{% url 'settings:terms' %}">Cancel</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

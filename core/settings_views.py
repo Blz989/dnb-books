@@ -7,6 +7,9 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
+from contacts.models import PaymentTerm
+from contacts.term_forms import PaymentTermForm
+from contacts.terms import usage as term_usage
 from sales.forms import CompanyProfileForm
 
 from . import company
@@ -98,3 +101,24 @@ def user_edit(request, pk):
 def advanced(request):
     require_admin(request.user)
     return render(request, "core/settings/advanced.html", _ctx("advanced"))
+
+
+@login_required
+def payment_terms(request):
+    require_admin(request.user)
+    singular = {"customers": "customer", "vendors": "vendor", "invoices": "invoice", "bills": "bill"}
+    rows = [{"term": t, "used_by": ", ".join(f"{n} {singular[k] if n == 1 else k}" for k, n in term_usage(t).items())}
+            for t in PaymentTerm.objects.all()]
+    return render(request, "core/settings/payment_terms.html", _ctx("terms", rows=rows))
+
+
+@login_required
+def payment_term_form(request, pk=None):
+    require_admin(request.user)
+    term = get_object_or_404(PaymentTerm, pk=pk) if pk else None
+    form = PaymentTermForm(request.POST or None, instance=term)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Payment term saved.")
+        return redirect(reverse("settings:terms"))
+    return render(request, "core/settings/payment_term_form.html", _ctx("terms", form=form, term=term))

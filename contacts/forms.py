@@ -3,9 +3,12 @@ from django import forms
 from sales.balances import customer_balance
 
 from .models import Customer, duplicate_name_message
+from .terms import TermChoiceField, term_choices
 
 
 class CustomerForm(forms.ModelForm):
+    terms = TermChoiceField()
+
     class Meta:
         model = Customer
         fields = [
@@ -21,6 +24,7 @@ class CustomerForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["ship_to_address"].label = "Default ship-to address"
+        self.fields["terms"].choices = term_choices(include=self.instance.terms if self.instance.pk else None)
         if self.instance.pk:
             self.fields["is_active"] = forms.BooleanField(required=False, label="Active", initial=self.instance.is_active)
 

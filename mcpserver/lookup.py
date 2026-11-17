@@ -77,3 +77,14 @@ def choice(value: str, choices, label: str) -> str:
             return key
     options = ", ".join(text for _, text in choices.choices)
     raise Refused(f"Choose a {label}: {options}.")
+
+
+def term(value: str) -> str:
+    """An active payment term's code, matched by code or name, case-insensitively."""
+    from contacts.models import PaymentTerm
+    from contacts.terms import find_term
+    found = find_term(value)
+    if found is None:
+        options = ", ".join(t.name for t in PaymentTerm.objects.filter(is_active=True))
+        raise Refused(f"Choose a terms: {options}.")
+    return found.code

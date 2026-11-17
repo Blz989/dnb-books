@@ -1,6 +1,7 @@
 from django import forms
 
 from contacts.models import Vendor
+from contacts.terms import TermChoiceField, term_choices
 from core.roles import is_admin
 from ledger.models import Account, AccountSubtype, AccountType
 
@@ -9,6 +10,8 @@ from .models import PurchasingSettings
 
 
 class VendorForm(forms.ModelForm):
+    terms = TermChoiceField()
+
     class Meta:
         model = Vendor
         fields = [
@@ -19,6 +22,7 @@ class VendorForm(forms.ModelForm):
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["terms"].choices = term_choices(include=self.instance.terms if self.instance.pk else None)
         field = self.fields["default_expense_account"]
         field.queryset = Account.objects.filter(type=AccountType.EXPENSE, is_active=True)
         field.required = False
@@ -81,7 +85,6 @@ class PurchasingSettingsForm(forms.ModelForm):
 
 
 # ---- purchase orders and bills ----
-from contacts.models import Terms  # noqa: E402
 from ledger.forms import date_field  # noqa: E402
 
 
@@ -105,7 +108,7 @@ class BillHeaderForm(forms.Form):
         Vendor.objects.none(), error_messages={"required": "Choose a vendor.", "invalid_choice": "Choose a vendor."})
     vendor_invoice_number = forms.CharField(label="Vendor invoice #", required=False, max_length=100)
     date = date_field("Bill date")
-    terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Vendor's default")] + list(Terms.choices))
+    terms = TermChoiceField(required=False, blank_label="Vendor's default")
     notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
     reason = forms.CharField(label="Reason for the change", required=False, max_length=200)
     field_order = ["vendor", "vendor_invoice_number", "date", "terms", "notes", "reason"]
@@ -120,7 +123,7 @@ class BillHeaderForm(forms.Form):
 class BillFromPOForm(forms.Form):
     vendor_invoice_number = forms.CharField(label="Vendor invoice #", required=False, max_length=100)
     date = date_field("Bill date")
-    terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Vendor's default")] + list(Terms.choices))
+    terms = TermChoiceField(required=False, blank_label="Vendor's default")
     notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
 
 

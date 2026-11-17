@@ -1,6 +1,7 @@
 from django import forms
 
-from contacts.models import Customer, Terms
+from contacts.models import Customer
+from contacts.terms import TermChoiceField
 from ledger.forms import date_field
 from ledger.models import Account, AccountSubtype
 
@@ -105,7 +106,7 @@ class OrderHeaderForm(forms.Form):
 
 
 class InvoiceHeaderForm(OrderHeaderForm):
-    terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Customer's default")] + list(Terms.choices))
+    terms = TermChoiceField(required=False, blank_label="Customer's default")
     reason = forms.CharField(label="Reason for the change", required=False, max_length=200)
     field_order = ["customer", "date", "terms", "ship_to", "notes", "reason"]
 
@@ -119,7 +120,7 @@ class InvoiceHeaderForm(OrderHeaderForm):
 
 class ShipmentHeaderForm(forms.Form):
     date = date_field("Invoice date")
-    terms = forms.ChoiceField(label="Terms", required=False, choices=[("", "Customer's default")] + list(Terms.choices))
+    terms = TermChoiceField(required=False, blank_label="Customer's default")
     ship_to = forms.CharField(label="Ship to", required=False, widget=forms.Textarea(attrs={"rows": 3}))
     notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
 

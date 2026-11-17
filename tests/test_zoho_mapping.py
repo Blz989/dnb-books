@@ -58,6 +58,7 @@ def test_bank_kind():
     assert bank_kind("Sales", "Income") is None
 
 
+@pytest.mark.django_db
 def test_terms_labels():
     assert terms("Due on Receipt") == Terms.DUE_ON_RECEIPT
     assert terms("Due On Receipt") == Terms.DUE_ON_RECEIPT
@@ -66,7 +67,8 @@ def test_terms_labels():
     assert terms("Net 60") == Terms.NET_60
     assert terms("Net 7") == Terms.NET_15
     assert terms("Net 40") == Terms.NET_45
-    assert terms("Due end of the month") == Terms.NET_30
+    assert terms("Due end of the month") == "DUE_EOM"
+    assert terms("Due end of next month") == "DUE_EOM_NEXT"
     assert terms("") == Terms.NET_30
 
 
@@ -98,6 +100,7 @@ def test_vendor_method():
     assert vendor_method("Cash", None) == VendorPaymentMethod.ACH
 
 
+@pytest.mark.django_db
 def test_custom_terms_from_the_due_date_gap():
     assert terms("Custom", "2020-05-05", "2020-06-05") == Terms.NET_45  # 31 days: the next longer terms
     assert terms("Custom", "2020-05-05", "2020-06-04") == Terms.NET_30

@@ -6,11 +6,11 @@ from django.core.exceptions import ValidationError
 from contacts.models import Customer, Terms, due_date
 
 
-def test_net_30_due_date():
+def test_net_30_due_date(db):
     assert due_date(Terms.NET_30, date(2026, 10, 27)) == date(2026, 11, 26)
 
 
-def test_due_on_receipt_is_same_day():
+def test_due_on_receipt_is_same_day(db):
     assert due_date(Terms.DUE_ON_RECEIPT, date(2026, 10, 27)) == date(2026, 10, 27)
 
 

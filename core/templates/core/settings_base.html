@@ -6,6 +6,7 @@
     <div class="subnav-h">Organization</div>
     <a href="{% url 'settings:company' %}"{% if settings_section == "company" %} class="on"{% endif %}>Company profile</a>
     <a href="{% url 'settings:users' %}"{% if settings_section == "users" %} class="on"{% endif %}>Users and roles</a>
+    <a href="{% url 'settings:terms' %}"{% if settings_section == "terms" %} class="on"{% endif %}>Payment terms</a>
     <div class="subnav-h">Modules</div>
     <a href="{% url 'sales:settings' %}"{% if settings_section == "sales" %} class="on"{% endif %}>Sales</a>
     <a href="{% url 'purchasing:settings' %}"{% if settings_section == "purchasing" %} class="on"{% endif %}>Purchases</a>
