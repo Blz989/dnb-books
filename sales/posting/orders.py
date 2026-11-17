@@ -102,6 +102,8 @@ def update_order(
         raise OrderError("An order needs at least one line.")
     with transaction.atomic():
         current = SalesOrder.objects.get(pk=order.pk)
+        if current.deleted_at:
+            raise OrderError(f"{current.number} was deleted.")
         if current.status == OrderStatus.CLOSED:
             raise OrderError(f"{current.number} is closed. Reopen it to make changes.")
         validate_lines(lines)
@@ -154,6 +156,8 @@ def update_order(
 
 
 def close_order(order: SalesOrder, user) -> SalesOrder:
+    if order.deleted_at:
+        raise OrderError(f"{order.number} was deleted.")
     order.status = OrderStatus.CLOSED
     order.closed_by = user
     order.closed_at = timezone.now()
@@ -162,6 +166,8 @@ def close_order(order: SalesOrder, user) -> SalesOrder:
 
 
 def reopen_order(order: SalesOrder, user) -> SalesOrder:
+    if order.deleted_at:
+        raise OrderError(f"{order.number} was deleted.")
     order.status = OrderStatus.OPEN
     order.closed_by = None
     order.closed_at = None

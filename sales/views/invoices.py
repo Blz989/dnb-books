@@ -26,6 +26,7 @@ from ..models import (
     CreditApplication, DocStatus, Fulfillment, Invoice, OrderStatus, PaymentApplication, SalesOrderLine, SalesSettings,
 )
 from ..pdf import invoice_pdf
+from ..posting.deletion import delete_invoice
 from ..posting.invoices import (
     InvoiceLineSpec, create_invoice, edit_invoice, invoice_from_order, void_invoice,
 )
@@ -58,6 +59,7 @@ def invoice_list(request):
     unpaid = request.GET.get("unpaid") == "1"
     # Unpaid: the SQL balance prefilter from sales.balances, so no invoice is loaded just to find it settled.
     invoices = invoices_with_open_balance(None).filter(_gap__gt=UNPAID_TOLERANCE) if unpaid else invoices_with_balances()
+    invoices = invoices.filter(deleted_at__isnull=True)
     status = request.GET.get("status", "")
     if status in DocStatus.values:
         invoices = invoices.filter(status=status)
@@ -300,6 +302,33 @@ def invoice_void(request, number):
         messages.success(request, f"{invoice.number} was voided.")
         return redirect(reverse("sales:invoice-detail", args=[invoice.number]))
     return render(request, "sales/invoice_void.html", {**context, "form": form})
+
+
+@login_required
+def invoice_delete(request, number):
+    require_admin(request.user)
+    invoice = invoice_or_404(number)
+    back = reverse("sales:invoice-detail", args=[invoice.number])
+    errors = []
+    if request.method == "POST":
+        try:
+            delete_invoice(invoice, user=request.user)
+        except SalesError as exc:
+            errors = [str(exc)]
+        else:
+            messages.success(request, f"{invoice.number} was deleted.")
+            return redirect(reverse("sales:invoice-list"))
+    blocker = None
+    if invoice.deleted_at:
+        blocker = f"{invoice.number} is already deleted."
+    elif invoice.status != DocStatus.VOID:
+        blocker = "Void this invoice first. Only a voided invoice can be deleted."
+    return render(request, "core/delete_confirm.html", {
+        "doc": invoice, "who": invoice.customer.name, "kind": "invoice", "back": back, "nav_active": "invoices",
+        "intro": f"Delete voided invoice {invoice.number}? It leaves the invoice list. Its ledger entries were "
+                 "already reversed by the void, so no balances change.",
+        "blocker": blocker, "errors": errors or ([blocker] if blocker else []),
+    })
 
 
 @login_required

@@ -25,6 +25,7 @@ from ..models import Bill, BillLineKind, BillPaymentApplication, PurchaseOrderLi
 from ..posting.bills import (
     BillExpenseSpec, BillItemSpec, DuplicateBillWarning, bill_from_po, create_bill, edit_bill, void_bill,
 )
+from ..posting.deletion import delete_bill
 from ..posting.orders import po_remaining
 from ..posting.payments import remove_bill_application
 from . import common
@@ -48,7 +49,7 @@ def _today():
 
 @login_required
 def bill_list(request):
-    bills = bills_with_balances()
+    bills = bills_with_balances().filter(deleted_at__isnull=True)
     status = request.GET.get("status", "")
     if status in DocStatus.values:
         bills = bills.filter(status=status)
@@ -321,6 +322,33 @@ def bill_revision(request, number, revision):
     vendor = Vendor.objects.filter(pk=rev.snapshot["vendor_id"]).first()
     return render(request, "purchasing/bill_revision.html", {
         "bill": bill, "rev": rev, "snap": rev.snapshot, "vendor": vendor, "nav_active": "bills"})
+
+
+@login_required
+def bill_delete(request, number):
+    require_admin(request.user)
+    bill = bill_or_404(number)
+    back = reverse("purchasing:bill-detail", args=[bill.number])
+    errors = []
+    if request.method == "POST":
+        try:
+            delete_bill(bill, user=request.user)
+        except PurchasingError as exc:
+            errors = [str(exc)]
+        else:
+            messages.success(request, f"{bill.number} was deleted.")
+            return redirect(reverse("purchasing:bill-list"))
+    blocker = None
+    if bill.deleted_at:
+        blocker = f"{bill.number} is already deleted."
+    elif bill.status != DocStatus.VOID:
+        blocker = "Void this bill first. Only a voided bill can be deleted."
+    return render(request, "core/delete_confirm.html", {
+        "doc": bill, "who": bill.vendor.name, "kind": "bill", "back": back, "nav_active": "bills",
+        "intro": f"Delete voided bill {bill.number}? It leaves the bill list. Its ledger entries were "
+                 "already reversed by the void, so no balances change.",
+        "blocker": blocker, "errors": errors or ([blocker] if blocker else []),
+    })
 
 
 @login_required
