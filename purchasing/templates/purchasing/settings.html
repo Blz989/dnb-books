@@ -2,7 +2,7 @@
 {% load handling_tags %}
 {% block title %}Purchases settings{% endblock %}
 {% block page_title %}Purchases{% endblock %}
-{% block page_subtitle %}<div class="sub">Accounts payable account, document numbering, and 1099 thresholds.</div>{% endblock %}
+{% block page_subtitle %}<div class="sub">Accounts payable and default adjustment accounts, document numbering, and 1099 thresholds.</div>{% endblock %}
 {% block settings_content %}
 {% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
 <div class="card"><div class="body">
@@ -12,6 +12,7 @@
   <div class="form-row">
     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
     {{ field }}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
     {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
   </div>
   {% endfor %}

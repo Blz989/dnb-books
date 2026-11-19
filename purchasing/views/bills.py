@@ -20,10 +20,11 @@ from sales.models import DocStatus, OrderStatus
 
 from ..balances import bill_applied, bill_balance, bill_total, bills_with_balances
 from ..errors import PurchasingError
-from ..forms import BillFromPOForm, BillHeaderForm
+from ..forms import BillAdjustmentForm, BillFromPOForm, BillHeaderForm
 from ..models import Bill, BillLineKind, BillPaymentApplication, PurchaseOrderLine, VendorCreditApplication
 from ..posting.bills import (
-    BillExpenseSpec, BillItemSpec, DuplicateBillWarning, bill_from_po, create_bill, edit_bill, void_bill,
+    BillExpenseSpec, BillItemSpec, DuplicateBillWarning, bill_adjustment, bill_from_po, create_bill, edit_bill,
+    void_bill,
 )
 from ..posting.deletion import delete_bill
 from ..posting.orders import po_remaining
@@ -91,9 +92,9 @@ def _expense_specs(parsed):
     return [BillExpenseSpec(p["account"], p["amount"], p["description"]) for p in parsed]
 
 
-def _form_context(form, rows, exp_rows, token, bill=None, **extra):
+def _form_context(form, rows, exp_rows, token, bill=None, adj_form=None, **extra):
     return {
-        "form": form, "rows": rows, "exp_rows": exp_rows, "token": token, "bill": bill,
+        "form": form, "adj_form": adj_form or BillAdjustmentForm(), "rows": rows, "exp_rows": exp_rows, "token": token, "bill": bill,
         "shown": common.shown_count(rows), "exp_shown": common.expense_shown(exp_rows),
         "sku_options": common.sku_options(), "expense_accounts": common.expense_accounts(), "nav_active": "bills",
         **extra,
@@ -127,6 +128,7 @@ def bill_new(request):
         form = BillHeaderForm(initial=initial)
         return render(request, "purchasing/bill_form.html", _form_context(
             form, common.compact([]), common.compact_expense([]), common.new_token()))
+    adj_form = BillAdjustmentForm(request.POST)
     token = request.POST.get("token", "")
     if common._token_used(token):
         messages.info(request, ALREADY_SAVED)
@@ -134,8 +136,8 @@ def bill_new(request):
     form = BillHeaderForm(request.POST)
     rows, exp_rows, parsed, exp_parsed, errors = _read_form(request)
     if request.POST.get("back"):
-        return render(request, "purchasing/bill_form.html", _form_context(form, rows, exp_rows, token))
-    if form.is_valid() and not errors:
+        return render(request, "purchasing/bill_form.html", _form_context(form, rows, exp_rows, token, adj_form=adj_form))
+    if form.is_valid() and adj_form.is_valid() and not errors:
         d = form.cleaned_data
         try:
             with transaction.atomic():
@@ -145,7 +147,7 @@ def bill_new(request):
                 bill = create_bill(
                     vendor=d["vendor"], date=d["date"], vendor_invoice_number=d["vendor_invoice_number"],
                     item_lines=_item_specs(parsed), expense_lines=_expense_specs(exp_parsed), user=request.user,
-                    terms=d["terms"] or None, notes=d["notes"],
+                    terms=d["terms"] or None, notes=d["notes"], adjustment=adj_form.spec(),
                     allow_duplicate=request.POST.get("allow_duplicate") == "1",
                     allow_negative=request.POST.get("allow_negative") == "1")
         except DuplicateBillWarning as warning:
@@ -156,10 +158,11 @@ def bill_new(request):
                             flag="allow_negative", drop=("allow_negative",))
         except (PurchasingError, PostingError, StockError) as exc:
             return render(request, "purchasing/bill_form.html", _form_context(
-                form, rows, exp_rows, token, **common.error_context(exc)))
+                form, rows, exp_rows, token, adj_form=adj_form, **common.error_context(exc)))
         messages.success(request, f"Saved {bill.number}.")
         return redirect(reverse("purchasing:bill-detail", args=[bill.number]))
-    return render(request, "purchasing/bill_form.html", _form_context(form, rows, exp_rows, token, errors=errors))
+    return render(request, "purchasing/bill_form.html", _form_context(
+        form, rows, exp_rows, token, adj_form=adj_form, errors=errors))
 
 
 @login_required
@@ -173,8 +176,11 @@ def bill_edit(request, number):
             "vendor": bill.vendor_id, "vendor_invoice_number": bill.vendor_invoice_number, "date": bill.date.isoformat(),
             "terms": bill.terms, "notes": bill.notes})
         rows = common.item_rows_from_lines(bill.item_lines.select_related("item"), ref=lambda l: l.po_line_id)
-        exp_rows = common.expense_rows_from_lines(bill.expense_lines.all())
-        return render(request, "purchasing/bill_form.html", _form_context(form, rows, exp_rows, common.new_token(), bill))
+        exp_rows = common.expense_rows_from_lines(bill.expense_lines.filter(is_adjustment=False))
+        adj_form = BillAdjustmentForm(initial=BillAdjustmentForm.initial_for(bill_adjustment(bill)))
+        return render(request, "purchasing/bill_form.html", _form_context(
+            form, rows, exp_rows, common.new_token(), bill, adj_form=adj_form))
+    adj_form = BillAdjustmentForm(request.POST)
     token = request.POST.get("token", "")
     if common._token_used(token):
         messages.info(request, CHANGES_SAVED)
@@ -182,8 +188,9 @@ def bill_edit(request, number):
     form = BillHeaderForm(request.POST, editing=True)
     rows, exp_rows, parsed, exp_parsed, errors = _read_form(request)
     if request.POST.get("back"):
-        return render(request, "purchasing/bill_form.html", _form_context(form, rows, exp_rows, token, bill))
-    if form.is_valid() and not errors:
+        return render(request, "purchasing/bill_form.html", _form_context(
+            form, rows, exp_rows, token, bill, adj_form=adj_form))
+    if form.is_valid() and adj_form.is_valid() and not errors:
         d = form.cleaned_data
         try:
             with transaction.atomic():
@@ -194,6 +201,7 @@ def bill_edit(request, number):
                     bill, user=request.user, date=d["date"], vendor_invoice_number=d["vendor_invoice_number"],
                     item_lines=_item_specs(parsed, bill.purchase_order), expense_lines=_expense_specs(exp_parsed),
                     terms=d["terms"] or None, notes=d["notes"], vendor=d["vendor"], reason=d["reason"],
+                    adjustment=adj_form.spec(),
                     allow_duplicate=request.POST.get("allow_duplicate") == "1",
                     allow_negative=request.POST.get("allow_negative") == "1")
         except DuplicateBillWarning as warning:
@@ -204,10 +212,11 @@ def bill_edit(request, number):
                             flag="allow_negative", drop=("allow_negative",), bill=bill)
         except (PurchasingError, PostingError, StockError) as exc:
             return render(request, "purchasing/bill_form.html", _form_context(
-                form, rows, exp_rows, token, bill, **common.error_context(exc)))
+                form, rows, exp_rows, token, bill, adj_form=adj_form, **common.error_context(exc)))
         messages.success(request, f"Saved {bill.number}.")
         return redirect(reverse("purchasing:bill-detail", args=[bill.number]))
-    return render(request, "purchasing/bill_form.html", _form_context(form, rows, exp_rows, token, bill, errors=errors))
+    return render(request, "purchasing/bill_form.html", _form_context(
+        form, rows, exp_rows, token, bill, adj_form=adj_form, errors=errors))
 
 
 def _po_rows(po, post=None):
@@ -236,7 +245,7 @@ def po_bill(request, number):
         form = BillFromPOForm(initial={"date": _today().isoformat()})
         exp_rows = common.compact_expense([])
         return render(request, "purchasing/bill_from_po.html", {
-            **context, "form": form, "rows": _po_rows(po), "exp_rows": exp_rows,
+            **context, "form": form, "adj_form": BillAdjustmentForm(), "rows": _po_rows(po), "exp_rows": exp_rows,
             "exp_shown": common.expense_shown(exp_rows), "token": common.new_token()})
     token = request.POST.get("token", "")
     if common._token_used(token):
@@ -245,7 +254,8 @@ def po_bill(request, number):
     form = BillFromPOForm(request.POST)
     rows = _po_rows(po, request.POST)
     exp_rows = common.compact_expense(common.read_expense_rows(request.POST))
-    page = {**context, "form": form, "rows": rows, "exp_rows": exp_rows, "exp_shown": common.expense_shown(exp_rows),
+    adj_form = BillAdjustmentForm(request.POST)
+    page = {**context, "form": form, "adj_form": adj_form, "rows": rows, "exp_rows": exp_rows, "exp_shown": common.expense_shown(exp_rows),
             "token": token}
     if request.POST.get("back"):
         return render(request, "purchasing/bill_from_po.html", page)
@@ -267,7 +277,7 @@ def po_bill(request, number):
     filled = sum(1 for q in quantities.values() if q != 0)
     exp_parsed, exp_errors = common.parse_expense_rows(exp_rows, start=filled)
     errors += exp_errors
-    if form.is_valid() and not errors:
+    if form.is_valid() and adj_form.is_valid() and not errors:
         d = form.cleaned_data
         try:
             with transaction.atomic():
@@ -277,7 +287,7 @@ def po_bill(request, number):
                 bill = bill_from_po(
                     po, date=d["date"], vendor_invoice_number=d["vendor_invoice_number"], quantities=quantities,
                     prices=prices, expense_lines=_expense_specs(exp_parsed), user=request.user,
-                    terms=d["terms"] or None, notes=d["notes"],
+                    terms=d["terms"] or None, notes=d["notes"], adjustment=adj_form.spec(),
                     allow_duplicate=request.POST.get("allow_duplicate") == "1")
         except DuplicateBillWarning as warning:
             return _confirm(request, "Confirm bill", warnings=[str(warning)], button="Save anyway",
@@ -298,7 +308,8 @@ def bill_detail(request, number):
             allocations = list(line.allocations.select_related("invoice_line__invoice__customer"))
             line.drop_ship_allocations = allocations
             line.drop_ship_unmatched = line.quantity - sum(a.quantity for a in allocations)
-    expense_lines = list(bill.expense_lines.select_related("account"))
+    expense_lines = list(bill.expense_lines.select_related("account").filter(is_adjustment=False))
+    adjustment = bill_adjustment(bill)
     payment_apps = list(bill.payment_applications.select_related("payment").order_by("applied_on", "id"))
     credit_apps = list(bill.credit_applications.select_related("credit").order_by("applied_on", "id"))
     entries = [("Bill", bill.journal_entry)] if bill.journal_entry_id else []
@@ -308,6 +319,7 @@ def bill_detail(request, number):
             entries.append((f"Receipt of {line.item.sku}", m.journal_entry))
     return render(request, "purchasing/bill_detail.html", {
         "bill": bill, "item_lines": item_lines, "expense_lines": expense_lines, "total": bill_total(bill),
+        "adjustment": adjustment, "subtotal": bill_total(bill) - (adjustment.amount if adjustment else 0),
         "applied": bill_applied(bill), "balance": bill_balance(bill), "payment_apps": payment_apps,
         "credit_apps": credit_apps, "revisions": bill.revisions.all(), "entries": entries,
         "has_drop_ship": any(l.kind == BillLineKind.DROP_SHIP for l in item_lines),

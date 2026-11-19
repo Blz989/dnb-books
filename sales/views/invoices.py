@@ -21,14 +21,14 @@ from ..balances import (
     invoices_with_open_balance,
 )
 from ..errors import SalesError
-from ..forms import InvoiceHeaderForm, ShipmentHeaderForm, VoidDocForm
+from ..forms import InvoiceAdjustmentForm, InvoiceHeaderForm, ShipmentHeaderForm, VoidDocForm
 from ..models import (
     CreditApplication, DocStatus, Fulfillment, Invoice, OrderStatus, PaymentApplication, SalesOrderLine, SalesSettings,
 )
 from ..pdf import invoice_pdf
 from ..posting.deletion import delete_invoice
 from ..posting.invoices import (
-    InvoiceLineSpec, create_invoice, edit_invoice, invoice_from_order, void_invoice,
+    InvoiceLineSpec, create_invoice, edit_invoice, invoice_adjustment, invoice_from_order, void_invoice,
 )
 from ..posting.orders import remaining
 from ..posting.receipts import remove_application
@@ -100,9 +100,9 @@ def _specs(parsed, order=None):
     return specs
 
 
-def _form_context(form, rows, token, invoice=None, **extra):
+def _form_context(form, rows, token, invoice=None, adj_form=None, **extra):
     return {
-        "form": form, "rows": rows, "token": token, "invoice": invoice, "shown": common.shown_count(rows),
+        "form": form, "adj_form": adj_form or InvoiceAdjustmentForm(), "rows": rows, "token": token, "invoice": invoice, "shown": common.shown_count(rows),
         "sku_options": _sku_options(), "nav_active": "invoices", **extra,
     }
 
@@ -122,6 +122,7 @@ def invoice_new(request):
             initial["customer"] = request.GET["customer"]
         form = InvoiceHeaderForm(initial=initial)
         return render(request, "sales/invoice_form.html", _form_context(form, common.compact([]), common.new_token()))
+    adj_form = InvoiceAdjustmentForm(request.POST)
     token = request.POST.get("token", "")
     if common._token_used(token):
         messages.info(request, ALREADY_SAVED)
@@ -129,9 +130,9 @@ def invoice_new(request):
     form = InvoiceHeaderForm(request.POST)
     rows = common.compact(common.read_rows(request.POST))
     if request.POST.get("back"):
-        return render(request, "sales/invoice_form.html", _form_context(form, rows, token))
+        return render(request, "sales/invoice_form.html", _form_context(form, rows, token, adj_form=adj_form))
     parsed, errors = common.parse_rows(rows)
-    if form.is_valid() and not errors:
+    if form.is_valid() and adj_form.is_valid() and not errors:
         d = form.cleaned_data
         try:
             with transaction.atomic():
@@ -141,14 +142,15 @@ def invoice_new(request):
                 invoice = create_invoice(
                     customer=d["customer"], date=d["date"], lines=_specs(parsed), user=request.user,
                     terms=d["terms"] or None, ship_to=d["ship_to"] or None, notes=d["notes"],
-                    allow_negative=request.POST.get("allow_negative") == "1")
+                    adjustment=adj_form.spec(), allow_negative=request.POST.get("allow_negative") == "1")
         except NegativeStockWarning as warning:
             return _confirm(request, "Confirm invoice", warnings=warning.messages)
         except (SalesError, PostingError, StockError) as exc:
-            return render(request, "sales/invoice_form.html", _form_context(form, rows, token, **common.error_context(exc)))
+            return render(request, "sales/invoice_form.html", _form_context(
+                form, rows, token, adj_form=adj_form, **common.error_context(exc)))
         messages.success(request, f"Saved {invoice.number}.")
         return redirect(reverse("sales:invoice-detail", args=[invoice.number]))
-    return render(request, "sales/invoice_form.html", _form_context(form, rows, token, errors=errors))
+    return render(request, "sales/invoice_form.html", _form_context(form, rows, token, adj_form=adj_form, errors=errors))
 
 
 @login_required
@@ -161,8 +163,12 @@ def invoice_edit(request, number):
         form = InvoiceHeaderForm(editing=True, initial={
             "customer": invoice.customer_id, "date": invoice.date.isoformat(), "terms": invoice.terms,
             "ship_to": invoice.ship_to, "notes": invoice.notes})
-        rows = common.rows_from_lines(invoice.lines.select_related("item"), ref=lambda l: l.so_line_id)
-        return render(request, "sales/invoice_form.html", _form_context(form, rows, common.new_token(), invoice))
+        rows = common.rows_from_lines(
+            invoice.lines.select_related("item").filter(is_adjustment=False), ref=lambda l: l.so_line_id)
+        adj_form = InvoiceAdjustmentForm(initial=InvoiceAdjustmentForm.initial_for(invoice_adjustment(invoice)))
+        return render(request, "sales/invoice_form.html", _form_context(
+            form, rows, common.new_token(), invoice, adj_form=adj_form))
+    adj_form = InvoiceAdjustmentForm(request.POST)
     token = request.POST.get("token", "")
     if common._token_used(token):
         messages.info(request, "These changes were already saved.")
@@ -170,9 +176,9 @@ def invoice_edit(request, number):
     form = InvoiceHeaderForm(request.POST, editing=True)
     rows = common.compact(common.read_rows(request.POST))
     if request.POST.get("back"):
-        return render(request, "sales/invoice_form.html", _form_context(form, rows, token, invoice))
+        return render(request, "sales/invoice_form.html", _form_context(form, rows, token, invoice, adj_form=adj_form))
     parsed, errors = common.parse_rows(rows)
-    if form.is_valid() and not errors:
+    if form.is_valid() and adj_form.is_valid() and not errors:
         d = form.cleaned_data
         try:
             with transaction.atomic():
@@ -182,14 +188,17 @@ def invoice_edit(request, number):
                 edit_invoice(
                     invoice, user=request.user, date=d["date"], lines=_specs(parsed, invoice.sales_order),
                     terms=d["terms"] or None, ship_to=d["ship_to"], notes=d["notes"], customer=d["customer"],
-                    reason=d["reason"], allow_negative=request.POST.get("allow_negative") == "1")
+                    reason=d["reason"], adjustment=adj_form.spec(),
+                    allow_negative=request.POST.get("allow_negative") == "1")
         except NegativeStockWarning as warning:
             return _confirm(request, "Confirm changes", warnings=warning.messages, invoice=invoice)
         except (SalesError, PostingError, StockError) as exc:
-            return render(request, "sales/invoice_form.html", _form_context(form, rows, token, invoice, **common.error_context(exc)))
+            return render(request, "sales/invoice_form.html", _form_context(
+                form, rows, token, invoice, adj_form=adj_form, **common.error_context(exc)))
         messages.success(request, f"Saved {invoice.number}.")
         return redirect(reverse("sales:invoice-detail", args=[invoice.number]))
-    return render(request, "sales/invoice_form.html", _form_context(form, rows, token, invoice, errors=errors))
+    return render(request, "sales/invoice_form.html", _form_context(
+        form, rows, token, invoice, adj_form=adj_form, errors=errors))
 
 
 def _shipment_rows(order, post=None):
@@ -219,14 +228,16 @@ def order_invoice(request, number):
         form = ShipmentHeaderForm(initial={
             "date": _today().isoformat(), "ship_to": order.ship_to, "notes": config.default_invoice_notes})
         return render(request, "sales/invoice_from_order.html", {
-            **context, "form": form, "rows": _shipment_rows(order), "token": common.new_token()})
+            **context, "form": form, "adj_form": InvoiceAdjustmentForm(), "rows": _shipment_rows(order),
+            "token": common.new_token()})
     token = request.POST.get("token", "")
     if common._token_used(token):
         messages.info(request, ALREADY_SAVED)
         return redirect(reverse("sales:order-detail", args=[order.number]))
     form = ShipmentHeaderForm(request.POST)
     rows = _shipment_rows(order, request.POST)
-    page = {**context, "form": form, "rows": rows, "token": token}
+    adj_form = InvoiceAdjustmentForm(request.POST)
+    page = {**context, "form": form, "adj_form": adj_form, "rows": rows, "token": token}
     if request.POST.get("back"):
         return render(request, "sales/invoice_from_order.html", page)
     quantities, errors = {}, []
@@ -236,7 +247,7 @@ def order_invoice(request, number):
             quantities[r["line"].pk] = int(raw)
         except ValueError:
             errors.append(f"Line {n}: enter a quantity above zero, or 0 to skip it.")
-    if form.is_valid() and not errors:
+    if form.is_valid() and adj_form.is_valid() and not errors:
         d = form.cleaned_data
         try:
             with transaction.atomic():
@@ -245,7 +256,7 @@ def order_invoice(request, number):
                     return redirect(reverse("sales:order-detail", args=[order.number]))
                 invoice = invoice_from_order(
                     order, date=d["date"], quantities=quantities, user=request.user, ship_to=d["ship_to"],
-                    notes=d["notes"], terms=d["terms"] or None, allow_negative=request.POST.get("allow_negative") == "1")
+                    notes=d["notes"], terms=d["terms"] or None, adjustment=adj_form.spec(), allow_negative=request.POST.get("allow_negative") == "1")
         except NegativeStockWarning as warning:
             return _confirm(request, "Confirm invoice", warnings=warning.messages, order=order)
         except (SalesError, PostingError, StockError) as exc:
@@ -258,7 +269,9 @@ def order_invoice(request, number):
 @login_required
 def invoice_detail(request, number):
     invoice = invoice_or_404(number)
-    lines = list(invoice.lines.select_related("item", "stock_movement__journal_entry"))
+    all_lines = list(invoice.lines.select_related("item", "stock_movement__journal_entry"))
+    lines = [l for l in all_lines if not l.is_adjustment]
+    adjustment = next((l for l in all_lines if l.is_adjustment), None)
     total = invoice_total(invoice)
     payment_apps = list(invoice.payment_applications.select_related("payment").order_by("applied_on", "id"))
     credit_apps = list(invoice.credit_applications.select_related("credit_note").order_by("applied_on", "id"))
@@ -268,7 +281,8 @@ def invoice_detail(request, number):
         if m and m.journal_entry_id:
             entries.append((f"Cost of {line.item.sku}", m.journal_entry))
     return render(request, "sales/invoice_detail.html", {
-        "invoice": invoice, "lines": lines, "total": total, "applied": invoice_applied(invoice),
+        "invoice": invoice, "lines": lines, "total": total, "adjustment": adjustment,
+        "subtotal": total - (adjustment.amount if adjustment else 0), "applied": invoice_applied(invoice),
         "balance": invoice_balance(invoice), "payment_apps": payment_apps, "credit_apps": credit_apps,
         "revisions": invoice.revisions.all(), "entries": entries, "is_void": invoice.status == DocStatus.VOID,
         "is_admin": is_admin(request.user), "nav_active": "invoices",

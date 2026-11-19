@@ -15,6 +15,7 @@
     {% endfor %}
   </div>
   {% include "sales/_lines_table.html" %}
+  {% include "sales/_adjustment.html" %}
   </div>
   <button type="submit" class="btn primary">Save invoice</button>
   <a class="btn" href="{% if invoice %}{% url 'sales:invoice-detail' invoice.number %}{% else %}{% url 'sales:invoice-list' %}{% endif %}">Cancel</a>

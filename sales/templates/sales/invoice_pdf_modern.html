@@ -76,6 +76,8 @@
     <div class="sums">
       <table class="totals">
         <tr><td>Total quantity</td><td class="num">{{ items_total }}</td></tr>
+        {% if adjustment %}<tr><td>Subtotal</td><td class="num">{{ lines_subtotal|floatformat:"2g" }}</td></tr>
+        <tr><td>{{ adjustment.description|default:"Adjustment" }}</td><td class="num">{{ adjustment.amount|floatformat:"2g" }}</td></tr>{% endif %}
         <tr class="total"><td>Invoice total</td><td class="num">{{ subtotal|floatformat:"2g" }}</td></tr>
         {% if applied %}<tr><td>Payments and credits</td><td class="num">−{{ applied|floatformat:"2g" }}</td></tr>{% endif %}
       </table>

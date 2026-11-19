@@ -55,6 +55,8 @@
   </div>
   <div class="right">
     <table class="totals">
+      {% if adjustment %}<tr><td>Sub Total</td><td class="num">{{ lines_subtotal|floatformat:"2g" }}</td></tr>
+      <tr><td>{{ adjustment.description|default:"Adjustment" }}</td><td class="num">{{ adjustment.amount|floatformat:"2g" }}</td></tr>{% endif %}
       <tr><td>Total</td><td class="num">${{ subtotal|floatformat:"2g" }}</td></tr>
       {% if applied %}<tr><td>Payments and credits</td><td class="num">−{{ applied|floatformat:"2g" }}</td></tr>{% endif %}
       <tr class="due"><td>Balance Due</td><td class="num">${{ balance|floatformat:"2g" }}</td></tr>

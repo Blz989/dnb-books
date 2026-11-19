@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django import forms
 
 from contacts.models import Customer
@@ -215,3 +217,50 @@ class DepositForm(forms.Form):
 
 class ApplyForm(forms.Form):
     date = date_field("Apply on")
+
+
+# ---- adjustments (bills and invoices) ----
+def parse_adjustment(text: str) -> Decimal | None:
+    """A signed adjustment typed on a form: blank or 0.00 means none."""
+    text = (text or "").strip().replace(",", "").replace("$", "")
+    if not text:
+        return None
+    try:
+        amount = Decimal(text)
+    except InvalidOperation:
+        raise forms.ValidationError("Adjustment: enter an amount like -10.00 or 25.00.")
+    if not amount.is_finite():
+        raise forms.ValidationError("Adjustment: enter an amount like -10.00 or 25.00.")
+    if amount.as_tuple().exponent < -2:
+        raise forms.ValidationError("Adjustment: amounts can have at most 2 decimal places.")
+    return amount if amount != 0 else None
+
+
+class InvoiceAdjustmentForm(forms.Form):
+    """Prefix "adj". The adjustment posts to the ADJ item's income account."""
+    amount = forms.CharField(
+        label="Adjustment", required=False,
+        widget=forms.TextInput(attrs={"inputmode": "decimal", "placeholder": "-10.00 or 25.00"}))
+    note = forms.CharField(label="Adjustment note", required=False, max_length=500,
+                           widget=forms.TextInput(attrs={"placeholder": "Adjustment"}))
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("prefix", "adj")
+        super().__init__(*args, **kwargs)
+
+    def clean_amount(self):
+        return parse_adjustment(self.cleaned_data.get("amount"))
+
+    @classmethod
+    def initial_for(cls, line) -> dict:
+        if line is None:
+            return {}
+        return {"amount": f"{line.amount:.2f}", "note": line.description}
+
+    def spec(self):
+        from .posting.invoices import InvoiceAdjustmentSpec
+
+        amount = self.cleaned_data.get("amount")
+        if amount is None:
+            return None
+        return InvoiceAdjustmentSpec(amount, self.cleaned_data.get("note", "").strip() or "Adjustment")

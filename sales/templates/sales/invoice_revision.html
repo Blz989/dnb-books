@@ -25,6 +25,9 @@
       <td>{{ l.fulfillment }}{% if l.drop_ship_vendor %} ({{ l.drop_ship_vendor }}){% endif %}</td>
       <td class="num">{{ l.quantity }}</td><td class="num">{{ l.price }}</td><td class="num">{{ l.amount }}</td></tr>
   {% endfor %}
+  {% if snap.adjustment %}
+    <tr class="adjustment"><td><span class="sku">{{ snap.adjustment.sku }}</span></td><td>{{ snap.adjustment.description|default:"Adjustment" }}</td><td>Adjustment</td><td class="num"></td><td class="num"></td><td class="num">{{ snap.adjustment.amount }}</td></tr>
+  {% endif %}
   </tbody>
 </table>
 </div>

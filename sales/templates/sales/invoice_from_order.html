@@ -25,7 +25,9 @@
           {% if r.on_hand is not None %}<div class="on-hand{% if r.on_hand < r.left %} neg{% endif %}">{{ r.on_hand }} on hand</div>{% endif %}</td></tr>
     {% endfor %}
     </tbody>
-  </table></div>
+  </table>
+  {% include "sales/_adjustment.html" %}
+  </div>
   <button type="submit" class="btn primary">Save invoice</button>
   <a class="btn" href="{% url 'sales:order-detail' order.number %}">Cancel</a>
 </form>

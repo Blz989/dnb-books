@@ -72,10 +72,17 @@ class VendorForm(forms.ModelForm):
 class PurchasingSettingsForm(forms.ModelForm):
     class Meta:
         model = PurchasingSettings
-        fields = ["ap_account"]
+        fields = ["ap_account", "default_adjustment_account"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        adjustment = self.fields["default_adjustment_account"]
+        adjustment.queryset = Account.objects.filter(is_active=True).exclude(
+            subtype__in=[AccountSubtype.INVENTORY, AccountSubtype.ACCOUNTS_PAYABLE])
+        adjustment.label = "Default adjustment account"
+        adjustment.required = False
+        adjustment.help_text = "Bill adjustments start at this account. You can pick another on any bill."
+        adjustment.error_messages["invalid_choice"] = "Choose an account other than inventory or accounts payable."
         field = self.fields["ap_account"]
         field.queryset = Account.objects.filter(subtype=AccountSubtype.ACCOUNTS_PAYABLE, is_active=True)
         field.label = "Accounts payable account"
@@ -189,3 +196,55 @@ class VendorCreditHeaderForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["vendor"].queryset = Vendor.objects.filter(is_active=True)
+
+
+# ---- adjustment ----
+from sales.forms import parse_adjustment  # noqa: E402
+
+
+ADJUSTMENT_ACCOUNT_ERROR = "Adjustment: choose an account other than inventory or accounts payable."
+
+
+class BillAdjustmentForm(forms.Form):
+    """Prefix "adj". The account starts at Purchasing settings' default adjustment account."""
+    amount = forms.CharField(
+        label="Adjustment", required=False,
+        widget=forms.TextInput(attrs={"inputmode": "decimal", "placeholder": "-10.00 or 25.00"}))
+    account = forms.ModelChoiceField(
+        Account.objects.none(), label="Adjustment account", required=False, empty_label="Choose an account",
+        error_messages={"invalid_choice": ADJUSTMENT_ACCOUNT_ERROR})
+    note = forms.CharField(label="Adjustment note", required=False, max_length=500,
+                           widget=forms.TextInput(attrs={"placeholder": "Adjustment"}))
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("prefix", "adj")
+        super().__init__(*args, **kwargs)
+        default = PurchasingSettings.load().default_adjustment_account
+        self.fields["account"].queryset = Account.objects.filter(is_active=True).exclude(
+            subtype__in=[AccountSubtype.INVENTORY, AccountSubtype.ACCOUNTS_PAYABLE]).order_by("number")
+        if default is not None and not self.is_bound and "account" not in self.initial:
+            self.initial["account"] = default.pk
+
+    def clean_amount(self):
+        return parse_adjustment(self.cleaned_data.get("amount"))
+
+    def clean(self):
+        data = super().clean()
+        if data.get("amount") is not None and data.get("account") is None and "account" not in self.errors:
+            self.add_error("account", "Adjustment: choose an account.")
+        return data
+
+    @classmethod
+    def initial_for(cls, line) -> dict:
+        if line is None:
+            return {}
+        return {"amount": f"{line.amount:.2f}", "account": line.account_id, "note": line.description}
+
+    def spec(self):
+        from .posting.bills import BillAdjustmentSpec
+
+        amount = self.cleaned_data.get("amount")
+        if amount is None:
+            return None
+        return BillAdjustmentSpec(self.cleaned_data["account"], amount,
+                                  self.cleaned_data.get("note", "").strip() or "Adjustment")
