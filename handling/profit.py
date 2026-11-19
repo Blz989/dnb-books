@@ -166,7 +166,8 @@ def _drop_ship_matching(invoices: list[Invoice], as_of: date) -> dict[int, tuple
                     if take <= 0:
                         continue
                     bl = entry[0]
-                    cost += _cents(bl.amount * take / bl.quantity)
+                    # The bill line's share of a bill adjustment entered in DnB Books counts as cost (spec 3.9).
+                    cost += _cents((bl.amount + bl.adjustment_share) * take / bl.quantity)
                     entry[1] -= take
                     allocated += take
                     if allocated == line.quantity:

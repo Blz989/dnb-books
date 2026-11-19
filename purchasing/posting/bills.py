@@ -47,6 +47,15 @@ class BillExpenseSpec:
     description: str = ""
 
 
+@dataclass(frozen=True)
+class BillAdjustmentSpec:
+    """The bill's one signed Adjustment. Converted Zoho adjustments pass spreads_to_orders=False."""
+    account: Account
+    amount: Decimal
+    description: str = "Adjustment"
+    spreads_to_orders: bool = True
+
+
 class DuplicateBillWarning(PurchasingError):
     """Raised before saving when the vendor already has a bill with this invoice number. Callers confirm and
     retry with allow_duplicate=True."""
@@ -64,6 +73,47 @@ def line_kind(spec: BillItemSpec) -> BillLineKind:
 
 def normalize_invoice_number(value: str) -> str:
     return " ".join((value or "").split()).casefold()
+
+
+def bill_adjustment(bill: Bill) -> BillExpenseLine | None:
+    return bill.expense_lines.filter(is_adjustment=True).select_related("account").first()
+
+
+def validate_adjustment(adjustment: BillAdjustmentSpec | None) -> None:
+    if adjustment is None:
+        return
+    amount = adjustment.amount
+    if not isinstance(amount, Decimal):
+        raise TypeError("Amounts must be Decimal, never float or int.")
+    if not amount.is_finite() or amount == 0:
+        raise PurchasingError("Adjustment: enter an amount like -10.00 or 25.00.")
+    if amount.as_tuple().exponent < -2:
+        raise PurchasingError("Adjustment: amounts can have at most 2 decimal places.")
+    if abs(amount) > Decimal(MAX_AMOUNT_TEXT):
+        raise PurchasingError("Adjustment: that amount is too large.")
+    if adjustment.account.subtype in (AccountSubtype.INVENTORY, AccountSubtype.ACCOUNTS_PAYABLE):
+        raise PurchasingError("Adjustment: choose an account other than inventory or accounts payable.")
+
+
+def bill_lines_total(
+    item_lines: Sequence[BillItemSpec], expense_lines: Sequence[BillExpenseSpec],
+    adjustment: BillAdjustmentSpec | None = None,
+) -> Decimal:
+    return (sum((line_amount(s) for s in item_lines), Decimal("0.00"))
+            + sum((s.amount for s in expense_lines), Decimal("0.00"))
+            + (adjustment.amount if adjustment is not None else Decimal("0.00")))
+
+
+def adjustment_shares(amounts: Sequence[Decimal], adjustment: Decimal) -> list[Decimal]:
+    """Split a bill's adjustment over its item lines in proportion to their amounts, to the cent. The leftover
+    from rounding goes to the largest line (the first one on ties), so the shares always sum to the adjustment."""
+    base = sum(amounts, Decimal("0.00"))
+    if not amounts or base == 0:
+        return [Decimal("0.00") for _ in amounts]
+    shares = [(adjustment * a / base).quantize(CENT, rounding=ROUND_HALF_UP) for a in amounts]
+    largest = max(range(len(amounts)), key=lambda n: (amounts[n], -n))
+    shares[largest] += adjustment - sum(shares, Decimal("0.00"))
+    return shares
 
 
 def find_duplicate(vendor: Vendor, vendor_invoice_number: str, exclude_bill: Bill | None = None) -> Bill | None:
@@ -93,12 +143,13 @@ def validate_bill(
     *, vendor: Vendor, date: date_type, item_lines: Sequence[BillItemSpec], expense_lines: Sequence[BillExpenseSpec],
     purchase_order: PurchaseOrder | None, vendor_invoice_number: str, exclude_bill: Bill | None = None,
     allow_duplicate: bool = False, check_vendor: bool = True, allow_negative_adjustment: bool = False,
+    adjustment: BillAdjustmentSpec | None = None,
 ) -> None:
     """Every check that can fail before anything is saved."""
     PurchasingSettings.load().require_configured()
     if check_vendor and not vendor.is_active:
         raise PurchasingError(f"{vendor.name} is inactive.")
-    if not item_lines and not expense_lines:
+    if not item_lines and not expense_lines and adjustment is None:
         raise PurchasingError("A bill needs at least one line.")
     inv = InventorySettings.load()
     for n, spec in enumerate(item_lines, 1):
@@ -129,6 +180,10 @@ def validate_bill(
             raise PurchasingError(f"Line {n}: amounts can have at most 2 decimal places.")
         if spec.account.subtype in (AccountSubtype.INVENTORY, AccountSubtype.ACCOUNTS_PAYABLE):
             raise PurchasingError(f"Line {n}: choose an account other than inventory or accounts payable.")
+    validate_adjustment(adjustment)
+    # The Zoho import (allow_negative_adjustment) replays Zoho's totals as they were.
+    if bill_lines_total(item_lines, expense_lines, adjustment) < 0 and not allow_negative_adjustment:
+        raise PurchasingError("The bill total can't be below zero.")
     assert_open(date)
 
     if purchase_order is not None:
@@ -169,7 +224,7 @@ def _side(account: Account, signed: Decimal) -> LineSpec:
 
 def post_lines(
     bill: Bill, item_lines: Sequence[BillItemSpec], expense_lines: Sequence[BillExpenseSpec], *, user,
-    allow_negative: bool,
+    allow_negative: bool, adjustment: BillAdjustmentSpec | None = None,
 ) -> None:
     """Create the bill's lines, receive its stock, and post the rest. Runs inside the caller's transaction."""
     settings = PurchasingSettings.load()
@@ -187,12 +242,15 @@ def post_lines(
                              account=settings.ap_account) for n in stock_positions],
         )
     movement_for = dict(zip(stock_positions, movements))
+    spreads = adjustment is not None and adjustment.spreads_to_orders
+    shares = adjustment_shares(amounts, adjustment.amount) if spreads else [Decimal("0.00")] * len(amounts)
 
     debits: dict[Account, Decimal] = defaultdict(lambda: Decimal("0.00"))
-    for n, (spec, kind, amount) in enumerate(zip(item_lines, kinds, amounts)):
+    for n, (spec, kind, amount, share) in enumerate(zip(item_lines, kinds, amounts, shares)):
         BillItemLine.objects.create(
             bill=bill, item=spec.item, description=spec.description, quantity=spec.quantity, price=spec.price,
-            amount=amount, po_line=spec.po_line, kind=kind, stock_movement=movement_for.get(n), position=n)
+            amount=amount, po_line=spec.po_line, kind=kind, stock_movement=movement_for.get(n), position=n,
+            adjustment_share=share)
         if kind != BillLineKind.STOCK:
             debits[_debit_account(spec, kind, bill.vendor, n + 1, inv)] += amount
     for n, spec in enumerate(expense_lines):
@@ -200,16 +258,23 @@ def post_lines(
             bill=bill, account=spec.account, description=spec.description, amount=spec.amount,
             position=len(item_lines) + n)
         debits[spec.account] += spec.amount
+    if adjustment is not None:
+        BillExpenseLine.objects.create(
+            bill=bill, account=adjustment.account, description=adjustment.description.strip() or "Adjustment",
+            amount=adjustment.amount, position=len(item_lines) + len(expense_lines), is_adjustment=True,
+            spreads_to_orders=adjustment.spreads_to_orders)
+        debits[adjustment.account] += adjustment.amount
 
     total = sum(debits.values(), Decimal("0.00"))
+    moved = [_side(account, amount) for account, amount in debits.items() if amount != 0]
     entry = None
-    if total != 0:
+    # A $0.00 bill still posts when its lines move money between accounts (an adjustment that cancels the rest).
+    if moved:
         entry = post_entry(
             date=bill.date, user=user, memo=f"Bill {bill.number} {bill.vendor.name}",
             source_type="purchasing.bill", source_id=bill.number,
-            # A negative net (only possible with allow_negative_adjustment) posts on the other side.
-            lines=[_side(account, amount) for account, amount in debits.items() if amount != 0]
-            + [_side(settings.ap_account, -total)],
+            # A negative adjustment (or an imported negative line) credits its account.
+            lines=moved + ([_side(settings.ap_account, -total)] if total != 0 else []),
         )
     bill.journal_entry = entry
     bill.save()
@@ -223,7 +288,7 @@ def create_bill(
     *, vendor: Vendor, date: date_type, vendor_invoice_number: str, item_lines: Sequence[BillItemSpec] = (),
     expense_lines: Sequence[BillExpenseSpec] = (), user, purchase_order: PurchaseOrder | None = None,
     terms: Terms | None = None, notes: str = "", allow_duplicate: bool = False, allow_negative: bool = False,
-    allow_negative_adjustment: bool = False,
+    allow_negative_adjustment: bool = False, adjustment: BillAdjustmentSpec | None = None,
 ) -> Bill:
     """allow_negative_adjustment lets expense lines be negative; only the Zoho import passes it."""
     if purchase_order is None:
@@ -234,13 +299,14 @@ def create_bill(
         validate_bill(
             vendor=vendor, date=date, item_lines=item_lines, expense_lines=expense_lines,
             purchase_order=purchase_order, vendor_invoice_number=vendor_invoice_number,
-            allow_duplicate=allow_duplicate, allow_negative_adjustment=allow_negative_adjustment)
+            allow_duplicate=allow_duplicate, allow_negative_adjustment=allow_negative_adjustment,
+            adjustment=adjustment)
         terms = terms or vendor.terms
         bill = Bill.objects.create(
             number=next_number(DocType.BILL), vendor=vendor, vendor_invoice_number=vendor_invoice_number.strip(),
             date=date, terms=terms, due_date=terms_due_date(terms, date), notes=notes,
             purchase_order=purchase_order, created_by=user)
-        post_lines(bill, item_lines, expense_lines, user=user, allow_negative=allow_negative)
+        post_lines(bill, item_lines, expense_lines, user=user, allow_negative=allow_negative, adjustment=adjustment)
         dropship.rebuild(_drop_ship_so_lines(item_lines))
         if purchase_order is not None:
             refresh_po_status(purchase_order)
@@ -251,6 +317,7 @@ def bill_from_po(
     po: PurchaseOrder, *, date: date_type, vendor_invoice_number: str, quantities: dict[int, int],
     prices: dict[int, Decimal] | None = None, expense_lines: Sequence[BillExpenseSpec] = (), user,
     allow_duplicate: bool = False, terms: Terms | None = None, notes: str = "", allow_negative: bool = False,
+    adjustment: BillAdjustmentSpec | None = None,
 ) -> Bill:
     """Bill part or all of a purchase order. `quantities` and `prices` are keyed by PO line id."""
     by_id = {l.pk: l for l in po.lines.select_related("item")}
@@ -266,7 +333,7 @@ def bill_from_po(
     return create_bill(
         vendor=po.vendor, date=date, vendor_invoice_number=vendor_invoice_number, item_lines=specs,
         expense_lines=expense_lines, user=user, purchase_order=po, terms=terms, notes=notes,
-        allow_duplicate=allow_duplicate, allow_negative=allow_negative)
+        allow_duplicate=allow_duplicate, allow_negative=allow_negative, adjustment=adjustment)
 
 
 def _snapshot(bill: Bill) -> dict:
@@ -286,9 +353,17 @@ def _snapshot(bill: Bill) -> dict:
                 "account_id": l.account_id, "account": l.account.number, "description": l.description,
                 "amount": str(l.amount),
             }
-            for l in bill.expense_lines.select_related("account")
+            for l in bill.expense_lines.select_related("account") if not l.is_adjustment
         ],
+        "adjustment": _adjustment_snapshot(bill_adjustment(bill)),
     }
+
+
+def _adjustment_snapshot(line: BillExpenseLine | None) -> dict | None:
+    if line is None:
+        return None
+    return {"account_id": line.account_id, "account": line.account.number, "description": line.description,
+            "amount": str(line.amount), "spreads_to_orders": line.spreads_to_orders}
 
 
 def _active_applications(bill: Bill):
@@ -314,7 +389,9 @@ def edit_bill(
     bill: Bill, *, user, date: date_type, vendor_invoice_number: str, item_lines: Sequence[BillItemSpec],
     expense_lines: Sequence[BillExpenseSpec], terms: Terms | None = None, notes: str | None = None,
     vendor: Vendor | None = None, reason: str = "", allow_duplicate: bool = False, allow_negative: bool = False,
+    adjustment: BillAdjustmentSpec | None = None,
 ) -> Bill:
+    """`adjustment` is the bill's adjustment after the edit; None removes it."""
     with transaction.atomic():
         current = Bill.objects.select_related("vendor", "purchase_order", "journal_entry").get(pk=bill.pk)
         if current.status == DocStatus.VOID:
@@ -336,13 +413,16 @@ def edit_bill(
         if first_applied is not None and date > first_applied:
             raise PurchasingError(
                 f"The bill date can't be after {first_applied.isoformat()}, when a payment or credit was applied.")
+        old_adjustment = bill_adjustment(current)
+        if (adjustment is not None and old_adjustment is not None and not old_adjustment.spreads_to_orders
+                and adjustment.amount == old_adjustment.amount):
+            # A converted Zoho adjustment left at its amount stays out of drop-ship order cost.
+            adjustment = BillAdjustmentSpec(adjustment.account, adjustment.amount, adjustment.description, False)
         validate_bill(
             vendor=new_vendor, date=date, item_lines=item_lines, expense_lines=expense_lines,
             purchase_order=current.purchase_order, vendor_invoice_number=vendor_invoice_number,
-            exclude_bill=current, allow_duplicate=allow_duplicate, check_vendor=changed_vendor)
-        new_total = (
-            sum((line_amount(s) for s in item_lines), Decimal("0.00"))
-            + sum((s.amount for s in expense_lines), Decimal("0.00")))
+            exclude_bill=current, allow_duplicate=allow_duplicate, check_vendor=changed_vendor, adjustment=adjustment)
+        new_total = bill_lines_total(item_lines, expense_lines, adjustment)
         applied = bill_applied(current)
         if new_total < applied:
             raise PurchasingError(f"This bill has {applied:,.2f} applied. The new total can't be less than that.")
@@ -368,7 +448,7 @@ def edit_bill(
         current.save()
         # The new receipts go in before the old ones come out, so stock only counts as "going negative" when the
         # edit really leaves less on hand than has been sold.
-        post_lines(current, item_lines, expense_lines, user=user, allow_negative=allow_negative)
+        post_lines(current, item_lines, expense_lines, user=user, allow_negative=allow_negative, adjustment=adjustment)
         _reverse_posting(
             old_entry, old_movements, user=user, when=old_date, reason=f"Edited to revision {current.revision}",
             allow_negative=allow_negative)
