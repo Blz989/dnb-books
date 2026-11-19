@@ -344,3 +344,12 @@ table.lots tr.lot-start td { border-top: 1px solid var(--border); }
 .tiles.activity .tile a { font-size: 13px; margin-top: 4px; }
 /* Phones: a wide table scrolls inside its card instead of being cut off. */
 @media (max-width: 900px) { .card { overflow-x: auto; } }
+
+/* Item picker suggestions on document lines (purchasing/item_pick.js) */
+.item-suggest { position: absolute; z-index: 30; margin: 0; padding: 4px 0; list-style: none; max-height: 320px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.item-suggest[hidden] { display: none; }
+.item-suggest li { display: flex; justify-content: space-between; gap: 16px; padding: 6px 12px; cursor: pointer; }
+.item-suggest li small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.item-suggest li.on, .item-suggest li:hover { background: var(--hover); }
+.item-suggest li.none { color: var(--muted); cursor: default; }

@@ -14,6 +14,7 @@ urlpatterns = [
     path("counts/<int:pk>/cancel/", views.count_cancel, name="count-cancel"),
     path("import/", views.import_items, name="import"),
     path("import/confirm/", views.import_confirm, name="import-confirm"),
+    path("search/", views.item_search, name="search"),
     path("settings/", views.inventory_settings, name="settings"),
     path("adjust/", views.adjust, name="adjust"),
     path("adjustments/", views.adjustment_list, name="adjustments"),

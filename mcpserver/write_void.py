@@ -283,8 +283,6 @@ def _edit_sales_order(user, p, flags):
 def _edit_purchase_order(user, p, flags):
     require_admin(user)
     po = lookup.document(PurchaseOrder, p["number"], "purchase order")
-    if list(po.sales_orders()):
-        raise Refused(f"{po.number} is a drop-ship order. Edit it in the app.")
     before = read.get_purchase_order(user, po.number)
     existing, used, specs = list(po.lines.select_related("item")), set(), []
     for n, l in enumerate(p.get("lines") or [], 1):
@@ -296,8 +294,12 @@ def _edit_purchase_order(user, p, flags):
                                 line_id=old.pk if old else None))
     update_po(po, lines=specs, user=user, date=lookup.day(p.get("date"), "date"),
               expected_date=lookup.day(p.get("expected_date"), "expected date"), notes=p.get("notes"))
-    return po.number, {"edit": po.number, "before": before, "after": read.get_purchase_order(user, po.number),
-                       "effect": "Orders don't post to the ledger, so nothing posts."}
+    out = {"edit": po.number, "before": before, "after": read.get_purchase_order(user, po.number),
+           "effect": "Orders don't post to the ledger, so nothing posts. Item costs are not changed."}
+    if before["drop_ship_for"]:
+        out["drop_ship"] = ("Lines kept from the drop-ship order keep their sales order allocations; a removed line "
+                            "frees its sales order lines for a new PO. A line you add is not tied to a sales order.")
+    return po.number, out
 
 
 OPERATIONS = {tool: _void(tool) for tool in KINDS}
