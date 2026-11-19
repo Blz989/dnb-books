@@ -120,4 +120,4 @@ def adjustment_item() -> Item
 ## Task 8: Docs and PR
 - [x] README status line and CLAUDE.md pointers.
 - [x] Full `uv run pytest -q`.
-- [ ] PR into `main` with the title above.
+- [x] PR into `main` with the title above.
