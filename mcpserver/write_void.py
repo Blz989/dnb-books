@@ -28,7 +28,7 @@ from sales.posting.invoices import InvoiceLineSpec, edit_invoice, void_invoice
 from sales.posting.orders import OrderLineSpec, update_order
 from sales.posting.receipts import void_credit_note, void_payment, void_refund
 
-from . import lookup, read, read_more
+from . import adjustments, lookup, read, read_more
 from .runtime import Refused, fmt, money, role_message
 
 ZERO = Decimal("0.00")
@@ -206,7 +206,7 @@ def _edit_invoice(user, p, flags):
     require_admin(user)
     inv = lookup.document(Invoice, p["number"], "invoice")
     before = read.get_invoice(user, inv.number)
-    existing, used, specs = list(inv.lines.select_related("item")), set(), []
+    existing, used, specs = list(inv.lines.select_related("item").filter(is_adjustment=False)), set(), []
     if not p.get("lines"):
         raise Refused("An invoice needs at least one line with a quantity.")
     for n, l in enumerate(p["lines"], 1):
@@ -222,6 +222,7 @@ def _edit_invoice(user, p, flags):
     edit_invoice(inv, user=user, date=lookup.day(p.get("date"), "date", inv.date), lines=specs,
                  terms=_terms(p.get("terms"), inv.terms), ship_to=p["ship_to"] if p.get("ship_to") is not None else inv.ship_to,
                  notes=p["notes"] if p.get("notes") is not None else inv.notes, reason=(p.get("reason") or "").strip(),
+                 adjustment=adjustments.invoice_spec(p.get("adjustment"), inv),
                  allow_negative=flags.get("allow_negative", False))
     inv.refresh_from_db()
     return inv.number, {
@@ -234,7 +235,11 @@ def _edit_bill(user, p, flags):
     require_admin(user)
     bill = lookup.document(Bill, p["number"], "bill")
     before = read.get_bill(user, bill.number)
-    existing, used, item_specs = list(bill.item_lines.select_related("item")), set(), []
+    existing, used, item_specs = list(bill.item_lines.select_related("item", "po_line")), set(), []
+    if p.get("item_lines") is None:
+        # Left out: the bill keeps its item lines as they are.
+        item_specs = [BillItemSpec(l.item, l.quantity, l.price, description=l.description, po_line=l.po_line)
+                      for l in existing]
     for n, l in enumerate(p.get("item_lines") or [], 1):
         item = lookup.item(l["sku"])
         old = _pick(existing, l["sku"], used)
@@ -242,9 +247,13 @@ def _edit_bill(user, p, flags):
             else (old.price if old else item.purchase_cost)
         item_specs.append(BillItemSpec(item, int(l["quantity"]), price, description=l.get("description") or "",
                                        po_line=old.po_line if old else None))
-    expense_specs = [BillExpenseSpec(lookup.account(e["account"]), money(e["amount"], f"amount on expense line {n}"),
-                                     description=e.get("description") or "")
-                     for n, e in enumerate(p.get("expense_lines") or [], len(item_specs) + 1)]
+    if p.get("expense_lines") is None:
+        expense_specs = [BillExpenseSpec(l.account, l.amount, description=l.description)
+                         for l in bill.expense_lines.select_related("account").filter(is_adjustment=False)]
+    else:
+        expense_specs = [BillExpenseSpec(lookup.account(e["account"]), money(e["amount"], f"amount on expense line {n}"),
+                                         description=e.get("description") or "")
+                         for n, e in enumerate(p["expense_lines"], len(item_specs) + 1)]
     if not item_specs and not expense_specs:
         raise Refused("A bill needs at least one line.")
     old_entry = bill.journal_entry
@@ -253,6 +262,7 @@ def _edit_bill(user, p, flags):
               else bill.vendor_invoice_number,
               item_lines=item_specs, expense_lines=expense_specs, terms=_terms(p.get("terms"), bill.terms),
               notes=p["notes"] if p.get("notes") is not None else bill.notes, reason=(p.get("reason") or "").strip(),
+              adjustment=adjustments.bill_spec(p.get("adjustment"), bill),
               allow_duplicate=flags.get("allow_duplicate", False), allow_negative=flags.get("allow_negative", False))
     bill.refresh_from_db()
     return bill.number, {

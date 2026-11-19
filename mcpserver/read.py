@@ -215,9 +215,26 @@ def get_invoice(user, number: str) -> dict:
         "status": "void" if inv.status == DocStatus.VOID else "open",
         "lines": [{"sku": l.item.sku, "description": l.description or l.item.name, "quantity": l.quantity,
                    "price": fmt(l.price), "amount": fmt(l.amount), "ships": l.get_fulfillment_display()}
-                  for l in inv.lines.select_related("item")],
-        "total": fmt(invoice_total(inv)), "payments": apps, "credits": credits, "balance": fmt(invoice_balance(inv)),
+                  for l in inv.lines.select_related("item") if not l.is_adjustment],
+        **invoice_totals(inv), "payments": apps, "credits": credits, "balance": fmt(invoice_balance(inv)),
     }
+
+
+def invoice_totals(inv) -> dict:
+    """subtotal, adjustment (or None), total: the adjustment is shown on its own, not as a line."""
+    line = inv.lines.filter(is_adjustment=True).select_related("item__income_account").first()
+    total = invoice_total(inv)
+    adjustment = None if line is None else {
+        "amount": fmt(line.amount), "note": line.description, "account": str(line.item.income_account)}
+    return {"subtotal": fmt(total - (line.amount if line else 0)), "adjustment": adjustment, "total": fmt(total)}
+
+
+def bill_totals(b) -> dict:
+    """subtotal, adjustment (or None), total: the adjustment is shown on its own, not as an expense line."""
+    line = b.expense_lines.filter(is_adjustment=True).select_related("account").first()
+    total = bill_total(b)
+    adjustment = None if line is None else {"amount": fmt(line.amount), "note": line.description, "account": str(line.account)}
+    return {"subtotal": fmt(total - (line.amount if line else 0)), "adjustment": adjustment, "total": fmt(total)}
 
 
 # ---- bills ----
@@ -261,6 +278,8 @@ def get_bill(user, number: str) -> dict:
     b = lookup.document(Bill, number, "bill")
     pays = [{"payment": a.payment.number, "date": a.applied_on.isoformat(), "amount": fmt(a.amount)}
             for a in BillPaymentApplication.objects.filter(bill=b, removed=False).select_related("payment")]
+    credits = [{"credit": a.credit.number, "date": a.applied_on.isoformat(), "amount": fmt(a.amount)}
+               for a in b.credit_applications.filter(removed=False).select_related("credit")]
     return {
         "number": b.number, "vendor": b.vendor.name, "vendor_invoice": b.vendor_invoice_number,
         "date": b.date.isoformat(), "due": b.due_date.isoformat(), "terms": b.get_terms_display(),
@@ -270,8 +289,8 @@ def get_bill(user, number: str) -> dict:
                         "price": fmt(l.price), "amount": fmt(l.amount), "kind": l.get_kind_display()}
                        for l in b.item_lines.select_related("item")],
         "expense_lines": [{"account": str(l.account), "description": l.description, "amount": fmt(l.amount)}
-                          for l in b.expense_lines.select_related("account")],
-        "total": fmt(bill_total(b)), "payments": pays, "balance": fmt(bill_balance(b)),
+                          for l in b.expense_lines.select_related("account") if not l.is_adjustment],
+        **bill_totals(b), "payments": pays, "credits": credits, "balance": fmt(bill_balance(b)),
     }
 
 
