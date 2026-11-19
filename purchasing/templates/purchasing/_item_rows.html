@@ -1,16 +1,18 @@
-<datalist id="sku-list">{% for i in sku_options %}<option value="{{ i.sku }}">{{ i.name }}</option>{% endfor %}</datalist>
-<table class="data" id="doc-lines">
-  <thead><tr><th>#</th><th>Item SKU</th><th class="num">Qty</th><th class="num">Price</th><th>Description</th></tr></thead>
+{% load static %}
+<table class="data" id="doc-lines" data-search-url="{% url 'items:search' %}">
+  <thead><tr><th>#</th><th style="width:36%">Item (name or SKU)</th><th class="num">Qty</th><th class="num">Price</th><th>Description</th></tr></thead>
   <tbody>
   {% for r in rows %}
     <tr{% if r.index >= shown %} hidden data-extra{% endif %}>
       <td>{{ forloop.counter }}<input type="hidden" name="lines-{{ r.index }}-ref" value="{{ r.ref }}"></td>
-      <td><input type="text" list="sku-list" name="lines-{{ r.index }}-sku" value="{{ r.sku }}" autocapitalize="characters" maxlength="50"></td>
+      <td><input type="text" class="item-pick" name="lines-{{ r.index }}-sku" value="{% if r.label %}{{ r.label }}{% else %}{{ r.sku }}{% endif %}" maxlength="260" autocomplete="off" placeholder="Search by name or SKU" role="combobox" aria-autocomplete="list" aria-label="Item"></td>
       <td class="num"><input type="text" inputmode="numeric" name="lines-{{ r.index }}-quantity" value="{{ r.quantity }}" style="text-align:right"></td>
-      <td class="num"><input type="text" inputmode="decimal" name="lines-{{ r.index }}-price" value="{{ r.price }}" placeholder="Item cost" style="text-align:right"></td>
-      <td><input type="text" name="lines-{{ r.index }}-description" value="{{ r.description }}" maxlength="500" placeholder="Item name"></td>
+      <td class="num"><input type="text" inputmode="decimal" name="lines-{{ r.index }}-price" value="{{ r.price }}" placeholder="Cost" style="text-align:right"></td>
+      <td><input type="text" name="lines-{{ r.index }}-description" value="{{ r.description }}" maxlength="500" placeholder="{% if r.name %}{{ r.name }}{% else %}Item name{% endif %}"></td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+<ul id="item-suggest" class="item-suggest" role="listbox" hidden></ul>
 <div class="foot"><button type="button" class="btn add-rows" data-table="doc-lines">+ Add line</button><span></span></div>
+<script src="{% static 'purchasing/item_pick.js' %}" defer></script>

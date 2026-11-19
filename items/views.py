@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -23,7 +23,7 @@ from ledger.models import Account, AccountType
 
 from . import counts as count_service
 from . import imports as import_service
-from .sku import advance_past
+from .sku import advance_past, item_label
 from .errors import CountError, CountNeedsConfirmation, NegativeStockWarning, SettingsMissingError, StockError
 from .forms import (
     REASONS, AdjustDateForm, CountPostForm, CountStartForm, ItemForm, MovementsForm, SettingsForm, SkuSeriesForm,
@@ -54,6 +54,32 @@ def _item_or_404(sku: str) -> Item:
 
 
 # ---- items ----
+
+SEARCH_LIMIT = 15
+
+
+@login_required
+def item_search(request):
+    """Item picker for document lines: active items whose name or SKU contains the text, best matches first.
+    Small on purpose (a page never has to carry the whole item list)."""
+    q = request.GET.get("q", "").strip()[:100]
+    items = Item.objects.filter(is_active=True)
+    if q:
+        items = items.filter(Q(sku__icontains=q) | Q(name__icontains=q))
+    rows = list(items.values("sku", "name", "purchase_cost")[:500]) if q else list(
+        items.values("sku", "name", "purchase_cost")[:SEARCH_LIMIT])
+    low = q.lower()
+
+    def rank(row):
+        sku, name = row["sku"].lower(), row["name"].lower()
+        return (0 if sku == low else 1 if sku.startswith(low) else 2 if name.startswith(low) else 3, name, sku)
+
+    if q:
+        rows.sort(key=rank)
+    return JsonResponse({"results": [
+        {"sku": r["sku"], "name": r["name"], "label": item_label(r["name"], r["sku"]),
+         "cost": f"{r['purchase_cost']:.2f}"} for r in rows[:SEARCH_LIMIT]]})
+
 
 @login_required
 def item_list(request):

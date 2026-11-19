@@ -196,6 +196,20 @@ def _vendor_payment(user, p, flags):
     return payment.number, out
 
 
+def po_price_rows(lines) -> list[dict]:
+    """PO lines as the preview shows them. `item_cost` is the item master cost, so a price set on the order
+    (different from the master) is visible as such; the master cost is never changed by a PO."""
+    rows = []
+    for l in lines:
+        row = {"sku": l.item.sku, "name": l.item.name, "quantity": l.quantity, "price": fmt(l.price),
+               "amount": fmt(l.quantity * l.price), "item_cost": fmt(l.item.purchase_cost)}
+        if l.price != l.item.purchase_cost:
+            row["price_note"] = (f"Order price {fmt(l.price)} differs from the item cost "
+                                 f"{fmt(l.item.purchase_cost)}. The item cost is not changed.")
+        rows.append(row)
+    return rows
+
+
 def _purchase_order(user, p, flags):
     vendor = lookup.vendor(p["vendor"])
     day = lookup.day(p.get("date"), default=timezone.localdate())
@@ -210,8 +224,7 @@ def _purchase_order(user, p, flags):
     return po.number, {
         "purchase_order": po.number, "vendor": vendor.name, "date": day.isoformat(),
         "expected": po.expected_date.isoformat() if po.expected_date else "",
-        "lines": [{"sku": l.item.sku, "quantity": l.quantity, "price": fmt(l.price), "amount": fmt(l.quantity * l.price)}
-                  for l in lines],
+        "lines": po_price_rows(lines),
         "total": fmt(sum((l.quantity * l.price for l in lines), Decimal("0"))),
         "posts": "Nothing posts to the ledger until the bill.",
     }

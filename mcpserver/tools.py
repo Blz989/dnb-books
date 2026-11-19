@@ -26,7 +26,10 @@ class SaleLine(BaseModel):
 class PurchaseLine(BaseModel):
     sku: str
     quantity: int
-    price: str | None = Field(None, description="Unit cost like 4.25. Leave out to use the PO price or item cost.")
+    price: str | None = Field(
+        None, description="Unit price on this order, like 4.25. It is the order's own price and can differ from the "
+                          "item cost; the item cost is never changed. Leave out to keep the line's current price "
+                          "(on an edit) or use the item cost (new line).")
     description: str = ""
 
 
@@ -293,7 +296,8 @@ def register(mcp):
     @mcp.tool(annotations=PREVIEW)
     def create_purchase_order(ctx: Context, vendor: str, lines: list[PurchaseLine], date: str = "",
                               expected_date: str = "", notes: str = "") -> dict:
-        """Preview a new purchase order. Nothing is saved until confirm_change."""
+        """Preview a new purchase order. A price on a line sets the order price separately from the item cost
+        (the preview shows both). Nothing is saved until confirm_change."""
         payload = {"vendor": vendor, "lines": _dump(lines), "date": date, "expected_date": expected_date, "notes": notes}
         return run(ctx, "create_purchase_order", write.preview, operation="create_purchase_order", payload=payload)
 
@@ -462,8 +466,11 @@ def register(mcp):
     @mcp.tool(annotations=PREVIEW)
     def edit_purchase_order(ctx: Context, number: str, lines: list[PurchaseLine], date: str = "",
                             expected_date: str = "", notes: str | None = None) -> dict:
-        """Preview editing a purchase order. Admin only. lines replace all current lines. Drop-ship orders are edited
-        in the app. Nothing changes until confirm_change with confirm_document set to the number."""
+        """Preview editing a purchase order. Admin only. lines replace all current lines; a line with the same SKU keeps
+        its current price unless you give one, and a price you give is the order price, separate from the item cost
+        (the item cost is not changed). Works on drop-ship orders too: kept lines keep their sales order allocations,
+        and a line shared by several sales orders can't change quantity. Billed lines can't be removed or cut below
+        what is billed. Nothing changes until confirm_change with confirm_document set to the number."""
         payload = {"number": number, "lines": _dump(lines), "date": date, "expected_date": expected_date, "notes": notes}
         return run(ctx, "edit_purchase_order", write.preview, operation="edit_purchase_order", payload=payload)
 

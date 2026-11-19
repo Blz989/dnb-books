@@ -36,3 +36,8 @@ def advance_past(sku: str) -> None:
     if m and int(m.group(1)) >= s.sku_next:
         s.sku_next = int(m.group(1)) + 1
         s.save(update_fields=["sku_next"])
+
+
+def item_label(name: str, sku: str) -> str:
+    """How an item reads in a line field: "Item name (SKU)". The name comes first because people know names."""
+    return f"{name} ({sku})" if name else sku

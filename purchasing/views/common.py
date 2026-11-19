@@ -1,10 +1,12 @@
 """Shared by the purchase order and bill screens: row parsing, form tokens, confirm pages."""
+import re
 from decimal import Decimal, InvalidOperation
 
 from django.http import QueryDict
 
 from items.errors import SettingsMissingError
 from items.models import Item
+from items.sku import item_label
 from ledger.models import Account, AccountType
 from sales.views.common import (  # noqa: F401  (shared row helpers and one-time form tokens)
     MAX_LINES, MIN_SHOWN, _claim_token, _token_used, compact, is_blank, new_token, price_text, read_rows, shown_count,
@@ -28,6 +30,23 @@ def error_context(exc) -> dict:
     return {"errors": [str(exc)], "settings_link": link}
 
 
+def resolve_item(text: str):
+    """(item, error) for what was typed in an item field: a SKU, an item name, or "Item name (SKU)" as the picker
+    writes it. Error is "none" (nothing matches) or "several" (a name shared by more than one item)."""
+    text = text.strip()
+    item = Item.objects.filter(sku__iexact=text).first()
+    if item is None:
+        tail = re.search(r"\(([^()]+)\)\s*$", text)
+        if tail:
+            item = Item.objects.filter(sku__iexact=tail.group(1).strip()).first()
+    if item is None:
+        named = list(Item.objects.filter(name__iexact=text)[:2])
+        if len(named) > 1:
+            return None, "several"
+        item = named[0] if named else None
+    return item, ("" if item else "none")
+
+
 def parse_item_rows(rows: list[dict]):
     """Returns (parsed, errors). Each parsed entry: item, quantity, price, description, ref."""
     parsed, errors, n = [], [], 0
@@ -35,9 +54,12 @@ def parse_item_rows(rows: list[dict]):
         if is_blank(row):
             continue
         n += 1
-        item = Item.objects.filter(sku__iexact=row["sku"]).first() if row["sku"] else None
         if not row["sku"]:
             errors.append(f"Line {n}: choose an item.")
+            continue
+        item, problem = resolve_item(row["sku"])
+        if problem == "several":
+            errors.append(f"Line {n}: more than one item is named {row['sku']}. Pick one from the list.")
             continue
         if item is None:
             errors.append(f"Line {n}: no item has SKU {row['sku']}.")
@@ -67,7 +89,8 @@ def item_rows_from_lines(lines, ref=lambda line: line.pk) -> list[dict]:
     rows = []
     for i, line in enumerate(lines):
         rows.append({
-            "index": i, "sku": line.item.sku, "quantity": str(line.quantity), "price": price_text(line.price),
+            "index": i, "sku": line.item.sku, "label": item_label(line.item.name, line.item.sku),
+            "name": line.item.name, "quantity": str(line.quantity), "price": price_text(line.price),
             "description": line.description, "fulfillment": "", "vendor": "", "ref": str(ref(line) or ""),
         })
     return compact(rows)
@@ -137,6 +160,7 @@ def expense_accounts():
 
 
 def sku_options():
+    """Still used by the credit form's own datalist; the PO and bill lines use the search endpoint instead."""
     return Item.objects.filter(is_active=True).order_by("sku").values("sku", "name")[:1000]
 
 

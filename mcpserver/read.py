@@ -301,8 +301,8 @@ def get_purchase_order(user, number: str) -> dict:
     for l in po.lines.select_related("item").prefetch_related("allocations__so_line__order__customer"):
         billed = billed_quantity(l)
         row = {"sku": l.item.sku, "description": l.description or l.item.name, "quantity": l.quantity,
-               "price": fmt(l.price), "amount": fmt(l.quantity * l.price), "billed": billed,
-               "remaining": max(l.quantity - billed, 0)}
+               "price": fmt(l.price), "item_cost": fmt(l.item.purchase_cost),
+               "amount": fmt(l.quantity * l.price), "billed": billed, "remaining": max(l.quantity - billed, 0)}
         allocations = [{"sales_order": a.so_line.order.number, "customer": a.so_line.order.customer.name,
                         "quantity": a.quantity} for a in l.allocations.all()]
         if allocations:
