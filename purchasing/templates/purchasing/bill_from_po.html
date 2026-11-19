@@ -27,6 +27,7 @@
   </table>
   <h2 style="margin:12px 16px 0">Expenses on this bill</h2>
   {% include "purchasing/_expense_rows.html" %}
+  {% include "purchasing/_adjustment.html" %}
   </div>
   <button type="submit" class="btn primary">Save bill</button>
   <a class="btn" href="{% url 'purchasing:po-detail' order.number %}">Cancel</a>

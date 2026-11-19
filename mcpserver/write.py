@@ -31,8 +31,9 @@ from sales.posting.invoices import InvoiceLineSpec, create_invoice, invoice_from
 from sales.posting.orders import remaining
 from sales.posting.receipts import oldest_first, receive_payment
 
-from . import lookup
+from . import adjustments, lookup
 from .models import PendingChange
+from .read import bill_totals, invoice_totals
 from .runtime import Refused, fmt, money, require_perm
 
 EXPIRES = timedelta(minutes=15)
@@ -78,7 +79,8 @@ def _invoice(user, p, flags):
                 raise Refused(f"Line {n}: {line['sku']} has nothing left to invoice on {order.number}.")
             quantities[match[0].pk] = quantities.get(match[0].pk, 0) + int(line["quantity"])
         invoice = invoice_from_order(order, date=day, quantities=quantities, user=user, allow_negative=allow_negative,
-                                     ship_to=p.get("ship_to") or None, notes=p.get("notes"), terms=_terms(p.get("terms")))
+                                     ship_to=p.get("ship_to") or None, notes=p.get("notes"), terms=_terms(p.get("terms")),
+                                     adjustment=adjustments.invoice_spec(p.get("adjustment")))
     else:
         specs = []
         for n, line in enumerate(lines, 1):
@@ -89,15 +91,17 @@ def _invoice(user, p, flags):
                 item, int(line["quantity"]), price, description=line.get("description") or "",
                 fulfillment=Fulfillment.DROP_SHIP if vendor else Fulfillment.STOCK, drop_ship_vendor=vendor))
         invoice = create_invoice(customer=customer, date=day, lines=specs, user=user, terms=_terms(p.get("terms")),
-                                 ship_to=p.get("ship_to") or None, notes=p.get("notes"), allow_negative=allow_negative)
+                                 ship_to=p.get("ship_to") or None, notes=p.get("notes"), allow_negative=allow_negative,
+                                 adjustment=adjustments.invoice_spec(p.get("adjustment")))
+
     return invoice.number, {
         "invoice": invoice.number, "customer": customer.name, "date": invoice.date.isoformat(),
         "due": invoice.due_date.isoformat(), "terms": invoice.get_terms_display(),
         "sales_order": invoice.sales_order.number if invoice.sales_order else "",
         "lines": [{"sku": l.item.sku, "description": l.description or l.item.name, "quantity": l.quantity,
                    "price": fmt(l.price), "amount": fmt(l.amount), "ships": l.get_fulfillment_display()}
-                  for l in invoice.lines.select_related("item")],
-        "total": fmt(invoice_total(invoice)), "posts": _entry_lines(invoice.journal_entry),
+                  for l in invoice.lines.select_related("item") if not l.is_adjustment],
+        **invoice_totals(invoice), "posts": _entry_lines(invoice.journal_entry),
     }
 
 
@@ -152,9 +156,9 @@ def _bill(user, p, flags):
     bill = create_bill(vendor=vendor, date=day, vendor_invoice_number=p.get("vendor_invoice_number") or "",
                        item_lines=item_specs, expense_lines=expense_specs, user=user, purchase_order=po,
                        terms=_terms(p.get("terms")), notes=p.get("notes") or "",
+                       adjustment=adjustments.bill_spec(p.get("adjustment")),
                        allow_duplicate=flags.get("allow_duplicate", False),
                        allow_negative=flags.get("allow_negative", False))
-    from purchasing.balances import bill_total
 
     return bill.number, {
         "bill": bill.number, "vendor": vendor.name, "vendor_invoice": bill.vendor_invoice_number,
@@ -163,8 +167,8 @@ def _bill(user, p, flags):
         "item_lines": [{"sku": l.item.sku, "quantity": l.quantity, "price": fmt(l.price), "amount": fmt(l.amount),
                         "kind": l.get_kind_display()} for l in bill.item_lines.select_related("item")],
         "expense_lines": [{"account": str(l.account), "description": l.description, "amount": fmt(l.amount)}
-                          for l in bill.expense_lines.select_related("account")],
-        "total": fmt(bill_total(bill)), "posts": _entry_lines(bill.journal_entry),
+                          for l in bill.expense_lines.select_related("account") if not l.is_adjustment],
+        **bill_totals(bill), "posts": _entry_lines(bill.journal_entry),
     }
 
 

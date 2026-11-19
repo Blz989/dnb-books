@@ -10,7 +10,7 @@ from django.db import transaction
 
 from contacts.models import Customer, Terms, due_date as terms_due_date
 from items.errors import NegativeStockWarning
-from items.models import Item, MovementKind
+from items.models import InventorySettings, Item, ItemType, MovementKind
 from items.stock import StockLine, record_movements, void_movement
 from core.roles import require_admin
 from ledger.models import Account
@@ -44,6 +44,58 @@ class InvoiceLineSpec:
     cogs_account: Account | None = None
 
 
+@dataclass(frozen=True)
+class InvoiceAdjustmentSpec:
+    """The invoice's one signed Adjustment, a line on the ADJ item (or the item an imported one used)."""
+    amount: Decimal
+    description: str = "Adjustment"
+    item: Item | None = None
+
+
+ADJUSTMENT_SKU = "ADJ"
+MAX_ADJUSTMENT = Decimal("999999999999.99")
+
+
+def adjustment_item() -> Item:
+    """The ADJ item, created on first use in a new database."""
+    item = Item.objects.filter(sku=ADJUSTMENT_SKU).first()
+    if item is not None:
+        return item
+    income = InventorySettings.load().default_income_account
+    if income is None:
+        raise InvoiceError("Set the default income account in Settings, Inventory first.")
+    return Item.objects.create(sku=ADJUSTMENT_SKU, name="Adjustment", item_type=ItemType.NON_STOCK, unit="each",
+                               income_account=income)
+
+
+def invoice_adjustment(invoice: Invoice) -> InvoiceLine | None:
+    return invoice.lines.filter(is_adjustment=True).select_related("item__income_account").first()
+
+
+def validate_adjustment(adjustment: InvoiceAdjustmentSpec | None) -> None:
+    if adjustment is None:
+        return
+    amount = adjustment.amount
+    if not isinstance(amount, Decimal):
+        raise TypeError("Amounts must be Decimal, never float or int.")
+    if not amount.is_finite() or amount == 0:
+        raise InvoiceError("Adjustment: enter an amount like -10.00 or 25.00.")
+    if amount.as_tuple().exponent < -2:
+        raise InvoiceError("Adjustment: amounts can have at most 2 decimal places.")
+    if abs(amount) > MAX_ADJUSTMENT:
+        raise InvoiceError("Adjustment: that amount is too large.")
+    if adjustment.item is not None and adjustment.item.is_stock:
+        raise InvoiceError("Adjustment: the adjustment item must be a non-stock item.")
+
+
+def _with_adjustment(lines: Sequence[InvoiceLineSpec], adjustment: InvoiceAdjustmentSpec | None) -> list:
+    """The lines to post: the adjustment, when there is one, becomes the last line."""
+    if adjustment is None:
+        return list(lines)
+    item = adjustment.item or adjustment_item()
+    return [*lines, InvoiceLineSpec(item, 1, adjustment.amount, description=adjustment.description.strip() or "Adjustment")]
+
+
 def line_amount(spec: InvoiceLineSpec) -> Decimal:
     return (spec.quantity * spec.price).quantize(CENT, rounding=ROUND_HALF_UP)
 
@@ -55,6 +107,7 @@ def _is_stock_line(spec: InvoiceLineSpec) -> bool:
 def validate_invoice(
     *, customer: Customer, date: date_type, lines: Sequence[InvoiceLineSpec], sales_order: SalesOrder | None,
     exclude_invoice: Invoice | None = None, check_customer: bool = True, allow_negative_adjustment: bool = False,
+    adjustment: InvoiceAdjustmentSpec | None = None,
 ) -> None:
     """Every check that can fail before anything is saved."""
     SalesSettings.load().require_configured()
@@ -63,6 +116,11 @@ def validate_invoice(
     if not lines:
         raise InvoiceError("An invoice needs at least one line with a quantity.")
     validate_lines(lines, error=InvoiceError, allow_negative_price=allow_negative_adjustment)
+    validate_adjustment(adjustment)
+    total = sum((line_amount(spec) for spec in lines), Decimal("0.00")) + (adjustment.amount if adjustment else 0)
+    # The Zoho import (allow_negative_adjustment) replays Zoho's totals as they were.
+    if total < 0 and not allow_negative_adjustment:
+        raise InvoiceError("The invoice total can't be below zero.")
     assert_open(date)
     if sales_order is not None:
         if sales_order.customer_id != customer.pk:
@@ -96,8 +154,11 @@ def _side(account, signed: Decimal) -> LineSpec:
 
 def post_lines(
     invoice: Invoice, lines: Sequence[InvoiceLineSpec], *, user, allow_negative: bool,
+    adjustment: InvoiceAdjustmentSpec | None = None,
 ) -> None:
     """Create the invoice lines, record stock movements, and post revenue. Runs inside the caller's transaction."""
+    adjusted = adjustment is not None
+    lines = _with_adjustment(lines, adjustment)
     amounts = [line_amount(spec) for spec in lines]
     total = sum(amounts, Decimal("0.00"))
 
@@ -122,7 +183,7 @@ def post_lines(
             invoice=invoice, item=spec.item, description=spec.description, quantity=spec.quantity,
             price=spec.price, amount=amount, so_line=spec.so_line, fulfillment=spec.fulfillment,
             drop_ship_vendor=spec.drop_ship_vendor.strip() if drop else "", stock_movement=movement_for.get(n),
-            position=n - 1,
+            position=n - 1, is_adjustment=adjusted and n == len(lines),
         )
 
     entry = None
@@ -137,7 +198,8 @@ def post_lines(
         entry = post_entry(
             date=invoice.date, user=user, memo=f"Invoice {invoice.number} {invoice.customer.name}",
             source_type="sales.invoice", source_id=invoice.number,
-            # A negative net (only possible with allow_negative_adjustment) posts on the other side.
+            # A negative net (only possible with allow_negative_adjustment) posts on the other side. A negative
+            # adjustment debits its income account.
             lines=([_side(settings.ar_account, total)] if total != 0 else []) + income,
         )
     invoice.journal_entry = entry
@@ -148,12 +210,13 @@ def create_invoice(
     *, customer: Customer, date: date_type, lines: Sequence[InvoiceLineSpec], user,
     sales_order: SalesOrder | None = None, terms: Terms | None = None, ship_to: str | None = None,
     notes: str | None = None, allow_negative: bool = False, allow_negative_adjustment: bool = False,
+    adjustment: InvoiceAdjustmentSpec | None = None,
 ) -> Invoice:
     """allow_negative_adjustment lets non-stock lines have negative prices; only the Zoho import passes it."""
     with transaction.atomic():
         validate_invoice(
             customer=customer, date=date, lines=lines, sales_order=sales_order,
-            allow_negative_adjustment=allow_negative_adjustment)
+            allow_negative_adjustment=allow_negative_adjustment, adjustment=adjustment)
         terms = terms or customer.terms
         invoice = Invoice.objects.create(
             number=next_number(DocType.INV), customer=customer, date=date, terms=terms,
@@ -161,7 +224,7 @@ def create_invoice(
             ship_to=(sales_order.ship_to if sales_order else customer.ship_to_address) if ship_to is None else ship_to,
             notes=SalesSettings.load().default_invoice_notes if notes is None else notes,
         )
-        post_lines(invoice, lines, user=user, allow_negative=allow_negative)
+        post_lines(invoice, lines, user=user, allow_negative=allow_negative, adjustment=adjustment)
         if sales_order is not None:
             refresh_status(sales_order)
         hooks.invoice_changed(invoice)
@@ -171,6 +234,7 @@ def create_invoice(
 def invoice_from_order(
     order: SalesOrder, *, date: date_type, quantities: dict[int, int], user, allow_negative: bool = False,
     ship_to: str | None = None, notes: str | None = None, terms: Terms | None = None,
+    adjustment: InvoiceAdjustmentSpec | None = None,
 ) -> Invoice:
     by_id = {l.pk: l for l in order.lines.select_related("item")}
     unknown = set(quantities) - set(by_id)
@@ -185,7 +249,7 @@ def invoice_from_order(
     ]
     return create_invoice(
         customer=order.customer, date=date, lines=specs, user=user, sales_order=order, ship_to=ship_to, notes=notes,
-        terms=terms, allow_negative=allow_negative,
+        terms=terms, allow_negative=allow_negative, adjustment=adjustment,
     )
 
 
@@ -199,9 +263,16 @@ def _snapshot(invoice: Invoice) -> dict:
                 "price": str(l.price), "amount": str(l.amount), "fulfillment": l.fulfillment,
                 "drop_ship_vendor": l.drop_ship_vendor, "so_line_id": l.so_line_id,
             }
-            for l in invoice.lines.select_related("item")
+            for l in invoice.lines.select_related("item") if not l.is_adjustment
         ],
+        "adjustment": _adjustment_snapshot(invoice_adjustment(invoice)),
     }
+
+
+def _adjustment_snapshot(line: InvoiceLine | None) -> dict | None:
+    if line is None:
+        return None
+    return {"item_id": line.item_id, "sku": line.item.sku, "description": line.description, "amount": str(line.amount)}
 
 
 def _reverse_posting(invoice: Invoice, *, user, when: date_type, reason: str) -> None:
@@ -218,7 +289,9 @@ def _reverse_posting(invoice: Invoice, *, user, when: date_type, reason: str) ->
 def edit_invoice(
     invoice: Invoice, *, user, date: date_type, lines: Sequence[InvoiceLineSpec], terms: Terms | None,
     ship_to: str, notes: str, customer: Customer | None = None, reason: str = "", allow_negative: bool = False,
+    adjustment: InvoiceAdjustmentSpec | None = None,
 ) -> Invoice:
+    """`adjustment` is the invoice's adjustment after the edit; None removes it."""
     with transaction.atomic():
         current = Invoice.objects.select_related("customer", "sales_order", "journal_entry").get(pk=invoice.pk)
         if current.status == DocStatus.VOID:
@@ -237,11 +310,16 @@ def edit_invoice(
         if first_applied is not None and date > first_applied:
             raise InvoiceError(
                 f"The invoice date can't be after {first_applied.isoformat()}, when a payment or credit was applied.")
+        old_adjustment = invoice_adjustment(current)
+        if adjustment is not None and adjustment.item is None and old_adjustment is not None:
+            # Keep the item an existing adjustment used, so an imported ADJ-<account> keeps its account.
+            adjustment = InvoiceAdjustmentSpec(adjustment.amount, adjustment.description, old_adjustment.item)
         validate_invoice(
             customer=new_customer, date=date, lines=lines, sales_order=current.sales_order,
-            exclude_invoice=current, check_customer=changed_customer,
+            exclude_invoice=current, check_customer=changed_customer, adjustment=adjustment,
         )
-        new_total = sum((line_amount(spec) for spec in lines), Decimal("0.00"))
+        new_total = (sum((line_amount(spec) for spec in lines), Decimal("0.00"))
+                     + (adjustment.amount if adjustment is not None else Decimal("0.00")))
         applied = invoice_applied(current)
         if new_total < applied:
             raise InvoiceError(
@@ -263,7 +341,7 @@ def edit_invoice(
         current.revision += 1
         current.journal_entry = None
         current.save()
-        post_lines(current, lines, user=user, allow_negative=allow_negative)
+        post_lines(current, lines, user=user, allow_negative=allow_negative, adjustment=adjustment)
         if current.sales_order_id:
             refresh_status(current.sales_order)
         hooks.invoice_changed(current)

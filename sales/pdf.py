@@ -33,7 +33,7 @@ def _address(text: str) -> list[str]:
 def _grouped_lines(invoice: Invoice) -> list[dict]:
     """Lines grouped by item category: uncategorized first with no heading, then each category once, A to Z.
     Within a group lines keep their entered order; numbering runs on across groups."""
-    lines = list(invoice.lines.select_related("item", "item__category"))
+    lines = [l for l in invoice.lines.select_related("item", "item__category") if not l.is_adjustment]
     groups: dict[str, list] = {}
     for line in lines:
         category = line.item.category
@@ -51,10 +51,11 @@ def _grouped_lines(invoice: Invoice) -> list[dict]:
 
 def render_invoice_html(invoice: Invoice) -> str:
     config = SalesSettings.load()
-    subtotal = invoice_total(invoice)
+    subtotal = invoice_total(invoice)  # the invoice total, adjustment included
     applied = invoice_applied(invoice)
     customer = invoice.customer
     ship_lines = _address(invoice.ship_to)
+    adjustment = invoice.lines.filter(is_adjustment=True).first()
     context = {
         "invoice": invoice,
         "company": config,
@@ -66,7 +67,9 @@ def render_invoice_html(invoice: Invoice) -> str:
         "ship_first": ship_lines[0] if ship_lines else customer.name,
         "ship_lines": ship_lines[1:],
         "groups": _grouped_lines(invoice),
-        "items_total": sum(l.quantity for l in invoice.lines.all()),
+        "items_total": sum(l.quantity for l in invoice.lines.all() if not l.is_adjustment),
+        "adjustment": adjustment,
+        "lines_subtotal": subtotal - (adjustment.amount if adjustment else 0),
         "drop_ship": Fulfillment.DROP_SHIP,
         "subtotal": subtotal,
         "applied": applied,

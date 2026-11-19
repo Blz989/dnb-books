@@ -31,6 +31,10 @@
     <tr><td>{{ l.account.number }} {{ l.account.name }}</td><td>{{ l.description|default:"—" }}</td><td>Expense</td>
       <td class="num"></td><td class="num"></td><td class="num">{{ l.amount|floatformat:"2g" }}</td></tr>
   {% endfor %}
+    {% if adjustment %}
+    <tr class="subtotal"><td></td><td>Subtotal</td><td></td><td></td><td></td><td class="num">{{ subtotal|floatformat:"2g" }}</td></tr>
+    <tr class="adjustment"><td>{{ adjustment.account.number }} {{ adjustment.account.name }}</td><td>{{ adjustment.description|default:"Adjustment" }}</td><td>Adjustment</td><td></td><td></td><td class="num">{{ adjustment.amount|floatformat:"2g" }}</td></tr>
+    {% endif %}
     <tr class="total"><td></td><td>Total</td><td></td><td></td><td></td><td class="num">{{ total|floatformat:"2g" }}</td></tr>
   </tbody>
 </table>

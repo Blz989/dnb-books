@@ -187,6 +187,8 @@ class InvoiceLine(models.Model):
     )
     drop_ship_billed = models.BooleanField(default=False)
     position = models.PositiveIntegerField(default=0)
+    # The invoice's one Adjustment (an ADJ item line), always its last line.
+    is_adjustment = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["position", "id"]

@@ -28,7 +28,7 @@ from migration.zoho import mapping
 from migration.zoho.reader import ID_COLUMNS, ZohoExport
 from migration.zoho.replay_money import OPENING_DATE, MoneyReplay, _quantity
 from purchasing.models import Bill, PurchaseOrder, PurchasingSettings
-from purchasing.posting.bills import BillExpenseSpec, BillItemSpec, create_bill
+from purchasing.posting.bills import BillAdjustmentSpec, BillExpenseSpec, BillItemSpec, create_bill
 from purchasing.posting.orders import POLineSpec, close_po, create_po
 from sales.balances import invoice_total
 from sales.models import (
@@ -36,7 +36,7 @@ from sales.models import (
 )
 from sales.numbering import set_sequence, use_number
 from sales.posting.deposits import undeposited_payments
-from sales.posting.invoices import InvoiceLineSpec, create_invoice, void_invoice
+from sales.posting.invoices import InvoiceAdjustmentSpec, InvoiceLineSpec, create_invoice, void_invoice
 from sales.posting.orders import OrderLineSpec, close_order, create_order, remaining
 
 RECONCILE_DATE = date(2025, 12, 31)
@@ -484,13 +484,15 @@ class Replay(MoneyReplay):
                 expense_lines.append(BillExpenseSpec(self.account(row["Account"]), total, description))
         # Zoho's own adjustment and every cent lost to 4-dp unit prices, so the bill totals Zoho's Total.
         extra = mapping.money(first["Adjustment"]) + leftover
+        adjustment = None
         if extra:
             name = first["Adjustment Account"].strip() or "Cost of Goods Sold"
-            expense_lines.append(BillExpenseSpec(self.account(name), extra, "Adjustment"))
+            # Converted, not entered here: it stays out of drop-ship order cost (adjustments spec 3.10).
+            adjustment = BillAdjustmentSpec(self.account(name), extra, "Adjustment", spreads_to_orders=False)
         if free:
             record_movements(kind=MovementKind.ADJUSTMENT, date=event.date, lines=free, user=self.user,
                              allow_negative=True, source_type="migration.free_goods", source_id=event.zoho_id)
-        if not item_lines and not expense_lines:
+        if not item_lines and not expense_lines and adjustment is None:
             self.skipped.setdefault("bills", set()).add(event.zoho_id)
             self.warnings.append(f"Bill {event.number} ({event.date}) is $0.00 in Zoho; no bill was created.")
             self._note_negative([l.item for l in free], event)
@@ -502,7 +504,7 @@ class Replay(MoneyReplay):
             vendor=self.vendors[first["Vendor Name"]], date=event.date, vendor_invoice_number=event.number,
             item_lines=item_lines, expense_lines=expense_lines, user=self.user,
             terms=mapping.terms(first["Payment Terms Label"], first["Bill Date"], first["Due Date"]), notes=notes,
-            allow_duplicate=True, allow_negative=True, allow_negative_adjustment=True)
+            allow_duplicate=True, allow_negative=True, allow_negative_adjustment=True, adjustment=adjustment)
         self.record("bill", event.zoho_id, bill)
         self.apply_pending_bill(bill)
         ours = sum((l.amount for l in [*bill.item_lines.all(), *bill.expense_lines.all()]), Decimal("0.00"))
@@ -611,13 +613,19 @@ class Replay(MoneyReplay):
         adjustment = mapping.money(first["Adjustment"]) + leftover
         extras = (
             (self._service_item("SHIP", first["Shipping Charge Account"]), shipping),
-            (self._service_item("ADJ", first["Adjustment Account"]), adjustment),
             (self.items["TAX"], tax),
             (self._discount_item(), -discount),
         )
         for item, amount in extras:
             if amount:
                 lines.append(InvoiceLineSpec(item, 1, amount, description=item.name))
+        adjust = None
+        if adjustment:
+            adj_item = self._service_item("ADJ", first["Adjustment Account"])
+            if lines:
+                adjust = InvoiceAdjustmentSpec(adjustment, adj_item.name, adj_item)
+            else:  # an invoice of only an adjustment: kept as a plain line, as before
+                lines.append(InvoiceLineSpec(adj_item, 1, adjustment, description=adj_item.name))
         if not lines:
             self.skipped.setdefault("invoices", set()).add(event.zoho_id)
             self.warnings.append(f"Invoice {event.number} has no lines in Zoho ($0.00); it was not created.")
@@ -626,7 +634,7 @@ class Replay(MoneyReplay):
             invoice = create_invoice(
                 customer=self.customer_for("invoices", first), date=event.date, lines=lines,
                 user=self.user, sales_order=order, terms=mapping.terms(first["Payment Terms Label"], first["Invoice Date"], first["Due Date"]),
-                notes=first["Notes"], allow_negative=True, allow_negative_adjustment=True)
+                notes=first["Notes"], allow_negative=True, allow_negative_adjustment=True, adjustment=adjust)
             self.record("invoice", event.zoho_id, invoice)
             self.apply_pending(invoice)
             if first["Invoice Status"].strip().lower() == "void":

@@ -27,6 +27,9 @@
   {% for l in snap.expense_lines %}
     <tr><td>{{ l.account }}</td><td>{{ l.description }}</td><td>Expense</td><td class="num"></td><td class="num"></td><td class="num">{{ l.amount }}</td></tr>
   {% endfor %}
+  {% if snap.adjustment %}
+    <tr class="adjustment"><td>{{ snap.adjustment.account }}</td><td>{{ snap.adjustment.description|default:"Adjustment" }}</td><td>Adjustment</td><td class="num"></td><td class="num"></td><td class="num">{{ snap.adjustment.amount }}</td></tr>
+  {% endif %}
   </tbody>
 </table>
 </div>

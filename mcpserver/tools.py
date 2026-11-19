@@ -78,6 +78,18 @@ class EntryLine(BaseModel):
     description: str = ""
 
 
+class BillAdjustment(BaseModel):
+    amount: str = Field(description="Signed amount, like -10.00 to lower the bill or 25.00 to raise it. 0.00 removes it.")
+    account: str = Field("", description="Account number or name. Leave out for the default adjustment account "
+                                         "(or, on an edit, the current adjustment's account).")
+    note: str = Field("", description="Shown on the bill. Defaults to Adjustment.")
+
+
+class InvoiceAdjustment(BaseModel):
+    amount: str = Field(description="Signed amount, like -10.00 to lower the invoice or 25.00 to raise it. 0.00 removes it.")
+    note: str = Field("", description="Shown on the invoice. Defaults to Adjustment.")
+
+
 class BillCredit(BaseModel):
     bill: str
     amount: str | None = Field(None, description="Leave out to apply up to the bill's balance.")
@@ -85,6 +97,15 @@ class BillCredit(BaseModel):
 
 def _dump(lines):
     return [l.model_dump() for l in lines or []]
+
+
+def _dump_kept(lines):
+    """For an edit: None (left out) keeps the current lines; [] removes them."""
+    return None if lines is None else _dump(lines)
+
+
+def _dump_one(value):
+    return None if value is None else value.model_dump()
 
 
 def register(mcp):
@@ -254,11 +275,13 @@ def register(mcp):
 
     @mcp.tool(annotations=PREVIEW)
     def create_invoice(ctx: Context, customer: str, lines: list[SaleLine], date: str = "", sales_order: str = "",
-                       terms: str = "", ship_to: str = "", notes: str | None = None) -> dict:
+                       terms: str = "", ship_to: str = "", notes: str | None = None,
+                       adjustment: InvoiceAdjustment | None = None) -> dict:
         """Preview a new invoice. With sales_order, lines invoice that order's open lines by SKU and quantity.
+        adjustment is one signed amount added to the total (it posts to the ADJ item's income account).
         Returns a preview and a confirmation_id; nothing is saved until confirm_change."""
         payload = {"customer": customer, "lines": _dump(lines), "date": date, "sales_order": sales_order,
-                   "terms": terms, "ship_to": ship_to, "notes": notes}
+                   "terms": terms, "ship_to": ship_to, "notes": notes, "adjustment": _dump_one(adjustment)}
         return run(ctx, "create_invoice", write.preview, operation="create_invoice", payload=payload)
 
     @mcp.tool(annotations=PREVIEW)
@@ -274,13 +297,15 @@ def register(mcp):
     @mcp.tool(annotations=PREVIEW)
     def create_bill(ctx: Context, vendor: str, vendor_invoice_number: str = "", date: str = "",
                     item_lines: list[PurchaseLine] | None = None, expense_lines: list[ExpenseLine] | None = None,
-                    purchase_order: str = "", terms: str = "", notes: str = "") -> dict:
+                    purchase_order: str = "", terms: str = "", notes: str = "",
+                    adjustment: BillAdjustment | None = None) -> dict:
         """Preview a new bill with item lines, expense lines, or both. With purchase_order, item lines receive
-        that PO's open lines by SKU. A duplicate vendor invoice number shows as a warning. Nothing is saved until
-        confirm_change."""
+        that PO's open lines by SKU. adjustment is one signed amount added to the total, to match the vendor's
+        invoice. A duplicate vendor invoice number shows as a warning. Nothing is saved until confirm_change."""
         payload = {"vendor": vendor, "vendor_invoice_number": vendor_invoice_number, "date": date,
                    "item_lines": _dump(item_lines), "expense_lines": _dump(expense_lines),
-                   "purchase_order": purchase_order, "terms": terms, "notes": notes}
+                   "purchase_order": purchase_order, "terms": terms, "notes": notes,
+                   "adjustment": _dump_one(adjustment)}
         return run(ctx, "create_bill", write.preview, operation="create_bill", payload=payload)
 
     @mcp.tool(annotations=PREVIEW)
@@ -433,25 +458,30 @@ def register(mcp):
 
     @mcp.tool(annotations=PREVIEW)
     def edit_invoice(ctx: Context, number: str, lines: list[SaleLine], date: str = "", terms: str = "",
-                     ship_to: str | None = None, notes: str | None = None, reason: str = "") -> dict:
+                     ship_to: str | None = None, notes: str | None = None, reason: str = "",
+                     adjustment: InvoiceAdjustment | None = None) -> dict:
         """Preview editing an invoice. Admin only. lines replace all current lines (a line with the same SKU keeps
         its link to the sales order, its old price, and its drop-ship vendor unless you give one; drop_ship_vendor ""
-        makes it a stock line). The old posting is voided and a new one posted.
+        makes it a stock line). The adjustment is not one of the lines: leave adjustment out to keep it, or give
+        amount 0.00 to remove it. The old posting is voided and a new one posted.
         Shows before and after. Nothing changes until confirm_change with confirm_document set to the number."""
         payload = {"number": number, "lines": _dump(lines), "date": date, "terms": terms, "ship_to": ship_to,
-                   "notes": notes, "reason": reason}
+                   "notes": notes, "reason": reason, "adjustment": _dump_one(adjustment)}
         return run(ctx, "edit_invoice", write.preview, operation="edit_invoice", payload=payload)
 
     @mcp.tool(annotations=PREVIEW)
     def edit_bill(ctx: Context, number: str, item_lines: list[PurchaseLine] | None = None,
                   expense_lines: list[ExpenseLine] | None = None, vendor_invoice_number: str | None = None,
-                  date: str = "", terms: str = "", notes: str | None = None, reason: str = "") -> dict:
-        """Preview editing a bill. Admin only. item_lines and expense_lines replace all current lines (an item line
-        with the same SKU keeps its PO link and old price unless you give one). Shows before and after. Nothing
-        changes until confirm_change with confirm_document set to the number."""
-        payload = {"number": number, "item_lines": _dump(item_lines), "expense_lines": _dump(expense_lines),
+                  date: str = "", terms: str = "", notes: str | None = None, reason: str = "",
+                  adjustment: BillAdjustment | None = None) -> dict:
+        """Preview editing a bill. Admin only. item_lines replaces all current item lines and expense_lines all
+        current expense lines (an item line with the same SKU keeps its PO link and old price unless you give one).
+        Leave either list out to keep those lines as they are; [] removes them. Leave adjustment out to keep the
+        current one, or give amount 0.00 to remove it. Shows before and after. Nothing changes until
+        confirm_change with confirm_document set to the number."""
+        payload = {"number": number, "item_lines": _dump_kept(item_lines), "expense_lines": _dump_kept(expense_lines),
                    "vendor_invoice_number": vendor_invoice_number, "date": date, "terms": terms, "notes": notes,
-                   "reason": reason}
+                   "reason": reason, "adjustment": _dump_one(adjustment)}
         return run(ctx, "edit_bill", write.preview, operation="edit_bill", payload=payload)
 
     @mcp.tool(annotations=PREVIEW)
