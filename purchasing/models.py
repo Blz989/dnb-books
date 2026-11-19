@@ -35,6 +35,8 @@ class VendorCreditKind(models.TextChoices):
 
 class PurchasingSettings(models.Model):
     ap_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    default_adjustment_account = models.ForeignKey(
+        Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
 
     class Meta:
         verbose_name_plural = "purchasing settings"
@@ -173,6 +175,8 @@ class BillItemLine(models.Model):
         "items.StockMovement", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
     position = models.PositiveIntegerField(default=0)
+    # This line's part of the bill's adjustment, for drop-ship order cost only. Never posted on its own.
+    adjustment_share = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 
     class Meta:
         ordering = ["position", "id"]
@@ -184,6 +188,9 @@ class BillExpenseLine(models.Model):
     description = models.CharField(max_length=500, blank=True)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     position = models.PositiveIntegerField(default=0)
+    # The bill's one Adjustment, always its last line. Converted Zoho adjustments don't spread into order cost.
+    is_adjustment = models.BooleanField(default=False)
+    spreads_to_orders = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["position", "id"]
