@@ -1,4 +1,5 @@
 """Invoice screens and PDFs with the Adjustment field (adjustments spec, Task 6)."""
+import html
 import re
 from datetime import date
 from decimal import Decimal
@@ -41,6 +42,7 @@ def test_new_invoice_with_adjustment(adm, setup, customer, service):
     assert invoice_total(inv) == D("79.25")
     page = _text(adm.get(f"/sales/invoices/{inv.number}/").content.decode())
     assert "Subtotal 80.00" in page and "Rounding Adjustment -0.75" in page and "Total 79.25" in page
+    assert "Rounding × 1" not in page  # the profit panel names it Adjustment, not a stock line
 
 
 @pytest.mark.parametrize("amount, message", [
@@ -50,7 +52,7 @@ def test_new_invoice_with_adjustment(adm, setup, customer, service):
 ])
 def test_form_errors(adm, setup, customer, service, amount, message):
     r = adm.post("/sales/invoices/new/", invoice_post(customer, ("SVC", 2, "40.00"), **adj(amount)))
-    assert r.status_code == 200 and message in r.content.decode()
+    assert r.status_code == 200 and message in html.unescape(r.content.decode())
     assert not Invoice.objects.exists()
 
 

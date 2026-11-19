@@ -22,7 +22,7 @@ The case that prompted it: Nova's invoice 620562 came to 1,675.00 while BILL-028
 1. **Where.** Bills and invoices. Not purchase orders, sales orders, credit notes, or vendor credits.
 2. **One adjustment per document**, signed (above or below zero), optional. Blank or 0.00 means none.
 3. **Stored as a line, flagged.** A new `is_adjustment` flag on `BillExpenseLine` and `InvoiceLine`. At most one flagged line per document, always last. Balance math is unchanged.
-4. **Bill adjustment account.** Purchasing settings get "Default adjustment account", set to 5010 Wholesale Cost of Goods Sold when that account exists. The bill form preselects it and the user can pick another account on any bill. Inventory and accounts payable accounts are refused, as for expense lines today.
+4. **Bill adjustment account.** Purchasing settings get "Default adjustment account", set to 5010 Wholesale Cost of Goods Sold when that account exists. The bill form preselects it and the user can pick another account on any bill. The bill form and the setting offer expense and cost of goods accounts only (decided during the build, 2026-11-19: a bank or balance sheet account makes no sense here). The Claude tools may name any account except inventory and accounts payable, which are refused, as for expense lines today.
 5. **Invoice adjustment account.** Always the ADJ item's income account (4050 Sales today). No account choice per invoice. The owner changes it by editing the ADJ item. Editing an invoice keeps the adjustment's item, so an imported `ADJ-<account>` adjustment keeps posting to the account Zoho used.
 6. **Totals.** Neither document's total may go below 0.00. A bill's total may not go below what is already applied (the existing rule).
 7. **Stock.** An adjustment never moves stock and never changes an item's cost or FIFO lots.
@@ -39,7 +39,7 @@ Below the expense lines, above the total:
 | Field | Notes |
 |---|---|
 | Adjustment | Signed amount, like -10.00 or 25.00. Blank for none. |
-| Adjustment account | Dropdown, preselected from the default. |
+| Adjustment account | Dropdown of expense and cost of goods accounts, preselected from the default. |
 | Adjustment note | Optional, defaults to "Adjustment". Shown on the bill page. |
 
 The totals area reads: Subtotal (item and expense lines), Adjustment (only when there is one), Total.

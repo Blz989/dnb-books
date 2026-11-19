@@ -16,8 +16,13 @@
       <th class="num">{{ ip.sales|floatformat:"2g" }}</th><th class="num">{{ ip.cost|floatformat:"2g" }}</th></tr>
     {% for lc in ip.lines %}
     <tr><td><a class="sku" href="/items/{{ lc.invoice_line.item.sku }}/">{{ lc.invoice_line.item.sku }}</a></td>
+      {% if lc.invoice_line.is_adjustment %}
+      <td>{{ lc.invoice_line.description|default:"Adjustment" }}</td>
+      <td>Adjustment</td>
+      {% else %}
       <td>{{ lc.invoice_line.description|default:lc.invoice_line.item.name }} <span class="dash">× {{ lc.invoice_line.quantity }}</span></td>
       <td>{{ lc.invoice_line.get_fulfillment_display }}</td>
+      {% endif %}
       <td class="num">{{ lc.invoice_line.amount|floatformat:"2g" }}</td>
       <td class="num">{% if lc.pending %}<span class="tag flag">Drop-ship bill not entered</span> {% endif %}{{ lc.cost|floatformat:"2g" }}</td></tr>
     {% endfor %}

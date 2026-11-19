@@ -77,12 +77,12 @@ class PurchasingSettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         adjustment = self.fields["default_adjustment_account"]
-        adjustment.queryset = Account.objects.filter(is_active=True).exclude(
-            subtype__in=[AccountSubtype.INVENTORY, AccountSubtype.ACCOUNTS_PAYABLE])
+        # Expense and cost of goods accounts: an adjustment changes what the bill cost.
+        adjustment.queryset = Account.objects.filter(is_active=True, type=AccountType.EXPENSE)
         adjustment.label = "Default adjustment account"
         adjustment.required = False
         adjustment.help_text = "Bill adjustments start at this account. You can pick another on any bill."
-        adjustment.error_messages["invalid_choice"] = "Choose an account other than inventory or accounts payable."
+        adjustment.error_messages["invalid_choice"] = "Choose an expense or cost of goods account."
         field = self.fields["ap_account"]
         field.queryset = Account.objects.filter(subtype=AccountSubtype.ACCOUNTS_PAYABLE, is_active=True)
         field.label = "Accounts payable account"
@@ -220,8 +220,8 @@ class BillAdjustmentForm(forms.Form):
         kwargs.setdefault("prefix", "adj")
         super().__init__(*args, **kwargs)
         default = PurchasingSettings.load().default_adjustment_account
-        self.fields["account"].queryset = Account.objects.filter(is_active=True).exclude(
-            subtype__in=[AccountSubtype.INVENTORY, AccountSubtype.ACCOUNTS_PAYABLE]).order_by("number")
+        self.fields["account"].queryset = Account.objects.filter(
+            is_active=True, type=AccountType.EXPENSE).order_by("number")
         if default is not None and not self.is_bound and "account" not in self.initial:
             self.initial["account"] = default.pk
 
