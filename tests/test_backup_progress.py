@@ -138,3 +138,79 @@ def test_backup_now_prints_each_step(file_db_with_entries, tmp_path, settings, c
     call_command("backup_now")
     out = capsys.readouterr().out
     assert "Copying the database" in out and "Backup finished" in out
+
+
+# ---- Task 3: queue, scheduler pickup, stuck runs ----
+
+from datetime import datetime, timedelta  # noqa: E402
+
+from django.utils import timezone  # noqa: E402
+
+from backup import service  # noqa: E402
+from backup.scheduler import POLL_SECONDS, wait_until  # noqa: E402
+
+
+def test_request_queues_one_backup_and_refuses_a_second(db, admin_user):
+    run = service.request_backup(admin_user)
+    assert run.status == BackupRun.Status.QUEUED and run.requested_by == admin_user
+    with pytest.raises(service.BackupError, match="^A backup is already running.$"):
+        service.request_backup(admin_user)
+
+
+def test_request_refused_while_nightly_backup_runs(db, admin_user):
+    BackupRun.objects.create(started_at=timezone.now(), status=BackupRun.Status.RUNNING, updated_at=timezone.now())
+    with pytest.raises(service.BackupError, match="already running"):
+        service.request_backup(admin_user)
+
+
+def test_run_queued_runs_the_request(file_db_with_entries, tmp_path, settings, admin_user):
+    settings.DNB_BACKUP_REMOTE = ""
+    settings.DNB_BACKUP_DIR = tmp_path
+    queued = service.request_backup(admin_user)
+    done = service.run_queued()
+    assert done.pk == queued.pk and done.status == BackupRun.Status.SUCCESS
+    assert service.run_queued() is None
+
+
+def test_stuck_running_backup_is_marked_failed(db, admin_user):
+    now = timezone.now()
+    old = BackupRun.objects.create(started_at=now - timedelta(hours=1), status=BackupRun.Status.RUNNING,
+                                   updated_at=now - timedelta(minutes=21))
+    legacy = BackupRun.objects.create(started_at=now - timedelta(days=3), status=BackupRun.Status.RUNNING)
+    service.expire_stuck_runs(now)
+    for run in (old, legacy):
+        run.refresh_from_db()
+        assert run.status == BackupRun.Status.FAILED
+        assert run.error == "The backup stopped without finishing. The server may have restarted during it."
+    service.request_backup(admin_user)  # no longer blocked
+
+
+def test_request_the_scheduler_never_started_is_marked_failed(db, admin_user):
+    now = timezone.now()
+    run = service.request_backup(admin_user, now=now - timedelta(minutes=11))
+    service.expire_stuck_runs(now)
+    run.refresh_from_db()
+    assert run.status == BackupRun.Status.FAILED
+    assert run.error == "The scheduler didn't start this backup. Check that the scheduler service is running."
+
+
+def test_recent_running_backup_is_left_alone(db):
+    now = timezone.now()
+    run = BackupRun.objects.create(started_at=now - timedelta(minutes=30), status=BackupRun.Status.RUNNING,
+                                   updated_at=now - timedelta(seconds=5))
+    service.expire_stuck_runs(now)
+    run.refresh_from_db()
+    assert run.status == BackupRun.Status.RUNNING
+
+
+def test_scheduler_checks_for_requests_every_few_seconds():
+    clock = [datetime(2026, 11, 24, 10, 0, 0)]
+    sleeps, ticks = [], []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        clock[0] += timedelta(seconds=seconds)
+
+    wait_until(clock[0] + timedelta(seconds=12), now=lambda: clock[0], sleep=sleep, tick=lambda: ticks.append(1))
+    assert sleeps == [POLL_SECONDS, POLL_SECONDS, 2] and POLL_SECONDS == 5
+    assert len(ticks) == 3

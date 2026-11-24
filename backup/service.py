@@ -14,6 +14,8 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
+from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from . import remote
@@ -383,6 +385,44 @@ def run_backup(now: datetime | None = None, *, run: BackupRun | None = None, ech
     return run
 
 
+STALE_RUNNING = timedelta(minutes=20)  # longer than the 15-minute upload limit, so only a dead run is caught
+STALE_QUEUED = timedelta(minutes=10)
+ALREADY_RUNNING = "A backup is already running."
+STOPPED = "The backup stopped without finishing. The server may have restarted during it."
+NOT_STARTED = "The scheduler didn't start this backup. Check that the scheduler service is running."
+
+
+def expire_stuck_runs(now: datetime) -> None:
+    """Mark runs that can no longer finish as failed, so they stop blocking Back up now."""
+    cutoff = now - STALE_RUNNING
+    BackupRun.objects.filter(status=BackupRun.Status.RUNNING).filter(
+        Q(updated_at__lt=cutoff) | Q(updated_at__isnull=True, started_at__lt=cutoff)
+    ).update(status=BackupRun.Status.FAILED, error=STOPPED, finished_at=now, updated_at=now)
+    BackupRun.objects.filter(status=BackupRun.Status.QUEUED, started_at__lt=now - STALE_QUEUED).update(
+        status=BackupRun.Status.FAILED, error=NOT_STARTED, finished_at=now, updated_at=now)
+
+
+def active_run() -> BackupRun | None:
+    return (BackupRun.objects.filter(status__in=[BackupRun.Status.QUEUED, BackupRun.Status.RUNNING])
+            .order_by("-started_at", "-id").first())
+
+
+def request_backup(user, now: datetime | None = None) -> BackupRun:
+    """Queue a backup for the scheduler service to run (it checks every few seconds)."""
+    now = now or timezone.now()
+    expire_stuck_runs(now)
+    with transaction.atomic():  # IMMEDIATE transactions (settings.py): two clicks can't both get through
+        if active_run() is not None:
+            raise BackupError(ALREADY_RUNNING)
+        return BackupRun.objects.create(
+            started_at=now, status=BackupRun.Status.QUEUED, requested_by=user, updated_at=now)
+
+
+def run_queued() -> BackupRun | None:
+    run = BackupRun.objects.filter(status=BackupRun.Status.QUEUED).order_by("started_at", "id").first()
+    return run_backup(run=run) if run is not None else None
+
+
 @dataclass
 class DrillResult:
     ok: bool
@@ -450,7 +490,7 @@ def _friendly(ts: datetime) -> str:
 
 
 def backup_status(now: datetime) -> BackupStatus:
-    finished = BackupRun.objects.exclude(status=BackupRun.Status.RUNNING).order_by("-started_at", "-id")
+    finished = BackupRun.objects.exclude(status__in=[BackupRun.Status.RUNNING, BackupRun.Status.QUEUED]).order_by("-started_at", "-id")
     latest = finished.first()
     if latest is not None and latest.status == BackupRun.Status.FAILED:
         return BackupStatus("error", f"Last backup failed: {latest.error}")

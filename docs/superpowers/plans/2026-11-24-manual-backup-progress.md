@@ -18,7 +18,7 @@ Executed inline (small change), TDD per task. Tests in `tests/test_backup_progre
 - Commit: "Backups: record steps, progress, and step timings"
 
 ### Task 3. Queue, scheduler pickup, stuck runs
-- [ ] Failing tests: `request_backup` queues one run and refuses a second; `run_queued` runs it; the scheduler wakes at least every 5 seconds; stale runs are marked failed with the spec's messages.
+- [x] Failing tests: `request_backup` queues one run and refuses a second; `run_queued` runs it; the scheduler wakes at least every 5 seconds; stale runs are marked failed with the spec's messages.
 - Commit: "Backups: queued manual backups run by the scheduler"
 
 ### Task 4. Button, progress bar, status JSON
