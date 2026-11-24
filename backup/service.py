@@ -498,3 +498,57 @@ def backup_status(now: datetime) -> BackupStatus:
     if success is None or now - (success.finished_at or success.started_at) > STALE_AFTER:
         return BackupStatus("warning", "No successful backup in the last 26 hours.")
     return BackupStatus("ok", f"Last backup {_friendly(success.finished_at or success.started_at)}.")
+
+
+@dataclass
+class LiveState:
+    """A backup that is waiting or running, for the progress bar."""
+    active: bool
+    progress: int = 0
+    label: str = ""
+    detail: str = ""
+
+    def as_json(self) -> dict:
+        if not self.active:
+            return {"active": False}
+        return {"active": True, "progress": self.progress, "label": self.label, "detail": self.detail}
+
+
+WAITING_HINT_AFTER = timedelta(seconds=60)
+
+
+def live_state(now: datetime) -> LiveState:
+    expire_stuck_runs(now)
+    run = active_run()
+    if run is None:
+        return LiveState(False)
+    if run.status == BackupRun.Status.QUEUED:
+        slow = now - run.started_at > WAITING_HINT_AFTER
+        return LiveState(True, 0, "Waiting to start", "Waiting for the scheduler to start it." if slow else "")
+    done = [step for step, _ in run.step_times]
+    with_upload = remote.enabled() or run.step == "upload" or "upload" in done
+    steps = [key for key, _, _ in STEPS if key != "upload" or with_upload]
+    if run.step not in steps:
+        return LiveState(True, run.progress, "Starting", run.detail)
+    label = f"Step {steps.index(run.step) + 1} of {len(steps)}: {STEP_LABELS[run.step]}"
+    return LiveState(True, run.progress, label, run.detail)
+
+
+def last_run_summary() -> str:
+    """How long the last finished backup took and where the time went, or where it stopped."""
+    run = (BackupRun.objects.filter(status__in=[BackupRun.Status.SUCCESS, BackupRun.Status.FAILED])
+           .order_by("-started_at", "-id").first())
+    if run is None:
+        return ""
+    times = {step: seconds for step, seconds in run.step_times}
+    if run.status == BackupRun.Status.FAILED:
+        if run.step not in STEP_LABELS:
+            return ""
+        if run.step in times:
+            return f"Stopped during {STEP_LABELS[run.step]} after {duration_text(times[run.step])}."
+        return f"Stopped during {STEP_LABELS[run.step]}."
+    if not run.step_times or run.finished_at is None:
+        return ""
+    slowest, seconds = max(run.step_times, key=lambda item: item[1])
+    total = (run.finished_at - run.started_at).total_seconds()
+    return f"Took {duration_text(total)}. Slowest step: {STEP_LABELS.get(slowest, slowest)}, {duration_text(seconds)}."

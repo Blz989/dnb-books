@@ -353,3 +353,12 @@ table.lots tr.lot-start td { border-top: 1px solid var(--border); }
 .item-suggest li small { color: var(--muted); font-variant-numeric: tabular-nums; }
 .item-suggest li.on, .item-suggest li:hover { background: var(--hover); }
 .item-suggest li.none { color: var(--muted); cursor: default; }
+
+/* Backups card: Back up now and its progress bar */
+.backup-progress { margin-top: 10px; }
+.backup-progress .bar { height: 8px; border-radius: 4px; background: var(--hover); border: 1px solid var(--border); overflow: hidden; }
+.backup-progress .bar span { display: block; height: 100%; background: var(--accent); transition: width .4s ease; }
+.backup-progress .step { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 600; margin-top: 6px; }
+.backup-progress .step [data-pct] { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 500; }
+.backup-progress .note:empty { display: none; }
+@media (prefers-reduced-motion: reduce) { .backup-progress .bar span { transition: none; } }

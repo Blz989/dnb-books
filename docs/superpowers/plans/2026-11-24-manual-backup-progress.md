@@ -22,9 +22,9 @@ Executed inline (small change), TDD per task. Tests in `tests/test_backup_progre
 - Commit: "Backups: queued manual backups run by the scheduler"
 
 ### Task 4. Button, progress bar, status JSON
-- [ ] Failing tests: admins see the button, others don't; non-admin POST is refused; status JSON reports step, percent, detail.
-- [ ] `backup/urls.py`, `backup/views.py`, `backup/static/backup/progress.js`, home card markup, CSS.
-- [ ] Screenshots: idle, waiting, uploading with retries, finished, failed, non-admin view; light and dark.
+- [x] Failing tests: admins see the button, others don't; non-admin POST is refused; status JSON reports step, percent, detail.
+- [x] `backup/urls.py`, `backup/views.py`, `backup/static/backup/progress.js`, home card markup, CSS.
+- [x] Screenshots: idle, waiting, uploading with retries, finished, failed, non-admin view; light and dark.
 - Commit: "Home: Back up now button with live progress"
 
 ### Task 5. Docs

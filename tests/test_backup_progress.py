@@ -214,3 +214,87 @@ def test_scheduler_checks_for_requests_every_few_seconds():
     wait_until(clock[0] + timedelta(seconds=12), now=lambda: clock[0], sleep=sleep, tick=lambda: ticks.append(1))
     assert sleeps == [POLL_SECONDS, POLL_SECONDS, 2] and POLL_SECONDS == 5
     assert len(ticks) == 3
+
+
+# ---- Task 4: button, progress bar, status JSON ----
+
+
+def test_admin_sees_back_up_now_button(client, admin_user):
+    client.force_login(admin_user)
+    html = client.get("/").content.decode()
+    assert "Back up now" in html and 'action="/backup/run/"' in html
+
+
+def test_standard_user_has_no_button_and_cannot_post(client, standard_user):
+    client.force_login(standard_user)
+    assert 'action="/backup/run/"' not in client.get("/").content.decode()
+    assert client.post("/backup/run/").status_code == 403
+    assert not BackupRun.objects.exists()
+
+
+def test_post_queues_backup_and_shows_progress(client, admin_user):
+    client.force_login(admin_user)
+    response = client.post("/backup/run/", follow=True)
+    assert BackupRun.objects.get().status == BackupRun.Status.QUEUED
+    html = response.content.decode()
+    assert "Waiting to start" in html and 'class="backup-progress"' in html
+    assert "Back up now</button>" not in html
+
+
+def test_second_post_shows_already_running(client, admin_user):
+    client.force_login(admin_user)
+    client.post("/backup/run/")
+    html = client.post("/backup/run/", follow=True).content.decode()
+    assert "A backup is already running." in html
+    assert BackupRun.objects.count() == 1
+
+
+def test_get_is_not_allowed(client, admin_user):
+    client.force_login(admin_user)
+    assert client.get("/backup/run/").status_code == 405
+
+
+def test_status_json_reports_step_percent_and_detail(client, standard_user):
+    client.force_login(standard_user)
+    assert client.get("/backup/status/").json() == {"active": False}
+    BackupRun.objects.create(started_at=timezone.now(), status=BackupRun.Status.RUNNING, updated_at=timezone.now(),
+                             step="upload", progress=47, detail="12.4 MB of 40.1 MB.",
+                             step_times=[["check", 0.1], ["snapshot", 0.4], ["archive", 1.0], ["encrypt", 0.5]])
+    data = client.get("/backup/status/").json()
+    assert data["active"] is True
+    assert data["progress"] == 47
+    assert data["label"] == "Step 5 of 6: Uploading the off-site copy"
+    assert data["detail"] == "12.4 MB of 40.1 MB."
+
+
+def test_status_json_says_when_scheduler_is_slow_to_start(client, admin_user):
+    client.force_login(admin_user)
+    service.request_backup(admin_user, now=timezone.now() - timedelta(seconds=90))
+    data = client.get("/backup/status/").json()
+    assert data["label"] == "Waiting to start"
+    assert data["detail"] == "Waiting for the scheduler to start it."
+
+
+def test_status_requires_login(client):
+    assert client.get("/backup/status/").status_code == 302
+
+
+def test_card_shows_last_run_time_and_slowest_step(client, admin_user):
+    now = timezone.now()
+    BackupRun.objects.create(started_at=now - timedelta(seconds=75), finished_at=now, updated_at=now,
+                             status=BackupRun.Status.SUCCESS, filename="dnb-x.tar.enc", progress=100,
+                             step_times=[["check", 0.1], ["snapshot", 2.0], ["upload", 58.2], ["cleanup", 1.0]])
+    client.force_login(admin_user)
+    html = client.get("/").content.decode()
+    assert "Took 1m 15s. Slowest step: Uploading the off-site copy, 58s." in html
+
+
+def test_card_shows_where_a_failed_run_stopped(client, admin_user):
+    now = timezone.now()
+    BackupRun.objects.create(started_at=now - timedelta(minutes=16), finished_at=now, updated_at=now,
+                             status=BackupRun.Status.FAILED, step="upload",
+                             error="Backup saved locally but not uploaded: rclone took longer than 15 minutes.",
+                             step_times=[["check", 0.1], ["upload", 900.0]])
+    client.force_login(admin_user)
+    html = client.get("/").content.decode()
+    assert "Stopped during Uploading the off-site copy after 15m 0s." in html

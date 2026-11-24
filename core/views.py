@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.utils import timezone
 
-from backup.service import backup_status
+from backup.service import backup_status, last_run_summary, live_state
 from core import dashboard
 from banking import status as banking_status
 from core.roles import is_admin
@@ -46,7 +46,9 @@ def home(request):
         "bills_due_total": bills.upcoming_total, "bills_due_count": bills.upcoming_count,
         "bills_overdue_total": bills.overdue_total, "bills_overdue_count": bills.overdue_count,
         "bills_due_through": (today + timedelta(days=7)).isoformat(),
+        "backup_live": live_state(timezone.now()),
         "backup": backup_status(timezone.now()),
+        "backup_summary": last_run_summary(),
         "bank_inbox_count": banking_status.inbox_count(),
         "bank_sync": banking_status.sync_status(),
         "unreconciled": banking_status.unreconciled_accounts(today),
