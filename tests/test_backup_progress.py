@@ -80,3 +80,61 @@ def test_upload_missing_rclone(settings, tmp_path):
 @pytest.mark.parametrize("n,text", [(0, "0 bytes"), (900, "900 bytes"), (12_400_000, "12.4 MB"), (2_500_000_000, "2.5 GB")])
 def test_size_text(n, text):
     assert remote.size_text(n) == text
+
+
+# ---- Task 2: steps, progress, and timings ----
+
+from backup.models import BackupRun  # noqa: E402
+from backup.service import run_backup  # noqa: E402
+
+
+def test_run_records_each_step_with_its_time(file_db_with_entries, fake_remote):
+    run = run_backup()
+    assert run.status == BackupRun.Status.SUCCESS
+    assert [s for s, _ in run.step_times] == ["check", "snapshot", "archive", "encrypt", "upload", "cleanup"]
+    assert all(seconds >= 0 for _, seconds in run.step_times)
+    assert run.progress == 100 and run.step == ""
+    assert run.updated_at is not None
+
+
+def test_run_without_remote_skips_upload_step(file_db_with_entries, tmp_path, settings):
+    settings.DNB_BACKUP_REMOTE = ""
+    settings.DNB_BACKUP_DIR = tmp_path
+    run = run_backup()
+    assert [s for s, _ in run.step_times] == ["check", "snapshot", "archive", "encrypt", "cleanup"]
+
+
+def test_failed_run_keeps_the_step_it_stopped_in(file_db_with_entries, fake_remote, monkeypatch):
+    monkeypatch.setenv("FAKE_RCLONE_FAIL", "Failed to copy: couldn't connect to Google Drive")
+    run = run_backup()
+    assert run.status == BackupRun.Status.FAILED
+    assert run.step == "upload"
+    assert run.step_times[-1][0] == "upload"
+
+
+def test_upload_progress_is_saved_while_running(file_db_with_entries, fake_remote, monkeypatch):
+    monkeypatch.setenv("FAKE_RCLONE_RETRIES", "2")
+    saved = []
+    original = BackupRun.save
+
+    def spy(self, *args, **kwargs):
+        if self.step == "upload":
+            saved.append((self.progress, self.detail))
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(BackupRun, "save", spy)
+    monkeypatch.setattr("backup.service.SAVE_EVERY_SECONDS", 0)
+    run_backup()
+    details = [d for _, d in saved if d]
+    assert any(" of " in d and "slow down 2 times" in d for d in details), details
+    percents = [p for p, _ in saved]
+    assert percents == sorted(percents) and max(percents) <= 95
+
+
+def test_backup_now_prints_each_step(file_db_with_entries, tmp_path, settings, capsys):
+    from django.core.management import call_command
+    settings.DNB_BACKUP_REMOTE = ""
+    settings.DNB_BACKUP_DIR = tmp_path
+    call_command("backup_now")
+    out = capsys.readouterr().out
+    assert "Copying the database" in out and "Backup finished" in out

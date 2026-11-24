@@ -5,6 +5,7 @@ import re
 import sqlite3
 import tarfile
 import tempfile
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -29,6 +30,95 @@ DAILY_DAYS = 30
 
 class BackupError(Exception):
     """A problem with a plain-language message that is shown to the user as is."""
+
+
+# (key, label, share of the progress bar). The upload share moves with the bytes rclone reports.
+STEPS = [
+    ("check", "Checking settings", 2),
+    ("snapshot", "Copying the database", 8),
+    ("archive", "Packing uploaded files", 15),
+    ("encrypt", "Encrypting", 10),
+    ("upload", "Uploading the off-site copy", 60),
+    ("cleanup", "Removing old backups", 5),
+]
+STEP_LABELS = {key: label for key, label, _ in STEPS}
+SAVE_EVERY_SECONDS = 0.5
+
+
+def duration_text(seconds: float) -> str:
+    seconds = int(round(seconds))
+    if seconds < 60:
+        return f"{seconds}s"
+    minutes, seconds = divmod(seconds, 60)
+    return f"{minutes}m {seconds}s"
+
+
+def upload_detail(p: remote.UploadProgress) -> str:
+    if p.bytes_total:
+        text = f"{remote.size_text(p.bytes_done)} of {remote.size_text(p.bytes_total)}"
+        if p.speed:
+            text += f" at {remote.size_text(int(p.speed))}/s"
+        if p.eta:
+            text += f", about {duration_text(p.eta)} left"
+        text += "."
+    else:
+        text = "Starting the upload."
+    if p.retries:
+        text += f" Google asked rclone to slow down {p.retries} time{'' if p.retries == 1 else 's'}."
+    return text
+
+
+class Progress:
+    """Saves the run's current step, percent, and detail line so the home screen can show them."""
+
+    def __init__(self, run: BackupRun, steps: list[str], echo=None):
+        self.run, self.echo = run, echo
+        chosen = [(key, share) for key, _, share in STEPS if key in steps]
+        total = sum(share for _, share in chosen)
+        self.span, start = {}, 0.0
+        for key, share in chosen:
+            self.span[key] = (start, share * 100 / total)
+            start += share * 100 / total
+        self._started = None
+        self._last_save = 0.0
+
+    def _save(self, force=False):
+        now = time.monotonic()
+        if not force and now - self._last_save < SAVE_EVERY_SECONDS:
+            return
+        self._last_save = now
+        self.run.updated_at = timezone.now()
+        self.run.save(update_fields=["step", "progress", "detail", "step_times", "updated_at"])
+
+    def _close_step(self):
+        if self.run.step and self._started is not None:
+            self.run.step_times = [*self.run.step_times, [self.run.step, round(time.monotonic() - self._started, 1)]]
+        self._started = None
+
+    def step(self, key: str):
+        self._close_step()
+        self.run.step, self.run.detail = key, ""
+        self.run.progress = int(self.span[key][0])
+        self._started = time.monotonic()
+        self._save(force=True)
+        if self.echo:
+            self.echo(f"{STEP_LABELS[key]}...")
+
+    def part(self, fraction: float, detail: str = ""):
+        start, width = self.span[self.run.step]
+        self.run.progress = max(self.run.progress, int(start + width * min(max(fraction, 0.0), 1.0)))
+        self.run.detail = detail[:300]
+        self._save()
+
+    def stopped(self):
+        """The run failed: keep the step it stopped in, with its time so far."""
+        step = self.run.step
+        self._close_step()
+        self.run.step = step
+
+    def finished(self):
+        self._close_step()
+        self.run.step, self.run.detail, self.run.progress = "", "", 100
 
 
 def snapshot(dest: Path) -> Path:
@@ -217,11 +307,20 @@ def apply_retention(directory: Path, today: date) -> list[Path]:
     return deleted
 
 
-def run_backup(now: datetime | None = None) -> BackupRun:
+def run_backup(now: datetime | None = None, *, run: BackupRun | None = None, echo=None) -> BackupRun:
+    """Take a backup. `run` is a queued request to fill in; otherwise a new run is recorded.
+    `echo`, when given, is called with each step's label (the backup_now command prints them)."""
     now = timezone.localtime(now or timezone.now())
-    run = BackupRun.objects.create(started_at=now, status=BackupRun.Status.RUNNING)
+    if run is None:
+        run = BackupRun.objects.create(started_at=now, status=BackupRun.Status.RUNNING, updated_at=timezone.now())
+    else:
+        run.started_at, run.status, run.updated_at = now, BackupRun.Status.RUNNING, timezone.now()
+        run.save(update_fields=["started_at", "status", "updated_at"])
     dest_dir = Path(settings.DNB_BACKUP_DIR)
+    steps = [key for key, _, _ in STEPS if key != "upload" or remote.enabled()]
+    progress = Progress(run, steps, echo)
     try:
+        progress.step("check")
         key = settings.DNB_BACKUP_KEY
         if not key:
             raise BackupError("No backup key set. Run generate_backup_key.")
@@ -236,6 +335,7 @@ def run_backup(now: datetime | None = None) -> BackupRun:
         final = dest_dir / name
         partial = dest_dir / (name + ".part")
         with tempfile.TemporaryDirectory() as tmp:
+            progress.step("snapshot")
             snap = snapshot(Path(tmp) / SNAPSHOT_NAME)
             conn = sqlite3.connect(snap)
             try:
@@ -243,30 +343,42 @@ def run_backup(now: datetime | None = None) -> BackupRun:
             finally:
                 conn.close()
             try:
+                progress.step("archive")
                 archive = Path(tmp) / "backup.tar"
                 build_archive(snap, Path(settings.MEDIA_ROOT), archive)
+                progress.step("encrypt")
                 encrypt_file(archive, partial, key)
                 os.replace(partial, final)
             except OSError as exc:
                 partial.unlink(missing_ok=True)
                 raise BackupError(f"Couldn't write to the backup folder {dest_dir}: {exc.strerror or exc}.") from exc
-        deleted = apply_retention(dest_dir, now.date())
         run.filename = name
         if remote.enabled():
+            progress.step("upload")
             try:
-                remote.upload(final)
+                remote.upload(final, on_progress=lambda p: progress.part(
+                    p.bytes_done / p.bytes_total if p.bytes_total else 0, upload_detail(p)))
+            except remote.RemoteError as exc:
+                raise BackupError(f"Backup saved locally but not uploaded: {exc}") from exc
+        progress.step("cleanup")
+        deleted = apply_retention(dest_dir, now.date())
+        if remote.enabled():
+            try:
                 remote.delete([p.name for p in deleted])
             except remote.RemoteError as exc:
                 raise BackupError(f"Backup saved locally but not uploaded: {exc}") from exc
 
+        progress.finished()
         run.status = BackupRun.Status.SUCCESS
         run.size_bytes = final.stat().st_size
         run.ledger_fingerprint = fingerprint
     except BackupError as exc:
+        progress.stopped()
         run.status, run.error = BackupRun.Status.FAILED, str(exc)
     except Exception as exc:  # noqa: BLE001 - recorded for the home screen, never raised to the scheduler
+        progress.stopped()
         run.status, run.error = BackupRun.Status.FAILED, f"Backup failed: {exc}"
-    run.finished_at = timezone.now()
+    run.finished_at = run.updated_at = timezone.now()
     run.save()
     return run
 

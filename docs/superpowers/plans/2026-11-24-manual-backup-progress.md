@@ -13,8 +13,8 @@ Executed inline (small change), TDD per task. Tests in `tests/test_backup_progre
 - Commit: "Backups: stream rclone upload progress"
 
 ### Task 2. Steps, progress, and timings on BackupRun
-- [ ] Failing tests: a run records each step in order with its time, ends at 100 percent; a failed run keeps the step it stopped in.
-- [ ] Migration `0002`; a progress reporter in `backup/service.py` saves at most twice a second, plus on every step change.
+- [x] Failing tests: a run records each step in order with its time, ends at 100 percent; a failed run keeps the step it stopped in.
+- [x] Migration `0002`; a progress reporter in `backup/service.py` saves at most twice a second, plus on every step change.
 - Commit: "Backups: record steps, progress, and step timings"
 
 ### Task 3. Queue, scheduler pickup, stuck runs
