@@ -28,5 +28,5 @@ Executed inline (small change), TDD per task. Tests in `tests/test_backup_progre
 - Commit: "Home: Back up now button with live progress"
 
 ### Task 5. Docs
-- [ ] README Backups section and Status line; CLAUDE.md source of truth.
+- [x] README Backups section and Status line; CLAUDE.md source of truth.
 - Commit: "Docs: manual backup and slow upload help"
