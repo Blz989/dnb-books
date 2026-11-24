@@ -402,9 +402,22 @@ def expire_stuck_runs(now: datetime) -> None:
         status=BackupRun.Status.FAILED, error=NOT_STARTED, finished_at=now, updated_at=now)
 
 
-def active_run() -> BackupRun | None:
-    return (BackupRun.objects.filter(status__in=[BackupRun.Status.QUEUED, BackupRun.Status.RUNNING])
-            .order_by("-started_at", "-id").first())
+def _stuck_message(run: BackupRun, now: datetime) -> str:
+    """Why a waiting or running backup can no longer finish, or "" if it still can. Read-only."""
+    if run.status == BackupRun.Status.QUEUED and run.started_at < now - STALE_QUEUED:
+        return NOT_STARTED
+    if run.status == BackupRun.Status.RUNNING and (run.updated_at or run.started_at) < now - STALE_RUNNING:
+        return STOPPED
+    return ""
+
+
+def active_run(now: datetime | None = None) -> BackupRun | None:
+    """The backup waiting or running now. With `now`, one that is stuck doesn't count."""
+    runs = BackupRun.objects.filter(status__in=[BackupRun.Status.QUEUED, BackupRun.Status.RUNNING])
+    for run in runs.order_by("-started_at", "-id"):
+        if now is None or not _stuck_message(run, now):
+            return run
+    return None
 
 
 def request_backup(user, now: datetime | None = None) -> BackupRun:
@@ -419,6 +432,8 @@ def request_backup(user, now: datetime | None = None) -> BackupRun:
 
 
 def run_queued() -> BackupRun | None:
+    """Called by the scheduler every few seconds: clear stuck runs, then run a waiting request."""
+    expire_stuck_runs(timezone.now())
     run = BackupRun.objects.filter(status=BackupRun.Status.QUEUED).order_by("started_at", "id").first()
     return run_backup(run=run) if run is not None else None
 
@@ -490,6 +505,9 @@ def _friendly(ts: datetime) -> str:
 
 
 def backup_status(now: datetime) -> BackupStatus:
+    newest = BackupRun.objects.order_by("-started_at", "-id").first()
+    if newest is not None and (stuck := _stuck_message(newest, now)):
+        return BackupStatus("error", f"Last backup failed: {stuck}")
     finished = BackupRun.objects.exclude(status__in=[BackupRun.Status.RUNNING, BackupRun.Status.QUEUED]).order_by("-started_at", "-id")
     latest = finished.first()
     if latest is not None and latest.status == BackupRun.Status.FAILED:
@@ -518,8 +536,8 @@ WAITING_HINT_AFTER = timedelta(seconds=60)
 
 
 def live_state(now: datetime) -> LiveState:
-    expire_stuck_runs(now)
-    run = active_run()
+    # Read-only: the home page is prefetched on hover, so it must not write (tests/test_speed.py).
+    run = active_run(now)
     if run is None:
         return LiveState(False)
     if run.status == BackupRun.Status.QUEUED:

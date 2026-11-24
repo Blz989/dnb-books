@@ -298,3 +298,24 @@ def test_card_shows_where_a_failed_run_stopped(client, admin_user):
     client.force_login(admin_user)
     html = client.get("/").content.decode()
     assert "Stopped during Uploading the off-site copy after 15m 0s." in html
+
+
+def test_home_shows_a_stuck_backup_as_failed_without_writing(client, admin_user):
+    now = timezone.now()
+    run = BackupRun.objects.create(started_at=now - timedelta(hours=1), status=BackupRun.Status.RUNNING,
+                                   updated_at=now - timedelta(minutes=25), step="upload")
+    client.force_login(admin_user)
+    html = client.get("/").content.decode()
+    assert "Last backup failed: The backup stopped without finishing." in html
+    assert 'class="backup-progress"' not in html and "Back up now</button>" in html
+    run.refresh_from_db()
+    assert run.status == BackupRun.Status.RUNNING  # left for the scheduler to mark failed
+
+
+def test_scheduler_tick_marks_stuck_runs_failed(db):
+    now = timezone.now()
+    run = BackupRun.objects.create(started_at=now - timedelta(hours=1), status=BackupRun.Status.RUNNING,
+                                   updated_at=now - timedelta(minutes=25))
+    assert service.run_queued() is None
+    run.refresh_from_db()
+    assert run.status == BackupRun.Status.FAILED
