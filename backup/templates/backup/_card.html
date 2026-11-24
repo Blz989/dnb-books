@@ -1,0 +1,16 @@
+{% load static %}<div class="kpi backup-card{% if backup.level != "ok" %} warn{% endif %}" id="backup-card" data-status-url="{% url 'backup:status' %}">
+  <div class="l">Backups</div>
+  <div class="v">{% if backup.level == "ok" %}OK{% else %}Needs attention{% endif %}</div>
+  <div class="note">{{ backup.message }}</div>
+  {% if backup_summary %}<div class="note">{{ backup_summary }}</div>{% endif %}
+  {% if backup_live.active %}
+  <div class="backup-progress" role="status" aria-live="polite">
+    <div class="bar" role="progressbar" aria-label="Backup progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ backup_live.progress }}"><span style="width: {{ backup_live.progress }}%"></span></div>
+    <div class="step"><span data-label>{{ backup_live.label }}</span><span data-pct>{{ backup_live.progress }}%</span></div>
+    <div class="note" data-detail>{{ backup_live.detail }}</div>
+  </div>
+  <script src="{% static 'backup/progress.js' %}" defer></script>
+  {% elif is_admin %}
+  <form method="post" action="{% url 'backup:run' %}">{% csrf_token %}<button class="btn small" type="submit">Back up now</button></form>
+  {% endif %}
+</div>

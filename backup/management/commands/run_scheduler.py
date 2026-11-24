@@ -5,7 +5,8 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from backup.scheduler import next_run, parse_time
+from backup.scheduler import next_run, parse_time, wait_until
+from backup.service import run_queued
 
 
 def upcoming_jobs(now):
@@ -24,7 +25,7 @@ def upcoming_jobs(now):
 
 
 class Command(BaseCommand):
-    help = "Run the nightly backup, the monthly restore drill, and the bank sync on schedule. Runs until stopped."
+    help = "Run the nightly backup, Back up now requests, the monthly restore drill, and the bank sync on schedule. Runs until stopped."
 
     def handle(self, *args, **options):
         self.stdout.write(f"Scheduler started: backup daily at {settings.DNB_BACKUP_TIME}, "
@@ -35,10 +36,22 @@ class Command(BaseCommand):
             when, command = min(upcoming_jobs(now))
             self.stdout.write(f"Next: {command} at {when:%Y-%m-%d %H:%M}.", ending="\n")
             self.stdout.flush()
-            time.sleep(max(0.0, (when - now).total_seconds()))
+            wait_until(when, now=lambda: timezone.localtime().replace(tzinfo=None), sleep=time.sleep,
+                       tick=self.run_requests)
             try:
                 call_command(command)
             except SystemExit:
                 pass  # backup_now and restore_drill exit 1 on failure; the result is on the home screen
             except Exception as exc:  # noqa: BLE001 - keep the scheduler alive
                 self.stderr.write(f"{command} failed: {exc}")
+
+    def run_requests(self):
+        """Run a Back up now request from the home screen, if there is one."""
+        try:
+            run = run_queued()
+        except Exception as exc:  # noqa: BLE001 - keep the scheduler alive
+            self.stderr.write(f"Back up now failed: {exc}")
+            return
+        if run is not None:
+            self.stdout.write(f"Back up now: {run.get_status_display()}{f' ({run.error})' if run.error else ''}.")
+            self.stdout.flush()

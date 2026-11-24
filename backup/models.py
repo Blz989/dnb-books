@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.db import models
 
 
 class BackupRun(models.Model):
     class Status(models.TextChoices):
+        QUEUED = "QUEUED", "Waiting"
         RUNNING = "RUNNING", "Running"
         SUCCESS = "SUCCESS", "Success"
         FAILED = "FAILED", "Failed"
@@ -14,6 +16,14 @@ class BackupRun(models.Model):
     size_bytes = models.BigIntegerField(null=True, blank=True)
     ledger_fingerprint = models.CharField(max_length=64, blank=True)
     error = models.TextField(blank=True)
+    # Live progress, shown on the home screen while the backup runs.
+    step = models.CharField(max_length=20, blank=True)  # the step running now, or the one a failed run stopped in
+    progress = models.PositiveSmallIntegerField(default=0)  # percent
+    detail = models.CharField(max_length=300, blank=True)
+    step_times = models.JSONField(default=list, blank=True)  # [[step, seconds], ...] in the order they ran
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-started_at", "-id"]

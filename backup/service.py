@@ -5,6 +5,7 @@ import re
 import sqlite3
 import tarfile
 import tempfile
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -13,6 +14,8 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
+from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from . import remote
@@ -29,6 +32,95 @@ DAILY_DAYS = 30
 
 class BackupError(Exception):
     """A problem with a plain-language message that is shown to the user as is."""
+
+
+# (key, label, share of the progress bar). The upload share moves with the bytes rclone reports.
+STEPS = [
+    ("check", "Checking settings", 2),
+    ("snapshot", "Copying the database", 8),
+    ("archive", "Packing uploaded files", 15),
+    ("encrypt", "Encrypting", 10),
+    ("upload", "Uploading the off-site copy", 60),
+    ("cleanup", "Removing old backups", 5),
+]
+STEP_LABELS = {key: label for key, label, _ in STEPS}
+SAVE_EVERY_SECONDS = 0.5
+
+
+def duration_text(seconds: float) -> str:
+    seconds = int(round(seconds))
+    if seconds < 60:
+        return f"{seconds}s"
+    minutes, seconds = divmod(seconds, 60)
+    return f"{minutes}m {seconds}s"
+
+
+def upload_detail(p: remote.UploadProgress) -> str:
+    if p.bytes_total:
+        text = f"{remote.size_text(p.bytes_done)} of {remote.size_text(p.bytes_total)}"
+        if p.speed:
+            text += f" at {remote.size_text(int(p.speed))}/s"
+        if p.eta:
+            text += f", about {duration_text(p.eta)} left"
+        text += "."
+    else:
+        text = "Starting the upload."
+    if p.retries:
+        text += f" Google asked rclone to slow down {p.retries} time{'' if p.retries == 1 else 's'}."
+    return text
+
+
+class Progress:
+    """Saves the run's current step, percent, and detail line so the home screen can show them."""
+
+    def __init__(self, run: BackupRun, steps: list[str], echo=None):
+        self.run, self.echo = run, echo
+        chosen = [(key, share) for key, _, share in STEPS if key in steps]
+        total = sum(share for _, share in chosen)
+        self.span, start = {}, 0.0
+        for key, share in chosen:
+            self.span[key] = (start, share * 100 / total)
+            start += share * 100 / total
+        self._started = None
+        self._last_save = 0.0
+
+    def _save(self, force=False):
+        now = time.monotonic()
+        if not force and now - self._last_save < SAVE_EVERY_SECONDS:
+            return
+        self._last_save = now
+        self.run.updated_at = timezone.now()
+        self.run.save(update_fields=["step", "progress", "detail", "step_times", "updated_at"])
+
+    def _close_step(self):
+        if self.run.step and self._started is not None:
+            self.run.step_times = [*self.run.step_times, [self.run.step, round(time.monotonic() - self._started, 1)]]
+        self._started = None
+
+    def step(self, key: str):
+        self._close_step()
+        self.run.step, self.run.detail = key, ""
+        self.run.progress = int(self.span[key][0])
+        self._started = time.monotonic()
+        self._save(force=True)
+        if self.echo:
+            self.echo(f"{STEP_LABELS[key]}...")
+
+    def part(self, fraction: float, detail: str = ""):
+        start, width = self.span[self.run.step]
+        self.run.progress = max(self.run.progress, int(start + width * min(max(fraction, 0.0), 1.0)))
+        self.run.detail = detail[:300]
+        self._save()
+
+    def stopped(self):
+        """The run failed: keep the step it stopped in, with its time so far."""
+        step = self.run.step
+        self._close_step()
+        self.run.step = step
+
+    def finished(self):
+        self._close_step()
+        self.run.step, self.run.detail, self.run.progress = "", "", 100
 
 
 def snapshot(dest: Path) -> Path:
@@ -217,11 +309,20 @@ def apply_retention(directory: Path, today: date) -> list[Path]:
     return deleted
 
 
-def run_backup(now: datetime | None = None) -> BackupRun:
+def run_backup(now: datetime | None = None, *, run: BackupRun | None = None, echo=None) -> BackupRun:
+    """Take a backup. `run` is a queued request to fill in; otherwise a new run is recorded.
+    `echo`, when given, is called with each step's label (the backup_now command prints them)."""
     now = timezone.localtime(now or timezone.now())
-    run = BackupRun.objects.create(started_at=now, status=BackupRun.Status.RUNNING)
+    if run is None:
+        run = BackupRun.objects.create(started_at=now, status=BackupRun.Status.RUNNING, updated_at=timezone.now())
+    else:
+        run.started_at, run.status, run.updated_at = now, BackupRun.Status.RUNNING, timezone.now()
+        run.save(update_fields=["started_at", "status", "updated_at"])
     dest_dir = Path(settings.DNB_BACKUP_DIR)
+    steps = [key for key, _, _ in STEPS if key != "upload" or remote.enabled()]
+    progress = Progress(run, steps, echo)
     try:
+        progress.step("check")
         key = settings.DNB_BACKUP_KEY
         if not key:
             raise BackupError("No backup key set. Run generate_backup_key.")
@@ -236,6 +337,7 @@ def run_backup(now: datetime | None = None) -> BackupRun:
         final = dest_dir / name
         partial = dest_dir / (name + ".part")
         with tempfile.TemporaryDirectory() as tmp:
+            progress.step("snapshot")
             snap = snapshot(Path(tmp) / SNAPSHOT_NAME)
             conn = sqlite3.connect(snap)
             try:
@@ -243,32 +345,97 @@ def run_backup(now: datetime | None = None) -> BackupRun:
             finally:
                 conn.close()
             try:
+                progress.step("archive")
                 archive = Path(tmp) / "backup.tar"
                 build_archive(snap, Path(settings.MEDIA_ROOT), archive)
+                progress.step("encrypt")
                 encrypt_file(archive, partial, key)
                 os.replace(partial, final)
             except OSError as exc:
                 partial.unlink(missing_ok=True)
                 raise BackupError(f"Couldn't write to the backup folder {dest_dir}: {exc.strerror or exc}.") from exc
-        deleted = apply_retention(dest_dir, now.date())
         run.filename = name
         if remote.enabled():
+            progress.step("upload")
             try:
-                remote.upload(final)
+                remote.upload(final, on_progress=lambda p: progress.part(
+                    p.bytes_done / p.bytes_total if p.bytes_total else 0, upload_detail(p)))
+            except remote.RemoteError as exc:
+                raise BackupError(f"Backup saved locally but not uploaded: {exc}") from exc
+        progress.step("cleanup")
+        deleted = apply_retention(dest_dir, now.date())
+        if remote.enabled():
+            try:
                 remote.delete([p.name for p in deleted])
             except remote.RemoteError as exc:
                 raise BackupError(f"Backup saved locally but not uploaded: {exc}") from exc
 
+        progress.finished()
         run.status = BackupRun.Status.SUCCESS
         run.size_bytes = final.stat().st_size
         run.ledger_fingerprint = fingerprint
     except BackupError as exc:
+        progress.stopped()
         run.status, run.error = BackupRun.Status.FAILED, str(exc)
     except Exception as exc:  # noqa: BLE001 - recorded for the home screen, never raised to the scheduler
+        progress.stopped()
         run.status, run.error = BackupRun.Status.FAILED, f"Backup failed: {exc}"
-    run.finished_at = timezone.now()
+    run.finished_at = run.updated_at = timezone.now()
     run.save()
     return run
+
+
+STALE_RUNNING = timedelta(minutes=20)  # longer than the 15-minute upload limit, so only a dead run is caught
+STALE_QUEUED = timedelta(minutes=10)
+ALREADY_RUNNING = "A backup is already running."
+STOPPED = "The backup stopped without finishing. The server may have restarted during it."
+NOT_STARTED = "The scheduler didn't start this backup. Check that the scheduler service is running."
+
+
+def expire_stuck_runs(now: datetime) -> None:
+    """Mark runs that can no longer finish as failed, so they stop blocking Back up now."""
+    cutoff = now - STALE_RUNNING
+    BackupRun.objects.filter(status=BackupRun.Status.RUNNING).filter(
+        Q(updated_at__lt=cutoff) | Q(updated_at__isnull=True, started_at__lt=cutoff)
+    ).update(status=BackupRun.Status.FAILED, error=STOPPED, finished_at=now, updated_at=now)
+    BackupRun.objects.filter(status=BackupRun.Status.QUEUED, started_at__lt=now - STALE_QUEUED).update(
+        status=BackupRun.Status.FAILED, error=NOT_STARTED, finished_at=now, updated_at=now)
+
+
+def _stuck_message(run: BackupRun, now: datetime) -> str:
+    """Why a waiting or running backup can no longer finish, or "" if it still can. Read-only."""
+    if run.status == BackupRun.Status.QUEUED and run.started_at < now - STALE_QUEUED:
+        return NOT_STARTED
+    if run.status == BackupRun.Status.RUNNING and (run.updated_at or run.started_at) < now - STALE_RUNNING:
+        return STOPPED
+    return ""
+
+
+def active_run(now: datetime | None = None) -> BackupRun | None:
+    """The backup waiting or running now. With `now`, one that is stuck doesn't count."""
+    runs = BackupRun.objects.filter(status__in=[BackupRun.Status.QUEUED, BackupRun.Status.RUNNING])
+    for run in runs.order_by("-started_at", "-id"):
+        if now is None or not _stuck_message(run, now):
+            return run
+    return None
+
+
+def request_backup(user, now: datetime | None = None) -> BackupRun:
+    """Queue a backup for the scheduler service to run (it checks every few seconds)."""
+    now = now or timezone.now()
+    expire_stuck_runs(now)
+    with transaction.atomic():  # IMMEDIATE transactions (settings.py): two clicks can't both get through
+        if active_run() is not None:
+            raise BackupError(ALREADY_RUNNING)
+        return BackupRun.objects.create(
+            started_at=now, status=BackupRun.Status.QUEUED, requested_by=user, updated_at=now)
+
+
+def run_queued() -> BackupRun | None:
+    """Called by the scheduler every few seconds: clear stuck runs, then run a waiting request."""
+    expire_stuck_runs(timezone.now())
+    run = BackupRun.objects.filter(status=BackupRun.Status.QUEUED).order_by("started_at", "id").first()
+    return run_backup(run=run) if run is not None else None
 
 
 @dataclass
@@ -338,7 +505,10 @@ def _friendly(ts: datetime) -> str:
 
 
 def backup_status(now: datetime) -> BackupStatus:
-    finished = BackupRun.objects.exclude(status=BackupRun.Status.RUNNING).order_by("-started_at", "-id")
+    newest = BackupRun.objects.order_by("-started_at", "-id").first()
+    if newest is not None and (stuck := _stuck_message(newest, now)):
+        return BackupStatus("error", f"Last backup failed: {stuck}")
+    finished = BackupRun.objects.exclude(status__in=[BackupRun.Status.RUNNING, BackupRun.Status.QUEUED]).order_by("-started_at", "-id")
     latest = finished.first()
     if latest is not None and latest.status == BackupRun.Status.FAILED:
         return BackupStatus("error", f"Last backup failed: {latest.error}")
@@ -346,3 +516,57 @@ def backup_status(now: datetime) -> BackupStatus:
     if success is None or now - (success.finished_at or success.started_at) > STALE_AFTER:
         return BackupStatus("warning", "No successful backup in the last 26 hours.")
     return BackupStatus("ok", f"Last backup {_friendly(success.finished_at or success.started_at)}.")
+
+
+@dataclass
+class LiveState:
+    """A backup that is waiting or running, for the progress bar."""
+    active: bool
+    progress: int = 0
+    label: str = ""
+    detail: str = ""
+
+    def as_json(self) -> dict:
+        if not self.active:
+            return {"active": False}
+        return {"active": True, "progress": self.progress, "label": self.label, "detail": self.detail}
+
+
+WAITING_HINT_AFTER = timedelta(seconds=60)
+
+
+def live_state(now: datetime) -> LiveState:
+    # Read-only: the home page is prefetched on hover, so it must not write (tests/test_speed.py).
+    run = active_run(now)
+    if run is None:
+        return LiveState(False)
+    if run.status == BackupRun.Status.QUEUED:
+        slow = now - run.started_at > WAITING_HINT_AFTER
+        return LiveState(True, 0, "Waiting to start", "Waiting for the scheduler to start it." if slow else "")
+    done = [step for step, _ in run.step_times]
+    with_upload = remote.enabled() or run.step == "upload" or "upload" in done
+    steps = [key for key, _, _ in STEPS if key != "upload" or with_upload]
+    if run.step not in steps:
+        return LiveState(True, run.progress, "Starting", run.detail)
+    label = f"Step {steps.index(run.step) + 1} of {len(steps)}: {STEP_LABELS[run.step]}"
+    return LiveState(True, run.progress, label, run.detail)
+
+
+def last_run_summary() -> str:
+    """How long the last finished backup took and where the time went, or where it stopped."""
+    run = (BackupRun.objects.filter(status__in=[BackupRun.Status.SUCCESS, BackupRun.Status.FAILED])
+           .order_by("-started_at", "-id").first())
+    if run is None:
+        return ""
+    times = {step: seconds for step, seconds in run.step_times}
+    if run.status == BackupRun.Status.FAILED:
+        if run.step not in STEP_LABELS:
+            return ""
+        if run.step in times:
+            return f"Stopped during {STEP_LABELS[run.step]} after {duration_text(times[run.step])}."
+        return f"Stopped during {STEP_LABELS[run.step]}."
+    if not run.step_times or run.finished_at is None:
+        return ""
+    slowest, seconds = max(run.step_times, key=lambda item: item[1])
+    total = (run.finished_at - run.started_at).total_seconds()
+    return f"Took {duration_text(total)}. Slowest step: {STEP_LABELS.get(slowest, slowest)}, {duration_text(seconds)}."

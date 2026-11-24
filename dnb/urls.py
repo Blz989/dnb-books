@@ -17,6 +17,7 @@ urlpatterns = [
     path("reports/", include("ledger.urls")),
     path("books/", include("ledger.books_urls")),
     path("settings/", include("core.urls")),
+    path("backup/", include("backup.urls")),
     path("brand/logo/", sales_logo, name="brand-logo"),
     path("brand/icon-<int:size>.png", brand_icon, name="brand-icon"),
     path("favicon.ico", favicon_ico, name="favicon"),
