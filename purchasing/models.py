@@ -4,7 +4,7 @@ from django.db import models
 
 from contacts.models import HasTerms, Terms, Vendor
 from items.models import Item
-from ledger.models import Account, JournalEntry
+from ledger.models import Account, JournalEntry, RecurringSchedule
 from sales.models import DocStatus, DocType, InvoiceLine, OrderStatus, SalesOrder, SalesOrderLine
 
 from .errors import PurchasingSettingsMissing
@@ -291,9 +291,40 @@ class VendorCreditApplication(models.Model):
     removed_on = models.DateField(null=True, blank=True)
 
 
+class RecurringBill(RecurringSchedule):
+    vendor = models.ForeignKey(Vendor, on_delete=models.PROTECT, related_name="recurring_bills")
+    terms = models.CharField(max_length=20, blank=True)  # blank: the vendor's terms on each run
+    notes = models.TextField(blank=True)
+
+    class Meta(RecurringSchedule.Meta):
+        pass
+
+
+class RecurringBillLine(models.Model):
+    profile = models.ForeignKey(RecurringBill, on_delete=models.CASCADE, related_name="lines")
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    description = models.CharField(max_length=500, blank=True)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "id"]
+
+
+class RecurringBillRun(models.Model):
+    profile = models.ForeignKey(RecurringBill, on_delete=models.PROTECT, related_name="runs")
+    scheduled_date = models.DateField()
+    bill = models.ForeignKey(Bill, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["scheduled_date"]
+        constraints = [models.UniqueConstraint(fields=["profile", "scheduled_date"], name="unique_recurring_bill_run")]
+
+
 for _model in (
     PurchasingSettings, Threshold1099, PurchaseOrder, PurchaseOrderLine, PurchaseOrderAllocation, Bill, BillItemLine,
     BillExpenseLine, BillRevision, DropShipAllocation, VendorPayment, BillPaymentApplication, VendorCredit,
-    VendorCreditLine, VendorCreditApplication,
+    VendorCreditLine, VendorCreditApplication, RecurringBill, RecurringBillLine, RecurringBillRun,
 ):
     auditlog.register(_model)

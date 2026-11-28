@@ -7,7 +7,7 @@ PR title: "Attachments, sales and purchase reports, recurring bills and journals
 - No new dependencies. File type checks read the first bytes (no python-magic).
 - Money is `Decimal`. All ledger writes go through `ledger/posting.py`; new code calls existing document functions (`create_bill`, `create_credit_note`, `apply_credit`) or `post_entry` only.
 - Reports in this plan read posted ledger lines (`JournalLine.objects.in_ledger()`); the two by-item reports read document lines only with the ledger tie-out the spec (2.2) requires, as A/R aging does today.
-- Existing tests pass untouched, except the report group count in `tests/test_reports_forecast.py` (5 to 6), which the new "Sales and purchases" group changes.
+- Existing tests pass untouched, except the report group count in `tests/test_reports_forecast.py` (5 to 6), which the new "Sales and purchases" group changes, and the scheduler job set in `tests/test_plaid_sync.py`, which gains `run_recurring`.
 - Error messages match the spec exactly.
 - Screenshots from a throwaway demo database; never the real `data/` database.
 
@@ -108,12 +108,12 @@ class RecurringJournalRun: profile, scheduled_date, entry (FK), created_at; uniq
 # ledger/management/commands/run_recurring.py
 # backup/management/commands/run_scheduler.py: daily job at DNB_RECURRING_TIME, and once at start
 ```
-- [ ] Models, migrations, auditlog registration.
-- [ ] Date math (spec 3.1) and runner (spec 3.2): oldest first, stop the profile on failure, record error, clear error on success.
-- [ ] `resume_from`: set on Resume to today; due dates before it are skipped.
-- [ ] Scheduler job and `DNB_RECURRING_TIME` setting (default "05:00", in `.env.example`).
-- [ ] Tests `tests/test_recurring.py`: month-end math, every frequency, catch-up, end date, pause and resume, closed month error then recovery, no duplicates on a second run, inactive account error.
-- [ ] Commit: `Recurring bills and journal entries: schedules and nightly runs`
+- [x] Models, migrations, auditlog registration.
+- [x] Date math (spec 3.1) and runner (spec 3.2): oldest first, stop the profile on failure, record error, clear error on success.
+- [x] `resume_from`: set on Resume to today; due dates before it are skipped.
+- [x] Scheduler job and `DNB_RECURRING_TIME` setting (default "05:00", in `.env.example`).
+- [x] Tests `tests/test_recurring.py`: month-end math, every frequency, catch-up, end date, pause and resume, closed month error then recovery, no duplicates on a second run, inactive account error.
+- [x] Commit: `Recurring bills and journal entries: schedules and nightly runs`
 
 ## Task 5: Recurring screens, Home, and cash forecast
 - [ ] Purchasing, Recurring bills: list, new, page, edit, pause or resume, delete (spec 3.3, 3.6). Nav link under Purchases.
