@@ -1,0 +1,25 @@
+{% load attachments %}
+<h2>Attachments</h2>
+<div class="card attachments">
+<table class="data">
+  <thead><tr><th>File</th><th class="num">Size</th><th>Added by</th><th>Added</th><th></th></tr></thead>
+  <tbody>
+  {% for f in files %}
+    <tr><td><a href="{% url 'attachments:open' f.pk %}" target="_blank" rel="noopener">{{ f.name }}</a></td>
+      <td class="num">{{ f.size|filesize }}</td><td>{{ f.uploaded_by.get_username }}</td><td>{{ f.uploaded_at|date:"Y-m-d H:i" }}</td>
+      <td>{% if is_admin %}<a class="btn" href="{% url 'attachments:remove' f.pk %}?next={{ next|urlencode }}">Remove</a>{% endif %}</td></tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">No files yet. Add the vendor's PDF, a receipt, or any proof that goes with this record.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="body">
+  <form method="post" enctype="multipart/form-data" action="{% url 'attachments:add' kind obj.pk %}" class="attach-form">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <input type="file" name="file" accept="application/pdf,image/png,image/jpeg">
+    <button type="submit" class="btn">Add file</button>
+    <span class="sub">PDF, PNG, or JPEG, up to 10 MB.</span>
+  </form>
+</div>
+</div>

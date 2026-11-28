@@ -1,0 +1,15 @@
+{% extends "core/base.html" %}
+{% load attachments %}
+{% block title %}Remove {{ attachment.name }}{% endblock %}
+{% block page_title %}Remove {{ attachment.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ attachment.size|filesize }} · added by {{ attachment.uploaded_by.get_username }} on {{ attachment.uploaded_at|date:"Y-m-d" }}</div>{% endblock %}
+{% block content %}
+<div class="card"><div class="body">
+  <p>The file is deleted from the server. The audit log keeps its name and who removed it.</p>
+  <form method="post">{% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" class="btn danger">Remove file</button>
+    <a class="btn" href="{{ next }}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

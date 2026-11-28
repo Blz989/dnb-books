@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ credit.number }}{% endblock %}
 {% block page_title %}{{ credit.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/vendors/{{ credit.vendor.pk }}/">{{ credit.vendor.name }}</a> · {{ credit.date|date:"Y-m-d" }} · {{ credit.get_kind_display }}{% if credit.reason %} · {{ credit.reason }}{% endif %}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
@@ -38,4 +39,5 @@
 </table>
 </div>
 <p class="help">Journal entries: {% for label, e in entries %}<a href="{% url 'books:journal-detail' e.pk %}">{{ e.display_number }}</a> <span class="dash">{{ label }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{% attachments_card credit %}
 {% endblock %}

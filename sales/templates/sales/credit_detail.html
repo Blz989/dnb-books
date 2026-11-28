@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ note.number }}{% endblock %}
 {% block page_title %}{{ note.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/customers/{{ note.customer.pk }}/">{{ note.customer.name }}</a> · {{ note.date|date:"Y-m-d" }}{% if note.reason %} · {{ note.reason }}{% endif %}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
@@ -41,4 +42,5 @@
 </table>
 </div>
 {% endif %}
+{% attachments_card note %}
 {% endblock %}

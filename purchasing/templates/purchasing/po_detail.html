@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ order.number }}{% endblock %}
 {% block page_title %}{{ order.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/vendors/{{ order.vendor.pk }}/">{{ order.vendor.name }}</a> · {{ order.date|date:"Y-m-d" }}{% if order.expected_date %} · expected {{ order.expected_date|date:"Y-m-d" }}{% endif %} · <span class="tag{% if order.status == 'CLOSED' %} ns{% endif %}">{{ order.get_status_display }}</span>
@@ -44,4 +45,5 @@
   </tbody>
 </table>
 </div>
+{% attachments_card order %}
 {% endblock %}
