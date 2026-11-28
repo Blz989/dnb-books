@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Write off {{ invoice.number }}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'sales:invoice-detail' invoice.number %}">{{ invoice.number }}</a></div>{% endblock %}
+{% block page_title %}Write off {{ invoice.number }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{{ invoice.customer.name }} · {{ invoice.date|date:"Y-m-d" }} · {{ balance|floatformat:"2g" }} left to pay</div>{% endblock %}
+{% block content %}
+{% include "sales/_errors.html" %}
+<div class="banner info">This creates a credit note to {% if account %}{{ account.number }} {{ account.name }}{% else %}the bad debt account{% endif %} and applies it to the invoice. The customer's balance goes down, and the order's profit (and handling owed) goes down by the same amount. To undo it, remove the credit from the invoice, then void the credit note.</div>
+<div class="card"><div class="body">
+<form method="post">{% csrf_token %}
+  {% for field in form %}
+  <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+    {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+  {% endfor %}
+  <button type="submit" class="btn primary"{% if not account %} disabled{% endif %}>Write off</button>
+  <a class="btn" href="{% url 'sales:invoice-detail' invoice.number %}">Cancel</a>
+</form>
+</div></div>
+{% endblock %}

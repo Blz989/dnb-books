@@ -148,15 +148,15 @@ CreditNote.write_off_of: FK Invoice, null=True, blank=True, related_name="write_
 # sales/posting/writeoff.py
 def write_off(invoice, *, date, amount, reason, user) -> CreditNote
 ```
-- [ ] Settings field and form (expense accounts only).
-- [ ] `write_off`: admin only, validations (spec 5.5), one transaction: credit note + application.
-- [ ] Refuse refunds from, and applying to another invoice, a write-off (spec 5.4).
-- [ ] Cash basis: exclude write-off entries and write-off applications.
-- [ ] Sales by customer: Written off column.
-- [ ] Invoice page: Write off button (admin, balance > 0, not void); form; credit note page says "Write-off of <invoice>".
-- [ ] Tests `tests/test_write_off.py`: ledger, balance, aging, statement, profit, cash basis, refusals, undo by removing then voiding.
-- [ ] Screenshots: invoice with Write off, the form and an error, the invoice after, the credit note, Sales settings.
-- [ ] Commit: `Bad debt write-off`
+- [x] Settings field and form (expense accounts only).
+- [x] `write_off`: admin only, validations (spec 5.5), one transaction: credit note + application.
+- [x] Refuse refunds from, and applying to another invoice, a write-off (spec 5.4).
+- [x] Cash basis: exclude write-off entries and write-off applications.
+- [x] Sales by customer: Written off column.
+- [x] Invoice page: Write off button (admin, balance > 0, not void); form; credit note page says "Write-off of <invoice>".
+- [x] Tests `tests/test_write_off.py`: ledger, balance, aging, statement, profit, cash basis, refusals, undo by removing then voiding.
+- [x] Screenshots: invoice with Write off, the form and an error, the invoice after, the credit note, Sales settings.
+- [x] Commit: `Bad debt write-off`
 
 ## Task 8: Docs and PR
 - [ ] README: What it does rows and Status line.

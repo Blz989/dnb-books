@@ -54,8 +54,10 @@ def _events(start: date, end: date) -> dict[tuple[str, str], Decimal]:
     fields = ("amount", "applied_on", "removed", "removed_on")
     for a in PaymentApplication.objects.select_related("invoice").only("invoice__number", *fields):
         add(("sales.invoice", a.invoice.number), a.amount, a.applied_on, a.removed, a.removed_on)
-    for a in CreditApplication.objects.select_related("invoice", "credit_note").only(
-            "invoice__number", "credit_note__number", *fields):
+    # A bad debt write-off is not a payment: the invoice's income never counts on the cash basis, and the write-off
+    # itself counts nothing (see _write_off_q).
+    for a in CreditApplication.objects.filter(credit_note__write_off_of__isnull=True).select_related(
+            "invoice", "credit_note").only("invoice__number", "credit_note__number", *fields):
         add(("sales.invoice", a.invoice.number), a.amount, a.applied_on, a.removed, a.removed_on)
         add(("sales.credit_note", a.credit_note.number), a.amount, a.applied_on, a.removed, a.removed_on)
     for r in Refund.objects.filter(source_credit_note__isnull=False).select_related("source_credit_note"):
@@ -77,13 +79,20 @@ def _allocated_q() -> Q:
     return q
 
 
+def _write_off_q() -> Q:
+    from sales.models import CreditNote
+
+    numbers = list(CreditNote.objects.filter(write_off_of__isnull=False).values_list("number", flat=True))
+    return Q(entry__source_type="sales.credit_note", entry__source_id__in=numbers)
+
+
 def profit_and_loss_cash(start: date, end: date) -> ProfitAndLoss:
     ledger = JournalLine.objects.in_ledger()
     totals: dict[int, list[Decimal]] = defaultdict(lambda: [ZERO, ZERO])
 
     # 1. P&L lines that don't wait for a payment, as posted in the range.
     as_posted = (ledger.filter(entry__date__gte=start, entry__date__lte=end, account__type__in=P_AND_L)
-                 .exclude(_allocated_q()).values("account_id").annotate(d=Sum("debit"), c=Sum("credit")))
+                 .exclude(_allocated_q()).exclude(_write_off_q()).values("account_id").annotate(d=Sum("debit"), c=Sum("credit")))
     for r in as_posted:
         totals[r["account_id"]][0] += money(r["d"])
         totals[r["account_id"]][1] += money(r["c"])

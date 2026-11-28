@@ -180,6 +180,8 @@ def apply_credit(credit_note: CreditNote, invoice: Invoice, amount: Decimal, *, 
         _check_open(current)
         _check_amount(amount)
         invoice = _check_invoice(invoice, current.customer)
+        if current.write_off_of_id and current.write_off_of_id != invoice.pk:
+            raise ReceiptError("A write-off applies only to the invoice it was made for.")
         _check_not_before(date, current, invoice)
         unapplied = credit_unapplied(current)
         if amount > unapplied:
@@ -200,6 +202,8 @@ def issue_refund(
     with transaction.atomic():
         settings = SalesSettings.load().require_configured()
         source = type(source).objects.select_related("customer").get(pk=source.pk)
+        if isinstance(source, CreditNote) and source.write_off_of_id:
+            raise ReceiptError("A write-off can't be refunded.")
         _check_open(source)
         _check_amount(amount)
         if method not in RefundMethod.values:
