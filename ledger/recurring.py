@@ -141,3 +141,26 @@ def run_all(today: date) -> RunSummary:
             total.created += s.created
             total.failed += s.failed
     return total
+
+
+# ---------------------------------------------------------------- Home
+
+def home_summary(now) -> dict:
+    """Documents created by schedules in the last 7 days, and schedules that stopped on an error."""
+    from purchasing.models import RecurringBill, RecurringBillRun
+
+    from .models import RecurringJournal, RecurringJournalRun
+
+    since = now - timedelta(days=7)
+    recent = [{"kind": "Bill", "name": r.profile.name, "date": r.scheduled_date, "number": r.bill.number,
+               "url": f"/purchasing/bills/{r.bill.number}/", "created": r.created_at}
+              for r in RecurringBillRun.objects.filter(created_at__gte=since).select_related("profile", "bill")]
+    recent += [{"kind": "Journal entry", "name": r.profile.name, "date": r.scheduled_date,
+                "number": r.entry.display_number, "url": f"/books/journal/{r.entry.pk}/", "created": r.created_at}
+               for r in RecurringJournalRun.objects.filter(created_at__gte=since).select_related("profile", "entry")]
+    recent.sort(key=lambda r: (r["created"], r["date"]), reverse=True)
+    errors = [{"label": "Recurring bill", "p": p, "url": f"/purchasing/recurring/{p.pk}/"}
+              for p in RecurringBill.objects.filter(is_active=True).exclude(last_error="")]
+    errors += [{"label": "Recurring journal entry", "p": p, "url": f"/books/recurring/{p.pk}/"}
+               for p in RecurringJournal.objects.filter(is_active=True).exclude(last_error="")]
+    return {"recurring_recent": recent[:10], "recurring_errors": errors}

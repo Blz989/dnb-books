@@ -116,13 +116,13 @@ class RecurringJournalRun: profile, scheduled_date, entry (FK), created_at; uniq
 - [x] Commit: `Recurring bills and journal entries: schedules and nightly runs`
 
 ## Task 5: Recurring screens, Home, and cash forecast
-- [ ] Purchasing, Recurring bills: list, new, page, edit, pause or resume, delete (spec 3.3, 3.6). Nav link under Purchases.
-- [ ] Accountant, Recurring journal entries: the same. Link on the Accountant area.
-- [ ] Home: "Created by recurring schedules" card (last 7 days) and error banners.
-- [ ] Cash forecast: upcoming recurring bill occurrences as outflows; note text (spec 3.4).
-- [ ] Tests `tests/test_recurring_views.py`.
-- [ ] Screenshots: both lists, both forms with an error, a profile page with created documents and an error, Home card and banner, cash forecast.
-- [ ] Commit: `Recurring bill and journal entry screens, Home card, and cash forecast`
+- [x] Purchasing, Recurring bills: list, new, page, edit, pause or resume, delete (spec 3.3, 3.6). Nav link under Purchases.
+- [x] Accountant, Recurring journal entries: the same. Link on the Accountant area.
+- [x] Home: "Created by recurring schedules" card (last 7 days) and error banners.
+- [x] Cash forecast: upcoming recurring bill occurrences as outflows; note text (spec 3.4).
+- [x] Tests `tests/test_recurring_views.py`.
+- [x] Screenshots: both lists, both forms with an error, a profile page with created documents and an error, Home card and banner, cash forecast.
+- [x] Commit: `Recurring bill and journal entry screens, Home card, and cash forecast`
 
 ## Task 6: Statement of cash flows
 Interfaces:

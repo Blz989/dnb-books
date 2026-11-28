@@ -13,6 +13,7 @@ from items.models import InventorySettings
 from items.reports import item_totals, low_stock
 from purchasing import reports as purchasing_reports
 from purchasing.models import PurchasingSettings
+from ledger.recurring import home_summary as recurring_home
 from sales import reports as sales_reports
 from sales.models import SalesSettings
 
@@ -58,6 +59,7 @@ def home(request):
         "stock_value": stock_value,
         "low_stock_count": len(low_stock()),
         "inventory_unconfigured": is_admin(request.user) and not InventorySettings.load().is_configured,
+        **recurring_home(timezone.now()),
     })
 
 

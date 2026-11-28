@@ -1,0 +1,54 @@
+{% extends "core/base.html" %}
+{% block title %}{{ p.name }}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url kind.url|add:'-list' %}">{{ kind.title }}</a></div>{% endblock %}
+{% block page_title %}{{ p.name }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if kind.is_bill %}<a href="/vendors/{{ p.vendor.pk }}/">{{ p.vendor.name }}</a> · {% endif %}{{ p.get_frequency_display }} from {{ p.start_date|date:"Y-m-d" }}{% if p.end_date %} to {{ p.end_date|date:"Y-m-d" }}{% endif %}
+  {% if status == "Active" %}<span class="tag">Active</span>{% else %}<span class="tag ns">{{ status }}</span>{% endif %}</div>{% endblock %}
+{% block page_actions %}
+  <a class="btn" href="{% url kind.url|add:'-edit' p.pk %}">Edit</a>
+  {% if p.is_active %}
+  <form method="post" action="{% url kind.url|add:'-pause' p.pk %}" style="display:inline">{% csrf_token %}<button class="btn" type="submit">Pause</button></form>
+  {% else %}
+  <form method="post" action="{% url kind.url|add:'-resume' p.pk %}" style="display:inline">{% csrf_token %}<button class="btn primary" type="submit">Resume</button></form>
+  {% endif %}
+  {% if can_delete %}<form method="post" action="{% url kind.url|add:'-delete' p.pk %}" style="display:inline" onsubmit="return confirm('Delete {{ p.name|escapejs }}?')">{% csrf_token %}<button class="btn danger" type="submit">Delete</button></form>{% endif %}
+{% endblock %}
+{% block content %}
+{% if error %}<div class="banner error">{{ error }}</div>{% endif %}
+{% if p.last_error %}<div class="banner error">Couldn't create the {{ kind.one }} for {{ p.last_error_date|date:"Y-m-d" }}: {{ p.last_error }} It tries again on the next run.</div>{% endif %}
+<div class="kpis">
+  <div class="kpi"><div class="l">Amount each time</div><div class="v">{{ amount|floatformat:"2g" }}</div></div>
+  <div class="kpi"><div class="l">Next date</div><div class="v">{{ next|date:"Y-m-d"|default:"—" }}</div></div>
+  <div class="kpi"><div class="l">Created so far</div><div class="v">{{ runs|length }}</div></div>
+</div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Account</th><th>Description</th>{% if kind.is_bill %}<th class="num">Amount</th>{% else %}<th class="num">Debit</th><th class="num">Credit</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for l in lines %}
+    <tr><td>{{ l.account.number }} {{ l.account.name }}</td><td>{{ l.description|default:"—" }}</td>
+      {% if kind.is_bill %}<td class="num">{{ l.amount|floatformat:"2g" }}</td>{% else %}<td class="num">{% if l.debit %}{{ l.debit|floatformat:"2g" }}{% endif %}</td><td class="num">{% if l.credit %}{{ l.credit|floatformat:"2g" }}{% endif %}</td>{% endif %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="card"><div class="body"><dl class="facts">
+  {% if kind.is_bill %}<dt>Terms</dt><dd>{% if p.terms %}{{ p.terms }}{% else %}Vendor's default{% endif %}</dd><dt>Notes</dt><dd>{{ p.notes|linebreaksbr|default:"—" }}</dd>{% else %}<dt>Memo</dt><dd>{{ p.memo|linebreaksbr|default:"—" }}</dd>{% endif %}
+  <dt>Posted as</dt><dd>{{ p.created_by.get_username }}</dd>
+</dl></div></div>
+<h2>Created</h2>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Scheduled date</th><th>{% if kind.is_bill %}Bill{% else %}Journal entry{% endif %}</th><th>Created</th></tr></thead>
+  <tbody>
+  {% for r in runs %}
+    <tr><td>{{ r.scheduled_date|date:"Y-m-d" }}</td>
+      <td>{% if kind.is_bill %}<a class="sku" href="{% url 'purchasing:bill-detail' r.bill.number %}">{{ r.bill.number }}</a>{% else %}<a class="sku" href="{% url 'books:journal-detail' r.entry.pk %}">{{ r.entry.display_number }}</a>{% endif %}</td>
+      <td>{{ r.created_at|date:"Y-m-d H:i" }}</td></tr>
+  {% empty %}<tr><td colspan="3" class="empty">Nothing created yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="help">Edits change future runs only. Fix or void a created {% if kind.is_bill %}bill{% else %}entry{% endif %} the usual way.</p>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+{% block title %}{{ kind.title }}{% endblock %}
+{% block page_title %}{{ kind.title }}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if kind.is_bill %}Bills that repeat, like rent and utilities. Each one is created and posted early in the morning on its date.{% else %}Entries that repeat, like accruals and depreciation. Each one is created and posted early in the morning on its date.{% endif %}</div>{% endblock %}
+{% block page_actions %}<a class="btn primary" href="{% url kind.url|add:'-new' %}">{{ kind.create_label }}</a>{% endblock %}
+{% block content %}
+<div class="card">
+<table class="data">
+  <thead><tr><th>Name</th>{% if kind.is_bill %}<th>Vendor</th>{% endif %}<th>Frequency</th><th class="num">Amount</th><th>Next date</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td><a href="{% url kind.url|add:'-detail' r.p.pk %}">{{ r.p.name }}</a></td>
+      {% if kind.is_bill %}<td>{{ r.p.vendor.name }}</td>{% endif %}
+      <td>{{ r.p.get_frequency_display }}</td><td class="num">{{ r.amount|floatformat:"2g" }}</td>
+      <td class="nowrap">{{ r.next|date:"Y-m-d"|default:"—" }}</td>
+      <td>{% if r.p.last_error %}<span class="tag void">Error</span>{% elif r.status == "Active" %}<span class="tag">Active</span>{% else %}<span class="tag ns">{{ r.status }}</span>{% endif %}</td></tr>
+  {% empty %}
+    <tr><td colspan="{% if kind.is_bill %}6{% else %}5{% endif %}" class="empty">No {{ kind.one }} schedules yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

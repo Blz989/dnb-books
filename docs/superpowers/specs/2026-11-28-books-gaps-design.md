@@ -104,7 +104,7 @@ Frequencies: Weekly, Every 2 weeks, Monthly, Every 3 months, Every 6 months, Yea
 - Home: a card "Created by recurring schedules" listing the last 7 days of created bills and entries, and a warning banner for each profile with an error: "Recurring bill Rent couldn't be created for 2026-12-01: <message>".
 
 ### 3.4 Cash forecast
-Upcoming recurring bill occurrences (after today, through the forecast horizon) are added as outflows on their dates, labeled "Recurring: <name>". The forecast's note changes from "Rent, payroll, and other costs count only once they're entered as bills" to "Recurring bills count on their next dates; other costs count once they're entered as bills."
+Upcoming recurring bill occurrences (from today through the forecast horizon, not yet created) are added as outflows on the due date of the bill each will create (bill date plus terms), noted "Recurring: <name>". One due after the horizon counts in "After this range". (Changed during build from "on their dates": the forecast places every bill on its due date.) The forecast's notes say recurring bills are included and payroll and other costs count once entered as bills or set up as recurring bills.
 
 ### 3.5 Permissions
 Recurring bills: any user (like bills). Recurring journal entries: the same users who can post a journal entry today.
