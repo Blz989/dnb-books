@@ -133,11 +133,11 @@ Interfaces:
                            total_investing, total_financing, net_change, cash_start, cash_end, bank_change, difference
 def cash_flow(start, end) -> CashFlow
 ```
-- [ ] Classification by subtype (spec 4). Use `finance:financial-statements`; record findings in the commit body.
-- [ ] View, template, CSV, PDF, catalog (Business overview), featured list unchanged.
-- [ ] Tests `tests/test_cash_flow.py`: each section, signs, Difference 0.00 on a ledger with every subtype, empty range.
-- [ ] Screenshots: the report, PDF.
-- [ ] Commit: `Statement of cash flows`
+- [x] Classification by subtype (spec 4). Use `finance:financial-statements`; record findings in the commit body.
+- [x] View, template, CSV, PDF, catalog (Business overview), featured list unchanged.
+- [x] Tests `tests/test_cash_flow.py`: each section, signs, Difference 0.00 on a ledger with every subtype, empty range.
+- [x] Screenshots: the report, PDF.
+- [x] Commit: `Statement of cash flows`
 
 ## Task 7: Bad debt write-off
 Interfaces:

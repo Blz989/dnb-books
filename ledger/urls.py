@@ -16,6 +16,7 @@ urlpatterns = [
     path("trial-balance/", pdf_export(views.trial_balance), name="trial-balance"),
     path("profit-and-loss/", pdf_export(views.profit_and_loss), name="profit-and-loss"),
     path("balance-sheet/", pdf_export(views.balance_sheet), name="balance-sheet"),
+    path("cash-flow/", pdf_export(sales_report_views.cash_flow_view), name="cash-flow"),
     path("bank-register/", pdf_export(register_views.bank_register), name="bank-register"),
     path("general-ledger/", pdf_export(views.general_ledger), name="general-ledger"),
     path("inventory-valuation/", pdf_export(item_views.inventory_valuation), name="inventory-valuation"),

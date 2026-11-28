@@ -1,0 +1,37 @@
+{% extends "core/report_base.html" %}
+{% block title %}Cash flow statement{% endblock %}
+{% block page_title %}Cash flow statement{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">{{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }} · indirect method</div>{% endif %}{% endblock %}
+{% block report %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>Account</th><th class="num">Amount</th></tr></thead>
+  <tbody>
+    <tr class="subtotal"><td colspan="2"><b>Operating activities</b></td></tr>
+    <tr><td>Net income</td><td class="num{% if report.net_income < 0 %} neg{% endif %}">{{ report.net_income|floatformat:"2g" }}</td></tr>
+    {% if report.noncash %}<tr><td>Depreciation and other non-cash charges</td><td class="num">{{ report.noncash|floatformat:"2g" }}</td></tr>{% endif %}
+    {% for l in report.operating %}<tr><td>Change in {{ l.account.number }} {{ l.account.name }}</td><td class="num{% if l.amount < 0 %} neg{% endif %}">{{ l.amount|floatformat:"2g" }}</td></tr>{% endfor %}
+    <tr class="total"><td>Net cash from operating activities</td><td class="num">{{ report.total_operating|floatformat:"2g" }}</td></tr>
+    <tr class="subtotal"><td colspan="2"><b>Investing activities</b></td></tr>
+    {% for l in report.investing %}<tr><td>{{ l.account.number }} {{ l.account.name }}</td><td class="num{% if l.amount < 0 %} neg{% endif %}">{{ l.amount|floatformat:"2g" }}</td></tr>
+    {% empty %}<tr><td class="dash">None</td><td></td></tr>{% endfor %}
+    <tr class="total"><td>Net cash from investing activities</td><td class="num">{{ report.total_investing|floatformat:"2g" }}</td></tr>
+    <tr class="subtotal"><td colspan="2"><b>Financing activities</b></td></tr>
+    {% for l in report.financing %}<tr><td>{{ l.account.number }} {{ l.account.name }}</td><td class="num{% if l.amount < 0 %} neg{% endif %}">{{ l.amount|floatformat:"2g" }}</td></tr>
+    {% empty %}<tr><td class="dash">None</td><td></td></tr>{% endfor %}
+    <tr class="total"><td>Net cash from financing activities</td><td class="num">{{ report.total_financing|floatformat:"2g" }}</td></tr>
+    <tr class="total"><td>Net change in cash</td><td class="num{% if report.net_change < 0 %} neg{% endif %}">{{ report.net_change|floatformat:"2g" }}</td></tr>
+    <tr><td>Cash at the start</td><td class="num">{{ report.cash_start|floatformat:"2g" }}</td></tr>
+    <tr class="total"><td>Cash at the end</td><td class="num">{{ report.cash_end|floatformat:"2g" }}</td></tr>
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% if report %}
+<h2>Check against the ledger</h2>
+<p class="help">Cash is every bank account. A purchase paid for with a loan shows in both investing and financing. Credit cards are operating. Depreciation and other expenses booked against fixed assets with no bank line are added back in operating activities.</p>
+{% include "ledger/_tie_out.html" with checks=report.checks difference=report.difference %}
+{% endif %}
+{% endblock %}

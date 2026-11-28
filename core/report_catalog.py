@@ -5,6 +5,7 @@ GROUPS = [
     ("Business overview", [
         ("profit-and-loss", "Profit and loss", "Income, cost of goods sold, and expenses for a date range."),
         ("balance-sheet", "Balance sheet", "Assets, liabilities, and equity on a date."),
+        ("cash-flow", "Cash flow statement", "Where cash came from and went, by operating, investing, and financing."),
         ("order-profitability", "Order profitability", "Profit per order after stock and drop-ship cost."),
         ("cash-forecast", "Cash forecast", "Cash on hand plus what's coming in, less what's going out."),
     ]),

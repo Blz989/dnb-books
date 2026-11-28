@@ -93,3 +93,30 @@ def purchases_by_item(request):
             return csv_response(f"purchases-by-item-{_suffix(report)}",
                                 ["SKU or account", "Name", "Quantity", "Amount", "Average cost"], rows)
     return render(request, "ledger/purchases_by_item.html", {"form": form, "report": report, "nav_active": "reports"})
+
+
+@login_required
+def cash_flow_view(request):
+    from .cash_flow import cash_flow
+
+    today = _today()
+    form = RangeForm(_data(request, {"start": date(today.year, 1, 1).isoformat(), "end": today.isoformat()}))
+    report = cash_flow(form.cleaned_data["start"], form.cleaned_data["end"]) if form.is_valid() else None
+    if report and _wants_csv(request):
+        r = report
+        rows = [["Operating activities", "", ""], ["", "Net income", amt(r.net_income)]]
+        if r.noncash:
+            rows.append(["", "Depreciation and other non-cash charges", amt(r.noncash)])
+        rows += [[l.account.number, l.account.name, amt(l.amount)] for l in r.operating]
+        rows.append(["", "Net cash from operating activities", amt(r.total_operating)])
+        rows.append(["Investing activities", "", ""])
+        rows += [[l.account.number, l.account.name, amt(l.amount)] for l in r.investing]
+        rows.append(["", "Net cash from investing activities", amt(r.total_investing)])
+        rows.append(["Financing activities", "", ""])
+        rows += [[l.account.number, l.account.name, amt(l.amount)] for l in r.financing]
+        rows.append(["", "Net cash from financing activities", amt(r.total_financing)])
+        rows += [["", "Net change in cash", amt(r.net_change)], ["", "Cash at the start", amt(r.cash_start)],
+                 ["", "Cash at the end", amt(r.cash_end)], ["", "Change in bank accounts", amt(r.bank_change)],
+                 ["", "Difference", amt(r.difference)]]
+        return csv_response(f"cash-flow-{_suffix(r)}", ["Account", "Line", "Amount"], rows)
+    return render(request, "ledger/cash_flow.html", {"form": form, "report": report, "nav_active": "reports"})

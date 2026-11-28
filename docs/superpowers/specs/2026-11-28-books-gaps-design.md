@@ -137,6 +137,8 @@ Below: Net change in cash, Cash at the start (Bank subtype accounts, balance on 
 
 Credit cards are operating, as QuickBooks does. Undeposited funds follows its subtype (Other current asset, so operating).
 
+Depreciation (added during build, from the `finance:financial-statements` review, ASC 230): a Fixed asset or Other asset movement in an entry that also hits an expense account and touches no bank account is a non-cash charge. It shows once in Operating as "Depreciation and other non-cash charges", not in Investing. Without this, accumulated depreciation (a Fixed asset account here) would show depreciation as an investing inflow.
+
 Out of scope: direct method, comparisons with prior years, per-account reclassification.
 
 ## 5. Bad debt write-off
