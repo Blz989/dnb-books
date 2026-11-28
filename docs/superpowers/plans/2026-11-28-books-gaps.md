@@ -159,7 +159,7 @@ def write_off(invoice, *, date, amount, reason, user) -> CreditNote
 - [x] Commit: `Bad debt write-off`
 
 ## Task 8: Docs and PR
-- [ ] README: What it does rows and Status line.
-- [ ] CLAUDE.md: add this spec and plan to Source of truth.
-- [ ] Full `uv run pytest -q`.
-- [ ] Commit: `Docs: attachments, new reports, recurring, cash flow, write-off`; open the PR.
+- [x] README: What it does rows and Status line.
+- [x] CLAUDE.md: add this spec and plan to Source of truth.
+- [x] Full `uv run pytest -q`.
+- [x] Commit: `Docs: attachments, new reports, recurring, cash flow, write-off`; open the PR.
