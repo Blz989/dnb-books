@@ -1,0 +1,30 @@
+{% extends "core/report_base.html" %}
+{% block title %}Purchases by vendor{% endblock %}
+{% block page_title %}Purchases by vendor{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">{{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}</div>{% endif %}{% endblock %}
+{% block report %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>Vendor</th><th class="num">Bills</th><th class="num">Purchases</th><th class="num">Vendor credits</th><th class="num">Net purchases</th></tr></thead>
+  <tbody>
+  {% for r in report.rows %}
+    <tr><td><a href="/vendors/{{ r.vendor.pk }}/">{{ r.vendor.name }}</a></td><td class="num">{{ r.bills }}</td>
+      <td class="num">{{ r.purchases|floatformat:"2g" }}</td><td class="num">{{ r.credits|floatformat:"2g" }}</td>
+      <td class="num{% if r.net < 0 %} neg{% endif %}">{{ r.net|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">No bills or vendor credits in this range.</td></tr>
+  {% endfor %}
+  {% with t=report.total %}
+    <tr class="total"><td>Total</td><td class="num">{{ t.bills }}</td><td class="num">{{ t.purchases|floatformat:"2g" }}</td><td class="num">{{ t.credits|floatformat:"2g" }}</td><td class="num">{{ t.net|floatformat:"2g" }}</td></tr>
+  {% endwith %}
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% if report %}
+<h2>Check against the ledger</h2>
+<p class="help">Net purchases must equal what bills and vendor credits put through accounts payable in this range.</p>
+{% include "ledger/_tie_out.html" with checks=report.checks difference=report.difference %}
+{% endif %}
+{% endblock %}

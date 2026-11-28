@@ -8,6 +8,12 @@ GROUPS = [
         ("order-profitability", "Order profitability", "Profit per order after stock and drop-ship cost."),
         ("cash-forecast", "Cash forecast", "Cash on hand plus what's coming in, less what's going out."),
     ]),
+    ("Sales and purchases", [
+        ("sales-by-customer", "Sales by customer", "Sales and credits per customer for a date range."),
+        ("sales-by-item", "Sales by item", "Quantity and amount sold per item."),
+        ("purchases-by-vendor", "Purchases by vendor", "Bills and vendor credits per vendor."),
+        ("purchases-by-item", "Purchases by item", "Quantity and amount bought per item and expense account."),
+    ]),
     ("Receivables", [
         ("ar-aging", "A/R aging", "What customers owe, by how late it is."),
         ("open-invoices", "Open invoices", "Every invoice with a balance."),

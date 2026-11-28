@@ -1,0 +1,6 @@
+{# One check block: rows of (label, amount) then Difference, which must be 0.00. #}
+<div class="kpis tie-out">
+  {% for label, value in checks %}<div class="kpi"><div class="l">{{ label }}</div><div class="v">{{ value|floatformat:"2g" }}</div></div>{% endfor %}
+  <div class="kpi{% if difference != 0 %} warn{% endif %}"><div class="l">Difference</div><div class="v">{{ difference|floatformat:"2g" }}</div></div>
+</div>
+{% if difference != 0 %}<div class="banner error">This should be 0.00. Tell the person who maintains DNB Books.</div>{% endif %}
