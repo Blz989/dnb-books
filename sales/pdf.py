@@ -89,6 +89,35 @@ def invoice_pdf(invoice: Invoice) -> bytes:
     return invoice_document(invoice).write_pdf()
 
 
+PACKING_SLIP_CSS = INVOICE_CSS.with_name("packing_slip_pdf.css")
+
+
+def render_packing_slip_html(invoice: Invoice) -> str:
+    """What is in this shipment's box: stock lines with quantities, never prices. Drop-ship lines ship from the
+    vendor, so they are listed under the table instead."""
+    config = SalesSettings.load()
+    lines = [l for l in invoice.lines.select_related("item").order_by("position", "id") if not l.is_adjustment]
+    in_box = [l for l in lines if l.fulfillment != Fulfillment.DROP_SHIP]
+    separate = [{"vendor": l.drop_ship_vendor or "the vendor", "sku": l.item.sku, "quantity": l.quantity}
+                for l in lines if l.fulfillment == Fulfillment.DROP_SHIP]
+    ship_lines = _address(invoice.ship_to)
+    context = {
+        "invoice": invoice, "company": config, "company_address": _address(config.company_address),
+        "logo_uri": logo_uri(), "font_uri": FONT_DIR.as_uri(),
+        "bill_lines": _address(invoice.customer.billing_address),
+        "ship_first": ship_lines[0] if ship_lines else invoice.customer.name, "ship_lines": ship_lines[1:],
+        "lines": in_box, "total_quantity": sum(l.quantity for l in in_box), "separate": separate,
+        "is_void": invoice.status == DocStatus.VOID,
+        "expected_delivery": invoice.sales_order.expected_delivery_date if invoice.sales_order else None,
+    }
+    return render_to_string("sales/packing_slip_pdf.html", context)
+
+
+def packing_slip_pdf(invoice: Invoice) -> bytes:
+    html = HTML(string=render_packing_slip_html(invoice), base_url=Path(settings.BASE_DIR).as_uri() + "/")
+    return html.render(stylesheets=[CSS(filename=str(INVOICE_CSS)), CSS(filename=str(PACKING_SLIP_CSS))]).write_pdf()
+
+
 STATEMENT_CSS = Path(settings.BASE_DIR) / "sales" / "static" / "sales" / "statement_pdf.css"
 
 

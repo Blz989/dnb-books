@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ invoice.number }} packing slip</title>
+<style>
+@font-face { font-family: "Inter"; font-weight: 100 900; src: url("{{ font_uri }}/inter-latin-wght-normal.woff2") format("woff2"); }
+</style>
+</head>
+<body>
+{% if is_void %}<div class="void-mark">VOID</div>{% endif %}
+<div class="top">
+  <div class="brand">
+    {% if logo_uri %}<div class="logo"><img src="{{ logo_uri }}" alt=""></div>{% endif %}
+    <div class="co"><b>{{ company.company_name|default:"Your company" }}</b>{% for line in company_address %}<br>{{ line }}{% endfor %}{% if company.company_phone or company.company_email %}<br>{{ company.company_phone }}{% if company.company_phone and company.company_email %} · {% endif %}{{ company.company_email }}{% endif %}</div>
+  </div>
+  <h1>PACKING SLIP</h1>
+</div>
+
+<div class="boxes head">
+  <table class="meta">
+    <tr><td>Invoice#</td><td>: <b>{{ invoice.number }}</b></td></tr>
+    <tr><td>Ship Date</td><td>: {{ invoice.date|date:"j M Y" }}</td></tr>
+    <tr><td>Order#</td><td>: {% if invoice.sales_order %}{{ invoice.sales_order.number }}{% endif %}</td></tr>
+    {% if expected_delivery %}<tr><td>Expected delivery</td><td>: {{ expected_delivery|date:"j M Y" }}</td></tr>{% endif %}
+  </table>
+  <div class="empty"></div>
+</div>
+<div class="boxes addr">
+  <div><div class="label">Customer</div><div class="body"><b>{{ invoice.customer.name }}</b>{% for line in bill_lines %}<br>{{ line }}{% endfor %}</div></div>
+  <div><div class="label">Ship To</div><div class="body"><b>{{ ship_first }}</b>{% for line in ship_lines %}<br>{{ line }}{% endfor %}</div></div>
+</div>
+
+<table class="lines slip">
+  <thead><tr><th style="width:5%">#</th><th style="width:18%">SKU</th><th>Item &amp; Description</th><th style="width:15%">Packaging</th><th class="num" style="width:10%">Qty</th><th class="num" style="width:10%">Packed</th></tr></thead>
+  <tbody>
+  {% for line in lines %}
+    <tr><td class="n">{{ forloop.counter }}</td><td>{{ line.item.sku }}</td>
+      <td>{{ line.description|default:line.item.name }}</td><td>{{ line.item.packaging }}</td>
+      <td class="num">{{ line.quantity }}{% if line.item.unit %}<div class="unit">{{ line.item.unit|upper }}</div>{% endif %}</td>
+      <td class="num"><span class="check"></span></td></tr>
+  {% empty %}
+    <tr><td colspan="6" class="none">Nothing in this box. Every item on this invoice ships from a vendor.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="foot slip-foot">
+  <div class="left">
+    <div>Total quantity {{ total_quantity }}</div>
+    {% if separate %}<div class="separate">{% for s in separate %}<div>Shipping separately from {{ s.vendor }}: {{ s.sku }} × {{ s.quantity }}</div>{% endfor %}</div>{% endif %}
+  </div>
+  <div class="right received">
+    <div class="label">Received by</div>
+    <table class="sign-lines">
+      <tr><td class="k">Name</td><td class="rule"></td></tr>
+      <tr><td class="k">Signature</td><td class="rule"></td></tr>
+      <tr><td class="k">Date</td><td class="rule"></td></tr>
+    </table>
+  </div>
+</div>
+</body>
+</html>

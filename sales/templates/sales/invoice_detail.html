@@ -9,6 +9,7 @@
 {% block page_actions %}
   {% if not is_void %}<a class="btn" href="{% url 'sales:invoice-edit' invoice.number %}">Edit</a>{% endif %}
   <a class="btn" href="{% url 'sales:invoice-pdf' invoice.number %}">Download PDF</a>
+  <a class="btn" href="{% url 'sales:invoice-packing-slip' invoice.number %}" target="_blank" rel="noopener">Packing slip</a>
   {% if not is_void %}<a class="btn" href="/sales/payments/new/?customer={{ invoice.customer.pk }}&amp;invoice={{ invoice.number }}">Receive payment</a>{% endif %}
   {% if is_admin and not is_void and balance > 0 %}<a class="btn" href="{% url 'sales:invoice-write-off' invoice.number %}">Write off</a>{% endif %}
   {% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:invoice-void' invoice.number %}">Void</a>{% endif %}

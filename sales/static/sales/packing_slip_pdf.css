@@ -1,0 +1,10 @@
+/* Packing slip: the Classic invoice stylesheet, plus these rules. No money appears on a slip. */
+.lines.slip td.none { text-align: center; color: #6b6b6b; padding: 14px 6px; }
+.lines.slip .check { display: inline-block; width: 11px; height: 11px; border: 1px solid #555; }
+.slip-foot .separate { margin-top: 10px; font-size: 9pt; color: #444; }
+.slip-foot .received { padding: 8px 12px 10px; }
+.slip-foot .received .label { font-weight: 600; margin-bottom: 2px; }
+.slip-foot .sign-lines { width: 100%; border-collapse: collapse; }
+.slip-foot .sign-lines td { height: 26px; vertical-align: bottom; padding: 0; }
+.slip-foot .sign-lines td.k { width: 22%; font-size: 8.5pt; color: #6b6b6b; padding-bottom: 2px; }
+.slip-foot .sign-lines td.rule { border-bottom: 1px solid #555; }
