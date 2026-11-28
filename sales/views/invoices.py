@@ -372,6 +372,16 @@ def invoice_pdf_view(request, number):
     return response
 
 
+@login_required
+def packing_slip_view(request, number):
+    from ..pdf import packing_slip_pdf
+
+    invoice = get_object_or_404(Invoice.objects.select_related("customer", "sales_order"), number=number)
+    response = HttpResponse(packing_slip_pdf(invoice), content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="{invoice.number}-packing-slip.pdf"'
+    return response
+
+
 class WriteOffForm(forms.Form):
     date = date_field("Write-off date")
     amount = forms.DecimalField(label="Amount", max_digits=14, decimal_places=2,

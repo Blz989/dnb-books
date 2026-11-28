@@ -34,11 +34,11 @@ def list_recurring(user) -> dict
 - [x] Commit: `Claude tools: write-offs and recurring schedules`
 
 ## Task 3: Packing slips
-- [ ] `sales/pdf.py`: `render_packing_slip_html(invoice)`, `packing_slip_pdf(invoice)`; template `sales/packing_slip_pdf.html` and stylesheet reusing the Classic invoice CSS.
-- [ ] View and URL; Packing slip button on the invoice page.
-- [ ] Tests `tests/test_packing_slip.py`: stock lines and quantities in, no prices or totals, drop-ship note, drop-ship-only invoice, adjustment line left out, void mark.
-- [ ] Screenshots: invoice page with the button, packing slip PDF (stock and drop-ship), drop-ship-only slip.
-- [ ] Commit: `Packing slips`
+- [x] `sales/pdf.py`: `render_packing_slip_html(invoice)`, `packing_slip_pdf(invoice)`; template `sales/packing_slip_pdf.html` and stylesheet reusing the Classic invoice CSS.
+- [x] View and URL; Packing slip button on the invoice page.
+- [x] Tests `tests/test_packing_slip.py`: stock lines and quantities in, no prices or totals, drop-ship note, drop-ship-only invoice, adjustment line left out, void mark.
+- [x] Screenshots: invoice page with the button, packing slip PDF (stock and drop-ship), drop-ship-only slip.
+- [x] Commit: `Packing slips`
 
 ## Task 4: Docs and PR
 - [ ] README rows; Status line; CLAUDE.md source of truth.
