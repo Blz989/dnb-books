@@ -27,6 +27,11 @@ EXTRA = {
     "drop_ship_awaiting_bill": "Drop-ship invoice lines not yet billed by the vendor",
     "unpaid_invoices": "Every customer's unpaid invoices, aged, as of a date",
     "1099_summary": "Payments to 1099 vendors for a year (the year of the end date)",
+    "sales_by_customer": "Sales, credits, and write-offs per customer for a date range, checked against the ledger",
+    "sales_by_item": "Quantity and amount sold per item for a date range, optionally one customer",
+    "purchases_by_vendor": "Bills and vendor credits per vendor for a date range, checked against A/P",
+    "purchases_by_item": "Quantity and amount bought per item and expense account, optionally one vendor",
+    "cash_flow": "Statement of cash flows (indirect method) for a date range",
 }
 
 
@@ -70,7 +75,61 @@ def _fifo(sku: str, start_d, end_d) -> dict:
     return out
 
 
-def extra_report(user, report: str, *, as_of: str, start: str, end: str, account: str, sku: str) -> dict:
+def _books_gaps(report: str, start_d, end_d, customer: str, vendor: str) -> dict:
+    from ledger import sales_reports
+    from ledger.cash_flow import cash_flow
+
+    span = {"from": start_d.isoformat(), "to": end_d.isoformat()}
+    if report == "sales_by_customer":
+        r = sales_reports.sales_by_customer(start_d, end_d)
+
+        def row(x, name):
+            return {"customer": name, "invoices": x.invoices, "sales": fmt(x.sales), "credits": fmt(x.credits),
+                    "net": fmt(x.net), "written_off": fmt(x.written_off)}
+        return {**span, **_limited([row(x, x.customer.name) for x in r.rows], "rows", len(r.rows)),
+                "totals": row(r.total, "Total"), "other_income": fmt(r.other_income),
+                "pnl_income": fmt(r.pnl_income), "difference": fmt(r.difference)}
+    if report == "sales_by_item":
+        who = lookup.customer(customer) if customer.strip() else None
+        r = sales_reports.sales_by_item(start_d, end_d, customer=who)
+        rows = [{"sku": x.item.sku, "name": x.item.name, "quantity": x.quantity, "amount": fmt(x.amount),
+                 "average": fmt(x.average) if x.average is not None else ""} for x in r.rows]
+        return {**span, "customer": who.name if who else "All customers", **_limited(rows, "rows", len(rows)),
+                "total": fmt(r.total), "ledger_total": fmt(r.ledger_total), "difference": fmt(r.difference)}
+    if report == "purchases_by_vendor":
+        r = sales_reports.purchases_by_vendor(start_d, end_d)
+
+        def row(x, name):
+            return {"vendor": name, "bills": x.bills, "purchases": fmt(x.purchases), "credits": fmt(x.credits),
+                    "net": fmt(x.net)}
+        return {**span, **_limited([row(x, x.vendor.name) for x in r.rows], "rows", len(r.rows)),
+                "totals": row(r.total, "Total"), "ap_total": fmt(r.ap_total), "difference": fmt(r.difference)}
+    if report == "purchases_by_item":
+        who = lookup.vendor(vendor) if vendor.strip() else None
+        r = sales_reports.purchases_by_item(start_d, end_d, vendor=who)
+        rows = [{"sku_or_account": x.item.sku if x.item else x.account.number,
+                 "name": x.item.name if x.item else x.account.name, "quantity": x.quantity, "amount": fmt(x.amount),
+                 "average": fmt(x.average) if x.average is not None else ""} for x in r.rows]
+        return {**span, "vendor": who.name if who else "All vendors", **_limited(rows, "rows", len(rows)),
+                "total": fmt(r.total), "ledger_total": fmt(r.ledger_total), "difference": fmt(r.difference)}
+    # cash_flow
+    r = cash_flow(start_d, end_d)
+
+    def lines(xs):
+        return [{"account": f"{x.account.number} {x.account.name}", "amount": fmt(x.amount)} for x in xs]
+    return {**span, "net_income": fmt(r.net_income), "depreciation_and_noncash": fmt(r.noncash),
+            "operating": lines(r.operating), "total_operating": fmt(r.total_operating),
+            "investing": lines(r.investing), "total_investing": fmt(r.total_investing),
+            "financing": lines(r.financing), "total_financing": fmt(r.total_financing),
+            "net_change": fmt(r.net_change), "cash_start": fmt(r.cash_start), "cash_end": fmt(r.cash_end),
+            "bank_change": fmt(r.bank_change), "difference": fmt(r.difference)}
+
+
+GAPS = {"sales_by_customer", "sales_by_item", "purchases_by_vendor", "purchases_by_item", "cash_flow"}
+
+
+def extra_report(user, report: str, *, as_of: str, start: str, end: str, account: str, sku: str,
+                 customer: str = "", vendor: str = "") -> dict:
     today = _today()
     as_of_d = lookup.day(as_of, "as-of date", today)
     start_d = lookup.day(start, "start date", today.replace(month=1, day=1))
@@ -78,6 +137,8 @@ def extra_report(user, report: str, *, as_of: str, start: str, end: str, account
     if start_d > end_d:
         raise Refused("The start date is after the end date.")
 
+    if report in GAPS:
+        return _books_gaps(report, start_d, end_d, customer, vendor)
     if report == "general_ledger":
         if not account.strip():
             raise Refused("Choose an account for the general ledger.")

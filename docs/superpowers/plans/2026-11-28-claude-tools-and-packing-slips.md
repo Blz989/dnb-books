@@ -15,10 +15,10 @@ PR title: "Claude tools for reports, write-offs, and recurring schedules; packin
 - The packing slip shows no money anywhere.
 
 ## Task 1: Reports in `run_report`
-- [ ] `mcpserver/read_reports.py`: `sales_by_customer`, `sales_by_item`, `purchases_by_vendor`, `purchases_by_item`, `cash_flow` in `EXTRA`, with `customer` and `vendor` inputs passed through `run_report`.
-- [ ] `mcpserver/tools.py`: report names and the two inputs added to `run_report`, docstring updated.
-- [ ] Tests `tests/test_mcp_books_gaps.py`: each report's figures equal the screen function's; unknown customer refused.
-- [ ] Commit: `Claude tools: sales and purchase reports and the cash flow statement`
+- [x] `mcpserver/read_reports.py`: `sales_by_customer`, `sales_by_item`, `purchases_by_vendor`, `purchases_by_item`, `cash_flow` in `EXTRA`, with `customer` and `vendor` inputs passed through `run_report`.
+- [x] `mcpserver/tools.py`: report names and the two inputs added to `run_report`, docstring updated.
+- [x] Tests `tests/test_mcp_books_gaps.py`: each report's figures equal the screen function's; unknown customer refused.
+- [x] Commit: `Claude tools: sales and purchase reports and the cash flow statement`
 
 ## Task 2: Write-off and recurring tools
 Interfaces:
@@ -28,10 +28,10 @@ OPERATIONS = {"write_off_invoice": ..., "create_recurring_bill": ..., "create_re
               "pause_recurring": ..., "resume_recurring": ...}
 def list_recurring(user) -> dict
 ```
-- [ ] Operations registered in `write.OPERATIONS`; tools in `tools.py`.
-- [ ] Recurring line checks reuse `ledger.recurring_views.bill_lines` / `journal_lines` (rows built from the tool input).
-- [ ] Tests in `tests/test_mcp_books_gaps.py`: preview saves nothing, confirm saves exactly the preview, admin-only write-off, app messages pass through, duplicate names refused, pause and resume.
-- [ ] Commit: `Claude tools: write-offs and recurring schedules`
+- [x] Operations registered in `write.OPERATIONS`; tools in `tools.py`.
+- [x] Recurring line checks reuse `ledger.recurring_views.bill_lines` / `journal_lines` (rows built from the tool input).
+- [x] Tests in `tests/test_mcp_books_gaps.py`: preview saves nothing, confirm saves exactly the preview, admin-only write-off, app messages pass through, duplicate names refused, pause and resume.
+- [x] Commit: `Claude tools: write-offs and recurring schedules`
 
 ## Task 3: Packing slips
 - [ ] `sales/pdf.py`: `render_packing_slip_html(invoice)`, `packing_slip_pdf(invoice)`; template `sales/packing_slip_pdf.html` and stylesheet reusing the Classic invoice CSS.

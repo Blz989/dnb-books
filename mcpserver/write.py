@@ -369,9 +369,12 @@ OPERATIONS = {
 # Imported here, after everything above is defined, because write_more borrows nothing from this module.
 from .write_more import OPERATIONS as _MORE  # noqa: E402
 from .write_void import GUARDED, OPERATIONS as _VOIDS, require_admin  # noqa: E402
+from .write_gaps import OPERATIONS as _GAPS  # noqa: E402
 
 OPERATIONS.update(_MORE)
 OPERATIONS.update(_VOIDS)
+OPERATIONS.update(_GAPS)
+_NAMED = {"create_recurring_bill", "create_recurring_journal_entry", "pause_recurring", "resume_recurring"}
 
 
 # ---- preview and confirm ----
@@ -410,7 +413,7 @@ def preview(user, operation: str, payload: dict) -> dict:
         number = payload.get("number", "")
         note = (f"Nothing is changed yet. To make this change, call confirm_change with this confirmation_id and "
                 f"confirm_document set to {number}.")
-    elif tool.startswith("save_"):
+    elif tool.startswith("save_") or tool in _NAMED:
         note = "Nothing is saved yet."
     else:
         note = f"Nothing is saved yet. The number {number} is the next free one and may change if someone saves first."

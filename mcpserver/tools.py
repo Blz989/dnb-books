@@ -5,7 +5,7 @@ from mcp.server.mcpserver import Context
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
-from . import read, read_more, write, write_void
+from . import read, read_gaps, read_more, write, write_void
 from .runtime import run
 
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -88,6 +88,22 @@ class BillAdjustment(BaseModel):
 class InvoiceAdjustment(BaseModel):
     amount: str = Field(description="Signed amount, like -10.00 to lower the invoice or 25.00 to raise it. 0.00 removes it.")
     note: str = Field("", description="Shown on the invoice. Defaults to Adjustment.")
+
+
+class RecurringBillLine(BaseModel):
+    account: str = Field(description="Expense account number or name, like 6000 or Rent.")
+    amount: str
+    description: str = ""
+
+
+class RecurringEntryLine(BaseModel):
+    account: str = Field(description="Account number or name.")
+    debit: str = ""
+    credit: str = ""
+    description: str = ""
+
+
+Frequency = Literal["weekly", "every 2 weeks", "monthly", "every 3 months", "every 6 months", "yearly"]
 
 
 class BillCredit(BaseModel):
@@ -255,23 +271,76 @@ def register(mcp):
                         "bills_due", "low_stock", "inventory_valuation", "order_profitability", "cash_forecast",
                         "general_ledger", "bank_register", "stock_movements", "fifo_lots", "negative_stock",
                         "customer_balances", "vendor_balances", "open_sales_orders", "open_purchase_orders",
-                        "undeposited_funds", "drop_ship_awaiting_bill", "unpaid_invoices", "1099_summary"],
+                        "undeposited_funds", "drop_ship_awaiting_bill", "unpaid_invoices", "1099_summary",
+                        "sales_by_customer", "sales_by_item", "purchases_by_vendor", "purchases_by_item", "cash_flow"],
         as_of: str = "", start: str = "", end: str = "", basis: Literal["accrual", "cash"] = "accrual",
         compare_years: int = Field(0, ge=0, le=3, description="Same dates in up to 3 earlier years."),
         view: Literal["daily", "weekly", "monthly"] = "weekly", overdue_only: bool = False,
         account: str = Field("", description="Account number or name, for general_ledger and bank_register."),
         sku: str = Field("", description="Item SKU, for fifo_lots and optionally stock_movements."),
+        customer: str = Field("", description="Customer name, to narrow sales_by_item to one customer."),
+        vendor: str = Field("", description="Vendor name, to narrow purchases_by_item to one vendor."),
     ) -> dict:
         """Run a report. as_of (YYYY-MM-DD) is for balance sheet, trial balance, agings, open invoices, valuation,
         and the due-through date of bills_due. start and end are for profit and loss and order profitability.
         basis and compare_years apply to profit and loss; compare_years also to balance sheet and trial balance.
         view applies to cash_forecast. general_ledger and bank_register need account and use start and end.
         fifo_lots needs sku. 1099_summary uses the year of end. customer_balances, vendor_balances, and
-        unpaid_invoices use as_of. Dates default to today, and start to January 1."""
+        unpaid_invoices use as_of. sales_by_customer, sales_by_item, purchases_by_vendor, purchases_by_item, and
+        cash_flow use start and end; each returns a difference against the ledger that should be 0.00.
+        Dates default to today, and start to January 1."""
         return run(ctx, "run_report", read.run_report, report=report, as_of=as_of, start=start, end=end, basis=basis,
-                   compare_years=compare_years, view=view, overdue_only=overdue_only, account=account, sku=sku)
+                   compare_years=compare_years, view=view, overdue_only=overdue_only, account=account, sku=sku,
+                   customer=customer, vendor=vendor)
+
+    @mcp.tool(annotations=READ)
+    def list_recurring(ctx: Context) -> dict:
+        """Every recurring bill and recurring journal entry: frequency, amount, next date, status (Active, Paused,
+        Ended), and the last error if a run failed."""
+        return run(ctx, "list_recurring", read_gaps.list_recurring)
 
     # ---- write: preview ----
+
+    @mcp.tool(annotations=PREVIEW)
+    def write_off_invoice(ctx: Context, invoice: str, reason: str, amount: str = "", date: str = "") -> dict:
+        """Preview writing off an invoice the customer won't pay, to the bad debt account set in Sales settings.
+        amount defaults to the invoice balance; date to today. Admin only. It lowers the order's profit and the
+        handling owed. Nothing is saved until confirm_change."""
+        return run(ctx, "write_off_invoice", write.preview, operation="write_off_invoice",
+                   payload={"invoice": invoice, "reason": reason, "amount": amount, "date": date})
+
+    @mcp.tool(annotations=PREVIEW)
+    def create_recurring_bill(ctx: Context, name: str, vendor: str, lines: list[RecurringBillLine],
+                              start_date: str, frequency: Frequency = "monthly", end_date: str = "",
+                              terms: str = "", notes: str = "") -> dict:
+        """Preview a bill that repeats (rent, utilities). Expense lines only. Each date's bill is created and posted
+        early that morning. terms defaults to the vendor's. Nothing is saved until confirm_change."""
+        return run(ctx, "create_recurring_bill", write.preview, operation="create_recurring_bill", payload={
+            "name": name, "vendor": vendor, "lines": _dump(lines), "start_date": start_date, "frequency": frequency,
+            "end_date": end_date, "terms": terms, "notes": notes})
+
+    @mcp.tool(annotations=PREVIEW)
+    def create_recurring_journal_entry(ctx: Context, name: str, lines: list[RecurringEntryLine], start_date: str,
+                                       frequency: Frequency = "monthly", end_date: str = "",
+                                       memo: str = "") -> dict:
+        """Preview a journal entry that repeats (depreciation, accruals). Debits must equal credits. Each date's
+        entry is posted early that morning. Nothing is saved until confirm_change."""
+        return run(ctx, "create_recurring_journal_entry", write.preview, operation="create_recurring_journal_entry",
+                   payload={"name": name, "lines": _dump(lines), "start_date": start_date, "frequency": frequency,
+                            "end_date": end_date, "memo": memo})
+
+    @mcp.tool(annotations=PREVIEW)
+    def pause_recurring(ctx: Context, kind: Literal["bill", "journal_entry"], name: str) -> dict:
+        """Preview pausing a recurring bill or journal entry by its name. Nothing is changed until confirm_change."""
+        return run(ctx, "pause_recurring", write.preview, operation="pause_recurring",
+                   payload={"kind": kind, "name": name})
+
+    @mcp.tool(annotations=PREVIEW)
+    def resume_recurring(ctx: Context, kind: Literal["bill", "journal_entry"], name: str) -> dict:
+        """Preview resuming a paused recurring bill or journal entry. Dates passed while paused are skipped.
+        Nothing is changed until confirm_change."""
+        return run(ctx, "resume_recurring", write.preview, operation="resume_recurring",
+                   payload={"kind": kind, "name": name})
 
     @mcp.tool(annotations=PREVIEW)
     def create_invoice(ctx: Context, customer: str, lines: list[SaleLine], date: str = "", sales_order: str = "",
