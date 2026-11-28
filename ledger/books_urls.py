@@ -19,3 +19,7 @@ urlpatterns = [
     path("month-close/<str:month>/close-anyway/", views.period_close_anyway, name="period-close-anyway"),
     path("month-close/<str:month>/reopen/", views.period_reopen, name="period-reopen"),
 ]
+
+from .recurring_views import JOURNALS, urls as recurring_urls  # noqa: E402
+
+urlpatterns += recurring_urls(JOURNALS)

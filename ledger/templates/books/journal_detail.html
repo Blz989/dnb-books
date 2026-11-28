@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ entry.display_number }}{% endblock %}
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'books:journal' %}">Journal entries</a></div>{% endblock %}
 {% block page_title %}{{ entry.display_number }} {% if entry.status == "VOID" %}<span class="tag void">Void</span>{% elif entry.status == "DRAFT" %}<span class="tag ns">Draft</span>{% else %}<span class="tag">Posted</span>{% endif %}{% endblock %}
@@ -38,4 +39,5 @@
 </table>
 </div>
 {% if entry.status != "DRAFT" %}<p class="help">Posted entries can't be changed. To correct one, void it and enter a new one.</p>{% endif %}
+{% attachments_card entry %}
 {% endblock %}

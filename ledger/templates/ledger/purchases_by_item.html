@@ -1,0 +1,33 @@
+{% extends "core/report_base.html" %}
+{% block title %}Purchases by item{% endblock %}
+{% block page_title %}Purchases by item{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">{{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}</div>{% endif %}{% endblock %}
+{% block report %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>SKU or account</th><th>Name</th><th class="num">Quantity</th><th class="num">Amount</th><th class="num">Average cost</th></tr></thead>
+  <tbody>
+  {% for r in report.rows %}
+    {% if r.item %}
+    <tr><td><a class="sku" href="/items/{{ r.item.sku }}/">{{ r.item.sku }}</a></td><td>{{ r.item.name }}</td>
+      <td class="num{% if r.quantity < 0 %} neg{% endif %}">{{ r.quantity }}</td><td class="num{% if r.amount < 0 %} neg{% endif %}">{{ r.amount|floatformat:"2g" }}</td>
+      <td class="num">{% if r.average is not None %}{{ r.average|floatformat:"4g" }}{% else %}<span class="dash">—</span>{% endif %}</td></tr>
+    {% else %}
+    <tr><td>{{ r.account.number }}</td><td>{{ r.account.name }} <span class="dash">expense lines</span></td><td></td>
+      <td class="num{% if r.amount < 0 %} neg{% endif %}">{{ r.amount|floatformat:"2g" }}</td><td></td></tr>
+    {% endif %}
+  {% empty %}<tr><td colspan="5" class="empty">Nothing billed in this range.</td></tr>
+  {% endfor %}
+    <tr class="total"><td></td><td>Total</td><td></td><td class="num">{{ report.total|floatformat:"2g" }}</td><td></td></tr>
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% if report %}
+<h2>Check against the ledger</h2>
+<p class="help">Bills count on their date. A voided bill counts again, negative, on the day it was voided, the way the ledger books it.</p>
+{% include "ledger/_tie_out.html" with checks=report.checks difference=report.difference %}
+{% endif %}
+{% endblock %}

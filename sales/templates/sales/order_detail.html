@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% load purchasing_tags handling_tags %}
 {% block title %}{{ order.number }}{% endblock %}
 {% block page_title %}{{ order.number }}{% endblock %}
@@ -50,4 +51,5 @@
 </table>
 </div>
 {% profit_panel order.number %}
+{% attachments_card order %}
 {% endblock %}

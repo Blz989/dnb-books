@@ -40,6 +40,7 @@ DNB_RCLONE = [os.environ.get("DNB_RCLONE", "rclone")]
 # Scheduler (docker compose "scheduler" service), local time, HH:MM.
 DNB_BACKUP_TIME = os.environ.get("DNB_BACKUP_TIME", "01:15")
 DNB_DRILL_TIME = os.environ.get("DNB_DRILL_TIME", "02:15")
+DNB_RECURRING_TIME = os.environ.get("DNB_RECURRING_TIME", "05:00")
 
 # Banking. Plaid keys come only from .env; DNB_FIELD_KEY encrypts the stored Plaid access tokens.
 PLAID_CLIENT_ID = os.environ.get("PLAID_CLIENT_ID", "")

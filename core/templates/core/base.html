@@ -61,6 +61,7 @@
         <a href="/purchasing/bills/"{% if nav_active == "bills" %} class="on"{% endif %}>Bills</a>
         <a href="/purchasing/pay/"{% if nav_active == "pay-bills" %} class="on"{% endif %}>Pay bills</a>
         <a href="/purchasing/credits/"{% if nav_active == "vendor-credits" %} class="on"{% endif %}>Vendor credits</a>
+        <a href="{% url 'purchasing:recurring-list' %}"{% if nav_active == "recurring-bills" %} class="on"{% endif %}>Recurring bills</a>
         <a href="/handling/"{% if nav_active == "handling" %} class="on"{% endif %}>Handling</a>
       </details>
       <details class="grp" data-grp="banking" open>
@@ -81,6 +82,7 @@
       <details class="grp" data-grp="accountant" open>
         <summary class="sec"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5h9a1 1 0 0 1 1 1v12H6a1 1 0 0 1-1-1zM5 14.5a1 1 0 0 1 1-1h9M8 7h4"/></svg>Accountant<svg class="chev" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 8 3 3 3-3"/></svg></summary>
         <a href="{% url 'books:journal' %}"{% if nav_active == "journal" %} class="on"{% endif %}>Journal entries</a>
+        <a href="{% url 'books:recurring-list' %}"{% if nav_active == "recurring-journals" %} class="on"{% endif %}>Recurring journal entries</a>
         <a href="{% url 'books:accounts' %}"{% if nav_active == "accounts" %} class="on"{% endif %}>Chart of accounts</a>
         <a href="{% url 'books:periods' %}"{% if nav_active == "periods" %} class="on"{% endif %}>Month close</a>
       </details>

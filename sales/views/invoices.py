@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -15,6 +16,7 @@ from items.errors import NegativeStockWarning, StockError
 from items.models import Item
 from items.stock import on_hand
 from ledger.errors import PostingError
+from ledger.forms import date_field
 
 from ..balances import (
     _TOLERANCE as UNPAID_TOLERANCE, invoice_applied, invoice_balance, invoice_total, invoices_with_balances,
@@ -368,3 +370,40 @@ def invoice_pdf_view(request, number):
     response = HttpResponse(invoice_pdf(invoice), content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="{invoice.number}.pdf"'
     return response
+
+
+class WriteOffForm(forms.Form):
+    date = date_field("Write-off date")
+    amount = forms.DecimalField(label="Amount", max_digits=14, decimal_places=2,
+                                error_messages={"required": "Enter an amount above zero.",
+                                                "invalid": "Enter an amount like 125.00."})
+    reason = forms.CharField(label="Reason", required=False, max_length=150,
+                             help_text="Shown on the credit note, for example \"Customer closed its business\".")
+
+
+@login_required
+def invoice_write_off(request, number):
+    """Admin only: write the balance (or part of it) off to the bad debt account. Spec 5."""
+    from ..posting.writeoff import write_off
+
+    require_admin(request.user)
+    invoice = invoice_or_404(number)
+    balance = invoice_balance(invoice)
+    context = {"invoice": invoice, "balance": balance, "nav_active": "invoices",
+               "account": SalesSettings.load().bad_debt_account}
+    if context["account"] is None:
+        context["errors"] = ["Set the bad debt account in Settings, Sales first."]
+        context["settings_link"] = "/sales/settings/"
+    if request.method != "POST":
+        form = WriteOffForm(initial={"date": timezone.localdate().isoformat(), "amount": f"{balance:.2f}"})
+        return render(request, "sales/invoice_write_off.html", {**context, "form": form})
+    form = WriteOffForm(request.POST)
+    if form.is_valid():
+        d = form.cleaned_data
+        try:
+            note = write_off(invoice, date=d["date"], amount=d["amount"], reason=d["reason"], user=request.user)
+        except (SalesError, PostingError) as exc:
+            return render(request, "sales/invoice_write_off.html", {**context, "form": form, **common.error_context(exc)})
+        messages.success(request, f"{d['amount']:,.2f} of {invoice.number} was written off as {note.number}.")
+        return redirect(reverse("sales:invoice-detail", args=[invoice.number]))
+    return render(request, "sales/invoice_write_off.html", {**context, "form": form})

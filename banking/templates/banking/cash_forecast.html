@@ -32,18 +32,18 @@
 <div class="two-col">
   <div class="card"><div class="card-h">Money coming in</div>
   <table class="data"><thead><tr><th>Expected</th><th>Invoice</th><th>Customer</th><th class="num">Amount</th></tr></thead><tbody>
-  {% for x in ins %}<tr><td class="nowrap">{{ x.expected|date:"M j" }}<div class="dash small">{{ x.note }}</div></td><td><a class="sku" href="{% url x.url_name x.number %}">{{ x.number }}</a></td><td>{{ x.party }}</td><td class="num">{{ x.amount|floatformat:"2g" }}</td></tr>
+  {% for x in ins %}<tr><td class="nowrap">{{ x.expected|date:"M j" }}<div class="dash small">{{ x.note }}</div></td><td><a class="sku" href="{% url x.url_name x.number %}">{{ x.label|default:x.number }}</a></td><td>{{ x.party }}</td><td class="num">{{ x.amount|floatformat:"2g" }}</td></tr>
   {% empty %}<tr><td colspan="4" class="empty">No open invoices in this range.</td></tr>{% endfor %}
   </tbody></table></div>
   <div class="card"><div class="card-h">Money going out</div>
   <table class="data"><thead><tr><th>Expected</th><th>Bill</th><th>Vendor</th><th class="num">Amount</th></tr></thead><tbody>
-  {% for x in outs %}<tr><td class="nowrap">{{ x.expected|date:"M j" }}<div class="dash small">{{ x.note }}</div></td><td><a class="sku" href="{% url x.url_name x.number %}">{{ x.number }}</a></td><td>{{ x.party }}</td><td class="num">{{ x.amount|floatformat:"2g" }}</td></tr>
+  {% for x in outs %}<tr><td class="nowrap">{{ x.expected|date:"M j" }}<div class="dash small">{{ x.note }}</div></td><td><a class="sku" href="{% url x.url_name x.number %}">{{ x.label|default:x.number }}</a></td><td>{{ x.party }}</td><td class="num">{{ x.amount|floatformat:"2g" }}</td></tr>
   {% empty %}<tr><td colspan="4" class="empty">No open bills in this range.</td></tr>{% endfor %}
   </tbody></table></div>
 </div>
 <div class="card"><div class="body notes">
-  <p><b>What's included.</b> Bank accounts and Undeposited Funds as of today, open invoices, and open bills. Overdue bills count as paid today.</p>
-  <p><b>Not included.</b> Rent, payroll, loan payments, and other costs until they're entered as bills. Credit card balances. Past about a month, the real figure will usually be lower than shown.</p>
+  <p><b>What's included.</b> Bank accounts and Undeposited Funds as of today, open invoices, open bills, and bills that recurring schedules will create (on each bill's due date). Overdue bills count as paid today.</p>
+  <p><b>Not included.</b> Payroll, loan payments, and other costs until they're entered as bills or set up as recurring bills. Credit card balances. Past about a month, the real figure will usually be lower than shown.</p>
   {% if f.beyond_in or f.beyond_out %}<p><b>After this range.</b> {{ f.beyond_in|floatformat:"2g" }} coming in and {{ f.beyond_out|floatformat:"2g" }} going out.</p>{% endif %}
 </div></div>
 <script src="{% static 'core/charts.js' %}" defer></script>

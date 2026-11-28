@@ -26,16 +26,19 @@ def logo_extension(data: bytes) -> str | None:
 class SalesSettingsForm(forms.ModelForm):
     class Meta:
         model = SalesSettings
-        fields = ["ar_account", "undeposited_account", "returns_account", "default_invoice_notes", "invoice_layout"]
+        fields = ["ar_account", "undeposited_account", "returns_account", "bad_debt_account", "default_invoice_notes",
+                  "invoice_layout"]
         widgets = {"default_invoice_notes": forms.Textarea(attrs={"rows": 3})}
         labels = {
             "ar_account": "Accounts receivable account",
             "undeposited_account": "Undeposited Funds account",
             "returns_account": "Sales returns and allowances account",
+            "bad_debt_account": "Bad debt account",
             "default_invoice_notes": "Default invoice notes",
             "invoice_layout": "Invoice layout",
         }
-        help_texts = {"invoice_layout": "Applies to every invoice each time it is printed."}
+        help_texts = {"invoice_layout": "Applies to every invoice each time it is printed.",
+                      "bad_debt_account": "Used when an admin writes off an invoice that won't be paid."}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -48,6 +51,10 @@ class SalesSettingsForm(forms.ModelForm):
             self.fields[name].queryset = Account.objects.filter(subtype__in=subtypes, is_active=True)
             self.fields[name].required = True
             self.fields[name].error_messages["required"] = "Choose an account."
+        self.fields["bad_debt_account"].queryset = Account.objects.filter(
+            subtype__in=[AccountSubtype.EXPENSE, AccountSubtype.OTHER_EXPENSE], is_active=True)
+        self.fields["bad_debt_account"].required = False
+        self.fields["bad_debt_account"].empty_label = "Not set"
         self.fields["default_invoice_notes"].required = False
         self.fields["invoice_layout"].required = False
 

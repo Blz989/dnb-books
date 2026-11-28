@@ -1,0 +1,30 @@
+{% extends "core/report_base.html" %}
+{% block title %}Sales by customer{% endblock %}
+{% block page_title %}Sales by customer{% endblock %}
+{% block page_subtitle %}{% if report %}<div class="sub">{{ report.start|date:"Y-m-d" }} to {{ report.end|date:"Y-m-d" }}</div>{% endif %}{% endblock %}
+{% block report %}
+<div class="card">
+{% include "ledger/_filter_form.html" %}
+{% if report %}
+<table class="data">
+  <thead><tr><th>Customer</th><th class="num">Invoices</th><th class="num">Sales</th><th class="num">Credits</th><th class="num">Net sales</th><th class="num">Written off</th></tr></thead>
+  <tbody>
+  {% for r in report.rows %}
+    <tr><td><a href="/customers/{{ r.customer.pk }}/">{{ r.customer.name }}</a></td><td class="num">{{ r.invoices }}</td>
+      <td class="num">{{ r.sales|floatformat:"2g" }}</td><td class="num">{{ r.credits|floatformat:"2g" }}</td>
+      <td class="num{% if r.net < 0 %} neg{% endif %}">{{ r.net|floatformat:"2g" }}</td><td class="num">{{ r.written_off|floatformat:"2g" }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">No sales in this range.</td></tr>
+  {% endfor %}
+  {% with t=report.total %}
+    <tr class="total"><td>Total</td><td class="num">{{ t.invoices }}</td><td class="num">{{ t.sales|floatformat:"2g" }}</td><td class="num">{{ t.credits|floatformat:"2g" }}</td><td class="num">{{ t.net|floatformat:"2g" }}</td><td class="num">{{ t.written_off|floatformat:"2g" }}</td></tr>
+  {% endwith %}
+  </tbody>
+</table>
+{% endif %}
+</div>
+{% if report %}
+<h2>Check against the ledger</h2>
+<p class="help">Net sales plus income from other entries (journal entries, bank entries) must equal income on the profit and loss. Written off is an expense, not a reduction of sales.</p>
+{% include "ledger/_tie_out.html" with checks=report.checks difference=report.difference %}
+{% endif %}
+{% endblock %}

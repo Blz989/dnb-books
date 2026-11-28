@@ -239,4 +239,4 @@ def test_sidebar_groups_collapse(adm, db):
 
 def test_report_groups_have_headers(adm, db):
     html = adm.get("/reports/trial-balance/").content.decode()
-    assert html.count('class="report-group-h"') == 5
+    assert html.count('class="report-group-h"') == 6

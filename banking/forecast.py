@@ -1,8 +1,8 @@
 """Cash forecast: cash on hand today, plus open invoices when each customer usually pays, less open bills when due.
 
 Starting cash is read from posted ledger lines (bank accounts and Undeposited Funds). Upcoming money comes from
-open documents, because it hasn't reached the ledger yet. Nothing recurring (rent, payroll) is included unless it has
-been entered as a bill.
+open documents, because it hasn't reached the ledger yet. Recurring bills not yet created count on the due date of
+the bill each one will create; other costs (payroll) count once they're entered as bills.
 """
 import calendar
 from collections import defaultdict
@@ -35,6 +35,7 @@ class Flow:
     due: date
     note: str = ""
     url_name: str = ""
+    label: str = ""  # link text when it isn't the document number (a recurring schedule)
 
 
 @dataclass
@@ -144,6 +145,27 @@ def _periods(today: date, view: str) -> list[Period]:
     return out
 
 
+def recurring_flows(today: date, horizon: date) -> list[Flow]:
+    """Bills that active recurring schedules will create from today through the horizon, placed on each bill's due
+    date. One created inside the range but due after it counts in "After this range"."""
+    from contacts.models import due_date as terms_due_date
+    from ledger.recurring import upcoming
+    from purchasing.models import RecurringBill
+
+    out = []
+    for p in RecurringBill.objects.filter(is_active=True).select_related("vendor").prefetch_related("lines"):
+        amount = money(sum((l.amount for l in p.lines.all()), ZERO))
+        if amount <= 0:
+            continue
+        terms = p.terms or p.vendor.terms
+        for d in upcoming(p, today - timedelta(days=1), horizon):
+            due = terms_due_date(terms, d)
+            out.append(Flow(max(due, today), "out", amount, str(p.pk), p.vendor.name, due,
+                            f"Recurring: {p.name}, billed {d:%b} {d.day}", "purchasing:recurring-detail",
+                            label="Recurring"))
+    return out
+
+
 def build(today: date, view: str = "weekly") -> Forecast:
     if view not in VIEWS:
         view = "weekly"
@@ -169,10 +191,10 @@ def build(today: date, view: str = "weekly") -> Forecast:
         note = "Overdue" if bill.due_date < today else "Due date"
         flows.append(Flow(expected, "out", row.balance, bill.number, bill.vendor.name, bill.due_date, note,
                           "purchasing:bill-detail"))
-    flows.sort(key=lambda f: (f.expected, f.kind, f.number))
-
     periods = _periods(today, view)
     horizon = periods[-1].end
+    flows += recurring_flows(today, horizon)
+    flows.sort(key=lambda f: (f.expected, f.kind, f.number))
     running = bank + undeposited
     beyond_in = beyond_out = ZERO
     for p in periods:

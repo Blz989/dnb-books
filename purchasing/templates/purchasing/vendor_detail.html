@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ vendor.name }}{% endblock %}
 {% block page_title %}{{ vendor.name }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><span class="tag">{{ vendor.get_terms_display }}</span>{% if vendor.is_1099 %} <span class="tag">1099</span>{% endif %}{% if not vendor.is_active %} <span class="tag ns">Inactive</span>{% endif %}</div>{% endblock %}
@@ -75,4 +76,5 @@
   </tbody>
 </table>
 </div>
+{% attachments_card vendor %}
 {% endblock %}

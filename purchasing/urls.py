@@ -43,3 +43,7 @@ urlpatterns += [
     path("credits/<docnum:number>/apply/", credits.credit_apply, name="credit-apply"),
     path("credits/<docnum:number>/void/", credits.credit_void, name="credit-void"),
 ]
+
+from ledger.recurring_views import BILLS, urls as recurring_urls  # noqa: E402
+
+urlpatterns += recurring_urls(BILLS)

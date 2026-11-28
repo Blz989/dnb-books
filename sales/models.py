@@ -64,6 +64,7 @@ class SalesSettings(models.Model):
     ar_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     undeposited_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     returns_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    bad_debt_account = models.ForeignKey(Account, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     company_name = models.CharField(max_length=200, blank=True)
     company_address = models.TextField(blank=True)
     company_phone = models.CharField(max_length=50, blank=True)
@@ -289,6 +290,9 @@ class CreditNote(models.Model):
     void_reason = models.CharField(max_length=200, blank=True)
     created_by = models.ForeignKey(USER, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
+    # Set on a bad debt write-off (spec 5): the only invoice it can be applied to.
+    write_off_of = models.ForeignKey("Invoice", null=True, blank=True, on_delete=models.PROTECT,
+                                     related_name="write_offs")
 
     class Meta:
         ordering = ["-date", "-id"]

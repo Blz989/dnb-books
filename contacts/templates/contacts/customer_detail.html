@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ customer.name }}{% endblock %}
 {% block page_title %}{{ customer.name }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><span class="tag">{{ customer.get_terms_display }}</span>{% if not customer.is_active %} <span class="tag ns">Inactive</span>{% endif %}</div>{% endblock %}
@@ -75,4 +76,5 @@
   </tbody>
 </table>
 </div>
+{% attachments_card customer %}
 {% endblock %}

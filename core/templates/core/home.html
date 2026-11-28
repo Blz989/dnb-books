@@ -21,6 +21,7 @@
 {% if purchasing_unconfigured %}
 <div class="banner info">Purchasing isn't set up yet. Choose the accounts payable account in Purchasing settings. <a href="{% url 'purchasing:settings' %}">Open settings</a></div>
 {% endif %}
+{% for e in recurring_errors %}<div class="banner error">{{ e.label }} {{ e.p.name }} couldn't be created for {{ e.p.last_error_date|date:"Y-m-d" }}: {{ e.p.last_error }} <a href="{{ e.url }}">Open it →</a></div>{% endfor %}
 {% if backup.level != "ok" %}<div class="banner {{ backup.level }}">{{ backup.message }}</div>{% endif %}
 <div class="section-h">Last 12 months</div>
 <div class="charts">
@@ -42,6 +43,17 @@
   <div class="kpi{% if bills_overdue_count %} warn{% endif %}"><div class="l">Overdue bills</div><div class="v">{{ bills_overdue_total|floatformat:"2g" }}</div><div class="note"><a href="/purchasing/bills/?overdue=1">{{ bills_overdue_count }} overdue bill{{ bills_overdue_count|pluralize }}</a></div></div>
   {% if handling_due %}<div class="kpi warn"><div class="l">Handling</div><div class="v" style="font-size:16px"><a href="{% url 'handling:preview' handling_due.end %}">Handling bill due for {{ handling_due.label }}</a></div><div class="note">{% if handling_due_count > 1 %}{{ handling_due_count }} periods are waiting. {% endif %}<a href="{% url 'handling:runs' %}">Handling bills</a></div></div>{% endif %}
 </div>
+{% if recurring_recent %}
+<div class="section-h">Created by recurring schedules</div>
+<div class="card">
+<table class="data">
+  <thead><tr><th>Date</th><th>Schedule</th><th>Created</th></tr></thead>
+  <tbody>
+  {% for r in recurring_recent %}<tr><td class="nowrap">{{ r.date|date:"Y-m-d" }}</td><td>{{ r.name }} <span class="dash">{{ r.kind }}</span></td><td><a class="sku" href="{{ r.url }}">{{ r.number }}</a></td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
 <div class="section-h">Banking</div>
 <div class="kpis">
   <div class="kpi"><div class="l">Inbox items waiting</div><div class="v">{{ bank_inbox_count }}</div><div class="note"><a href="/banking/inbox/">Open the inbox</a></div></div>

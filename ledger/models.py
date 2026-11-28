@@ -191,5 +191,77 @@ class AccountingPeriod(models.Model):
         return f"{self.year}-{self.month:02d}"
 
 
-for _model in (Account, JournalEntry, JournalLine, AccountingPeriod):
+class Frequency(models.TextChoices):
+    WEEKLY = "WEEKLY", "Weekly"
+    BIWEEKLY = "BIWEEKLY", "Every 2 weeks"
+    MONTHLY = "MONTHLY", "Monthly"
+    QUARTERLY = "QUARTERLY", "Every 3 months"
+    SEMIANNUAL = "SEMIANNUAL", "Every 6 months"
+    YEARLY = "YEARLY", "Yearly"
+
+
+class RecurringSchedule(models.Model):
+    """What recurring bills and recurring journal entries share. Dates come from ledger/recurring.py."""
+    name = models.CharField(max_length=100)
+    frequency = models.CharField(max_length=12, choices=Frequency.choices, default=Frequency.MONTHLY)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    resume_from = models.DateField(null=True, blank=True)  # dates passed while paused are skipped
+    last_error = models.TextField(blank=True)
+    last_error_date = models.DateField(null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def status(self, today) -> str:
+        from .recurring import next_date
+
+        if not self.is_active:
+            return "Paused"
+        return "Active" if next_date(self, today) is not None else "Ended"
+
+    def resume(self, today) -> None:
+        self.is_active = True
+        self.resume_from = today
+        self.save(update_fields=["is_active", "resume_from"])
+
+
+class RecurringJournal(RecurringSchedule):
+    memo = models.TextField(blank=True)
+
+    class Meta(RecurringSchedule.Meta):
+        pass
+
+
+class RecurringJournalLine(models.Model):
+    profile = models.ForeignKey(RecurringJournal, on_delete=models.CASCADE, related_name="lines")
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="+")
+    description = models.CharField(max_length=200, blank=True)
+    debit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    credit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "id"]
+
+
+class RecurringJournalRun(models.Model):
+    profile = models.ForeignKey(RecurringJournal, on_delete=models.PROTECT, related_name="runs")
+    scheduled_date = models.DateField()
+    entry = models.ForeignKey(JournalEntry, on_delete=models.PROTECT, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["scheduled_date"]
+        constraints = [models.UniqueConstraint(fields=["profile", "scheduled_date"], name="unique_recurring_journal_run")]
+
+
+for _model in (Account, JournalEntry, JournalLine, AccountingPeriod, RecurringJournal, RecurringJournalLine, RecurringJournalRun):
     auditlog.register(_model)

@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}{% if profile %}Edit {{ profile.name }}{% else %}{{ kind.create_label }}{% endif %}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url kind.url|add:'-list' %}">{{ kind.title }}</a></div>{% endblock %}
+{% block page_title %}{% if profile %}Edit {{ profile.name }}{% else %}{{ kind.create_label }}{% endif %}{% endblock %}
+{% block page_subtitle %}<div class="sub">{% if kind.is_bill %}Expense lines only. Each date creates and posts a bill to this vendor.{% else %}Each date creates and posts this entry. Debits must equal credits.{% endif %} Dates count from the start date; a month without that day uses its last day.</div>{% endblock %}
+{% block content %}
+{% if error %}<div class="banner error">{{ error }}</div>{% endif %}
+{% if form.non_field_errors %}<div class="banner error">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+<form method="post">{% csrf_token %}
+<div class="card"><div class="body">
+  <div class="form-grid">
+    {% for field in form %}{% if field.name != "notes" and field.name != "memo" %}
+    <div class="form-row"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+      {% for e in field.errors %}<span class="field-error">{{ e }}</span>{% endfor %}</div>
+    {% endif %}{% endfor %}
+  </div>
+  {% if kind.is_bill %}<div class="form-row wide"><label for="{{ form.notes.id_for_label }}">Notes</label>{{ form.notes }}</div>
+  {% else %}<div class="form-row wide"><label for="{{ form.memo.id_for_label }}">Memo</label>{{ form.memo }}</div>{% endif %}
+</div></div>
+<div class="card">
+<table class="data" id="je-lines">
+  <thead><tr><th>Account</th><th>Description</th>{% if kind.is_bill %}<th class="num">Amount</th>{% else %}<th class="num">Debit</th><th class="num">Credit</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr{% if r.hidden %} data-extra hidden{% endif %}>
+      <td><select name="account_{{ r.n }}" aria-label="Line {{ r.n }} account"><option value=""></option>{% for a in accounts %}<option value="{{ a.pk }}"{% if r.account == a.pk|stringformat:"d" %} selected{% endif %}>{{ a.number }} {{ a.name }}</option>{% endfor %}</select></td>
+      <td><input type="text" name="description_{{ r.n }}" value="{{ r.description }}" maxlength="200" aria-label="Line {{ r.n }} description"></td>
+      {% if kind.is_bill %}
+      <td class="num"><input type="text" inputmode="decimal" class="amt" name="amount_{{ r.n }}" value="{{ r.amount }}" aria-label="Line {{ r.n }} amount"></td>
+      {% else %}
+      <td class="num"><input type="text" inputmode="decimal" class="amt" data-side="debit" name="debit_{{ r.n }}" value="{{ r.debit }}" aria-label="Line {{ r.n }} debit"></td>
+      <td class="num"><input type="text" inputmode="decimal" class="amt" data-side="credit" name="credit_{{ r.n }}" value="{{ r.credit }}" aria-label="Line {{ r.n }} credit"></td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    {% if kind.is_bill %}
+    <tr><td><button type="button" class="btn small" id="add-line" data-table="je-lines">Add line</button></td><td></td><td></td></tr>
+    {% else %}
+    <tr class="total"><td><button type="button" class="btn small" id="add-line" data-table="je-lines">Add line</button></td><td>Total</td><td class="num" data-total="debit">0.00</td><td class="num" data-total="credit">0.00</td></tr>
+    <tr><td></td><td class="dash">Difference</td><td class="num" colspan="2" data-total="difference">0.00</td></tr>
+    {% endif %}
+  </tfoot>
+</table>
+</div>
+<div class="form-actions">
+  <button type="submit" class="btn primary">Save schedule</button>
+  <a class="btn" href="{% if profile %}{% url kind.url|add:'-detail' profile.pk %}{% else %}{% url kind.url|add:'-list' %}{% endif %}">Cancel</a>
+</div>
+</form>
+<script src="{% static 'core/lines.js' %}" defer></script>
+{% if not kind.is_bill %}<script src="{% static 'core/journal.js' %}" defer></script>{% endif %}
+{% endblock %}

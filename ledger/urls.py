@@ -7,7 +7,7 @@ from items import views as item_views
 from purchasing.views import reports as purchasing_reports
 from sales.views import reports as sales_reports
 
-from . import views
+from . import sales_report_views, views
 
 app_name = "reports"
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path("trial-balance/", pdf_export(views.trial_balance), name="trial-balance"),
     path("profit-and-loss/", pdf_export(views.profit_and_loss), name="profit-and-loss"),
     path("balance-sheet/", pdf_export(views.balance_sheet), name="balance-sheet"),
+    path("cash-flow/", pdf_export(sales_report_views.cash_flow_view), name="cash-flow"),
     path("bank-register/", pdf_export(register_views.bank_register), name="bank-register"),
     path("general-ledger/", pdf_export(views.general_ledger), name="general-ledger"),
     path("inventory-valuation/", pdf_export(item_views.inventory_valuation), name="inventory-valuation"),
@@ -36,5 +37,9 @@ urlpatterns = [
     path("open-purchase-orders/", pdf_export(purchasing_reports.open_purchase_orders), name="open-purchase-orders"),
     path("order-profitability/", pdf_export(handling_views.order_profitability), name="order-profitability"),
     path("cash-forecast/", pdf_export(forecast_views.cash_forecast), name="cash-forecast"),
+    path("sales-by-customer/", pdf_export(sales_report_views.sales_by_customer), name="sales-by-customer"),
+    path("sales-by-item/", pdf_export(sales_report_views.sales_by_item), name="sales-by-item"),
+    path("purchases-by-vendor/", pdf_export(sales_report_views.purchases_by_vendor), name="purchases-by-vendor"),
+    path("purchases-by-item/", pdf_export(sales_report_views.purchases_by_item), name="purchases-by-item"),
     path("1099-summary/", pdf_export(purchasing_reports.summary_1099), name="1099-summary"),
 ]

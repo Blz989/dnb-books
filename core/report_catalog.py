@@ -5,8 +5,15 @@ GROUPS = [
     ("Business overview", [
         ("profit-and-loss", "Profit and loss", "Income, cost of goods sold, and expenses for a date range."),
         ("balance-sheet", "Balance sheet", "Assets, liabilities, and equity on a date."),
+        ("cash-flow", "Cash flow statement", "Where cash came from and went, by operating, investing, and financing."),
         ("order-profitability", "Order profitability", "Profit per order after stock and drop-ship cost."),
         ("cash-forecast", "Cash forecast", "Cash on hand plus what's coming in, less what's going out."),
+    ]),
+    ("Sales and purchases", [
+        ("sales-by-customer", "Sales by customer", "Sales and credits per customer for a date range."),
+        ("sales-by-item", "Sales by item", "Quantity and amount sold per item."),
+        ("purchases-by-vendor", "Purchases by vendor", "Bills and vendor credits per vendor."),
+        ("purchases-by-item", "Purchases by item", "Quantity and amount bought per item and expense account."),
     ]),
     ("Receivables", [
         ("ar-aging", "A/R aging", "What customers owe, by how late it is."),

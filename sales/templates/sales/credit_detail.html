@@ -1,13 +1,15 @@
 {% extends "core/base.html" %}
+{% load attachments %}
 {% block title %}{{ note.number }}{% endblock %}
 {% block page_title %}{{ note.number }}{% endblock %}
 {% block page_subtitle %}<div class="sub"><a href="/customers/{{ note.customer.pk }}/">{{ note.customer.name }}</a> · {{ note.date|date:"Y-m-d" }}{% if note.reason %} · {{ note.reason }}{% endif %}{% if is_void %} <span class="tag void">Void</span>{% endif %}</div>{% endblock %}
 {% block page_actions %}
   {% if not is_void and unapplied > 0 %}<a class="btn primary" href="{% url 'sales:credit-apply' note.number %}">Apply</a>{% endif %}
-  {% if is_admin and not is_void and unapplied > 0 %}<a class="btn" href="{% url 'sales:refund-new' %}?credit={{ note.number }}">Refund</a>{% endif %}
+  {% if is_admin and not is_void and unapplied > 0 and not note.write_off_of %}<a class="btn" href="{% url 'sales:refund-new' %}?credit={{ note.number }}">Refund</a>{% endif %}
   {% if is_admin and not is_void %}<a class="btn" href="{% url 'sales:credit-void' note.number %}">Void</a>{% endif %}
 {% endblock %}
 {% block content %}
+{% if note.write_off_of %}<div class="banner info">Write-off of {{ note.write_off_of.number }} to bad debt. It can only be applied to that invoice and can't be refunded. To undo it, remove it from the invoice, then void it. <a href="{% url 'sales:invoice-detail' note.write_off_of.number %}">Open {{ note.write_off_of.number }} →</a></div>{% endif %}
 {% if is_void %}<div class="banner error">Voided on {{ note.voided_on|date:"Y-m-d" }}: {{ note.void_reason }}</div>{% endif %}
 <div class="kpis">
   <div class="kpi"><div class="l">Total</div><div class="v">{{ total|floatformat:"2g" }}</div></div>
@@ -41,4 +43,5 @@
 </table>
 </div>
 {% endif %}
+{% attachments_card note %}
 {% endblock %}

@@ -22,6 +22,7 @@ urlpatterns = [
     path("invoices/<docnum:number>/edit/", invoices.invoice_edit, name="invoice-edit"),
     path("invoices/<docnum:number>/pdf/", invoices.invoice_pdf_view, name="invoice-pdf"),
     path("invoices/<docnum:number>/void/", invoices.invoice_void, name="invoice-void"),
+    path("invoices/<docnum:number>/write-off/", invoices.invoice_write_off, name="invoice-write-off"),
     path("invoices/<docnum:number>/delete/", invoices.invoice_delete, name="invoice-delete"),
     path("invoices/<docnum:number>/revisions/<int:revision>/", invoices.invoice_revision, name="invoice-revision"),
     path("invoices/<docnum:number>/applications/<str:kind>/<int:pk>/remove/", invoices.application_remove, name="application-remove"),
