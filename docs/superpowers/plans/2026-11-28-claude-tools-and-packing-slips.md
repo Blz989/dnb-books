@@ -41,6 +41,6 @@ def list_recurring(user) -> dict
 - [x] Commit: `Packing slips`
 
 ## Task 4: Docs and PR
-- [ ] README rows; Status line; CLAUDE.md source of truth.
-- [ ] Full `uv run pytest -q`.
-- [ ] Commit: `Docs: Claude tools and packing slips`; open the PR.
+- [x] README rows; Status line; CLAUDE.md source of truth.
+- [x] Full `uv run pytest -q`.
+- [x] Commit: `Docs: Claude tools and packing slips`; open the PR.
